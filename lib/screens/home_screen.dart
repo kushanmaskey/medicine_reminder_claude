@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../tabs/prescriptions_tab.dart';
 import '../tabs/medications_tab.dart';
 import 'login_screen.dart';
+import 'add_prescription_screen.dart';
+import 'add_medication_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,13 +16,32 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _tabs = const [
-    PrescriptionsTab(),
-    MedicationsTab(),
-  ];
+  final _prescriptionsKey = GlobalKey<State>();
+  final _medicationsKey = GlobalKey<State>();
 
   final List<String> _titles = ['Prescriptions', 'Medications'];
+
+  @override
+  void initState() {
+    super.initState();
+    _requestNotificationPermission();
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    await NotificationService.requestPermission();
+  }
+
+  Future<void> _openAddScreen() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _currentIndex == 0
+            ? const AddPrescriptionScreen()
+            : const AddMedicationScreen(),
+      ),
+    );
+    if (result == true) setState(() {});
+  }
 
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
@@ -78,7 +100,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _tabs[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          PrescriptionsTab(key: _prescriptionsKey),
+          MedicationsTab(key: _medicationsKey),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
@@ -98,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: _openAddScreen,
         backgroundColor: const Color(0xFF3B82F6),
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
