@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../tabs/prescriptions_tab.dart';
-import '../tabs/medications_tab.dart';
+import '../tabs/appointments_tab.dart';
+import '../tabs/vitals_tab.dart';
 import 'login_screen.dart';
 import 'add_prescription_screen.dart';
-import 'add_medication_screen.dart';
+import 'add_appointment_screen.dart';
+import 'add_vital_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,9 +19,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final _prescriptionsKey = GlobalKey<State>();
-  final _medicationsKey = GlobalKey<State>();
+  final _appointmentsKey = GlobalKey<State>();
+  final _vitalsKey = GlobalKey<State>();
 
-  final List<String> _titles = ['Prescriptions', 'Medications'];
+  final List<String> _titles = ['Prescriptions', 'Appointments', 'Vitals'];
 
   @override
   void initState() {
@@ -32,13 +35,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openAddScreen() async {
+    final Widget screen;
+    if (_currentIndex == 0) {
+      screen = const AddPrescriptionScreen();
+    } else if (_currentIndex == 1) {
+      screen = const AddAppointmentScreen();
+    } else {
+      screen = const AddVitalScreen();
+    }
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => _currentIndex == 0
-            ? const AddPrescriptionScreen()
-            : const AddMedicationScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => screen),
     );
     if (result == true) setState(() {});
   }
@@ -78,6 +85,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Color get _fabColor {
+    switch (_currentIndex) {
+      case 1: return const Color(0xFF8B5CF6);
+      case 2: return const Color(0xFF0D9488);
+      default: return const Color(0xFF3B82F6);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: [
           PrescriptionsTab(key: _prescriptionsKey),
-          MedicationsTab(key: _medicationsKey),
+          AppointmentsTab(key: _appointmentsKey),
+          VitalsTab(key: _vitalsKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -119,15 +135,21 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Prescriptions',
           ),
           NavigationDestination(
-            icon: Icon(Icons.medication_outlined),
-            selectedIcon: Icon(Icons.medication, color: Color(0xFF3B82F6)),
-            label: 'Medications',
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_month, color: Color(0xFF8B5CF6)),
+            label: 'Appointments',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.monitor_heart_outlined),
+            selectedIcon:
+                Icon(Icons.monitor_heart, color: Color(0xFF0D9488)),
+            label: 'Vitals',
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openAddScreen,
-        backgroundColor: const Color(0xFF3B82F6),
+        backgroundColor: _fabColor,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
