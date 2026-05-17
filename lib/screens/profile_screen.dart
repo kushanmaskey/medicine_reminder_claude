@@ -190,6 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _saving = true);
 
     await AuthService.updateName(_nameController.text.trim());
+    if (_sex != null) await AuthService.updateSex(_sex!);
 
     if (_avatarType == 'custom' && _avatarImageBytes != null) {
       await AuthService.setCustomAvatar(base64Encode(_avatarImageBytes!));
@@ -224,12 +225,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _buildNameSection(),
                   const SizedBox(height: 16),
+                  _buildSexSection(),
+                  const SizedBox(height: 16),
                   _buildAvatarSection(),
                   const SizedBox(height: 32),
                   _buildSaveButton(),
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSexSection() {
+    const teal = Color(0xFF0D9488);
+    const pink = Color(0xFFEC4899);
+    final current = _sex ?? 'Male';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.wc_outlined, size: 15, color: _accentColor),
+              const SizedBox(width: 8),
+              Text(
+                'SEX',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[500],
+                    letterSpacing: 0.6),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _ProfileSexChip(
+                label: 'Male',
+                icon: Icons.male,
+                selected: current == 'Male',
+                activeColor: teal,
+                onTap: () => setState(() { _sex = 'Male'; _changed = true; }),
+              ),
+              const SizedBox(width: 12),
+              _ProfileSexChip(
+                label: 'Female',
+                icon: Icons.female,
+                selected: current == 'Female',
+                activeColor: pink,
+                onTap: () => setState(() { _sex = 'Female'; _changed = true; }),
+              ),
+            ],
           ),
         ],
       ),
@@ -535,6 +592,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : const Text('Save Profile',
                     style: TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSexChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const _ProfileSexChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Tooltip(
+        message: 'Select $label',
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: selected
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected
+                    ? activeColor.withValues(alpha: 0.6)
+                    : Colors.grey.shade200,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon,
+                    size: 20,
+                    color: selected ? activeColor : Colors.grey[400]),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? activeColor : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

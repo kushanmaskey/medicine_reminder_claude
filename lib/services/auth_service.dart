@@ -85,6 +85,11 @@ class AuthService {
     await prefs.setString(_keyName, name);
   }
 
+  static Future<void> updateSex(String sex) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySex, sex);
+  }
+
   static Future<void> setDefaultAvatar(int index) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyAvatarType, 'default');

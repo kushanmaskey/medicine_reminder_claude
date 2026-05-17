@@ -36,12 +36,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   bool _sexLoaded = false;
   bool _saving = false;
 
-  bool get _isEditing  => widget.existing != null;
-  bool get _isFemale   => _sex == 'Female';
-  static const _teal   = Color(0xFF0D9488);
-  static const _pink   = Color(0xFFEC4899);
+  bool get _isEditing => widget.existing != null;
+  // Show female-specific fields when sex is Female OR when sex is not yet set
+  // (null means the account predates the sex feature — show everything).
+  bool get _isMaleOnly => _sex == 'Male';
+  static const _teal  = Color(0xFF0D9488);
+  static const _pink  = Color(0xFFEC4899);
 
-  Color get _accentColor => _isFemale ? _pink : _teal;
+  Color get _accentColor => _isMaleOnly ? _teal : _pink;
 
   @override
   void initState() {
@@ -218,7 +220,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                   _buildWeightSection(),
                   const SizedBox(height: 16),
                   _buildColonoscopySection(),
-                  if (_isFemale) ...[
+                  if (!_isMaleOnly) ...[
                     const SizedBox(height: 16),
                     _buildPeriodSection(),
                     const SizedBox(height: 16),
