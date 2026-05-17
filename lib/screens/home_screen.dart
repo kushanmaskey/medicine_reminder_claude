@@ -9,6 +9,13 @@ import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_vital_screen.dart';
 
+const _gradientColors = [Color(0xFF0D9488), Color(0xFF0891B2)];
+const _gradient = LinearGradient(
+  colors: _gradientColors,
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -85,26 +92,38 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Color get _fabColor {
-    switch (_currentIndex) {
-      case 1: return const Color(0xFF8B5CF6);
-      case 2: return const Color(0xFF0D9488);
-      default: return const Color(0xFF3B82F6);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(
-          _titles[_currentIndex],
-          style: const TextStyle(
-            color: Color(0xFF1E293B),
-            fontWeight: FontWeight.bold,
+        scrolledUnderElevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.06),
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: _gradient,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.monitor_heart,
+                color: Colors.white, size: 18),
+          ),
+        ),
+        title: ShaderMask(
+          shaderCallback: (bounds) => _gradient.createShader(
+            Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+          ),
+          blendMode: BlendMode.srcIn,
+          child: Text(
+            _titles[_currentIndex],
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
           ),
         ),
         actions: [
@@ -114,6 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Sign Out',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: Container(
+            height: 2,
+            decoration: const BoxDecoration(gradient: _gradient),
+          ),
+        ),
       ),
       body: IndexedStack(
         index: _currentIndex,
@@ -127,16 +153,17 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDBEAFE),
+        indicatorColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description, color: Color(0xFF3B82F6)),
+            selectedIcon: Icon(Icons.description, color: Color(0xFF0D9488)),
             label: 'Prescriptions',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_month, color: Color(0xFF8B5CF6)),
+            selectedIcon:
+                Icon(Icons.calendar_month, color: Color(0xFF0D9488)),
             label: 'Appointments',
           ),
           NavigationDestination(
@@ -147,11 +174,42 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddScreen,
-        backgroundColor: _fabColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+      floatingActionButton: _GradientFAB(onPressed: _openAddScreen),
+    );
+  }
+}
+
+class _GradientFAB extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _GradientFAB({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: _gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.45),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.white.withValues(alpha: 0.25),
+          child: const Center(
+            child: Icon(Icons.add, color: Colors.white, size: 26),
+          ),
+        ),
       ),
     );
   }

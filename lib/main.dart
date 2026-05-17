@@ -20,8 +20,12 @@ class MedReminderApp extends StatelessWidget {
       title: 'MedReminder',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3B82F6)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0D9488),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        scaffoldBackgroundColor: Colors.white,
       ),
       home: const _SplashRouter(),
     );
@@ -41,8 +45,12 @@ class _SplashRouter extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(
-            backgroundColor: Color(0xFFF5F7FA),
-            body: Center(child: CircularProgressIndicator()),
+            backgroundColor: Colors.white,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF0D9488),
+              ),
+            ),
           );
         }
         final isLoggedIn = snapshot.data![0];
