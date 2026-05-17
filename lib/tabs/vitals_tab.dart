@@ -233,9 +233,40 @@ class _VitalCard extends StatelessWidget {
                       color: const Color(0xFF3B82F6),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(child: SizedBox()),
+                    _VitalChip(
+                      icon: Icons.biotech_outlined,
+                      label: 'Cholesterol',
+                      value: vital.cholesterolDisplay,
+                      color: const Color(0xFF8B5CF6),
+                    ),
                   ],
                 ),
+                if (vital.colonoscopyDate != null ||
+                    vital.periodDate != null ||
+                    vital.mammogramDate != null) ...[
+                  const SizedBox(height: 10),
+                  if (vital.colonoscopyDate != null)
+                    _DateRow(
+                      icon: Icons.medical_services_outlined,
+                      label: 'Last Colonoscopy',
+                      value: vital.colonoscopyDisplay,
+                      color: const Color(0xFF14B8A6),
+                    ),
+                  if (vital.periodDate != null)
+                    _DateRow(
+                      icon: Icons.calendar_month_outlined,
+                      label: 'Last Period',
+                      value: vital.periodDisplay,
+                      color: const Color(0xFFEC4899),
+                    ),
+                  if (vital.mammogramDate != null)
+                    _DateRow(
+                      icon: Icons.medical_information_outlined,
+                      label: 'Last Mammogram',
+                      value: vital.mammogramDisplay,
+                      color: const Color(0xFFEC4899),
+                    ),
+                ],
                 if (vital.notes.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Row(
@@ -292,6 +323,56 @@ class _VitalCard extends StatelessWidget {
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DateRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color),
+            ),
           ),
         ],
       ),

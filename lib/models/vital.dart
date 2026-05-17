@@ -4,10 +4,15 @@ class Vital {
   final int? bpSystolic;
   final int? bpDiastolic;
   final double? weight;
-  final String weightUnit; // 'kg' or 'lbs'
+  final String weightUnit;
   final double? sugarLevel;
-  final String sugarUnit; // 'mg/dL' or 'mmol/L'
-  final String riskLevel; // 'Low', 'Medium', 'High'
+  final String sugarUnit;
+  final double? cholesterol;
+  final String cholesterolUnit;
+  final DateTime? colonoscopyDate;
+  final DateTime? periodDate;
+  final DateTime? mammogramDate;
+  final String riskLevel;
   final String notes;
 
   Vital({
@@ -19,6 +24,11 @@ class Vital {
     this.weightUnit = 'kg',
     this.sugarLevel,
     this.sugarUnit = 'mg/dL',
+    this.cholesterol,
+    this.cholesterolUnit = 'mg/dL',
+    this.colonoscopyDate,
+    this.periodDate,
+    this.mammogramDate,
     required this.riskLevel,
     this.notes = '',
   });
@@ -29,6 +39,23 @@ class Vital {
       weight != null ? '${weight!.toStringAsFixed(1)} $weightUnit' : '—';
   String get sugarDisplay =>
       sugarLevel != null ? '${sugarLevel!.toStringAsFixed(1)} $sugarUnit' : '—';
+  String get cholesterolDisplay =>
+      cholesterol != null ? '${cholesterol!.toStringAsFixed(1)} $cholesterolUnit' : '—';
+
+  static String _fmtDate(DateTime dt) {
+    const months = [
+      'Jan','Feb','Mar','Apr','May','Jun',
+      'Jul','Aug','Sep','Oct','Nov','Dec'
+    ];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  String get colonoscopyDisplay =>
+      colonoscopyDate != null ? _fmtDate(colonoscopyDate!) : '—';
+  String get periodDisplay =>
+      periodDate != null ? _fmtDate(periodDate!) : '—';
+  String get mammogramDisplay =>
+      mammogramDate != null ? _fmtDate(mammogramDate!) : '—';
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -39,6 +66,11 @@ class Vital {
         'weightUnit': weightUnit,
         'sugarLevel': sugarLevel,
         'sugarUnit': sugarUnit,
+        'cholesterol': cholesterol,
+        'cholesterolUnit': cholesterolUnit,
+        'colonoscopyDate': colonoscopyDate?.toIso8601String(),
+        'periodDate': periodDate?.toIso8601String(),
+        'mammogramDate': mammogramDate?.toIso8601String(),
         'riskLevel': riskLevel,
         'notes': notes,
       };
@@ -52,6 +84,17 @@ class Vital {
         weightUnit: json['weightUnit'] ?? 'kg',
         sugarLevel: (json['sugarLevel'] as num?)?.toDouble(),
         sugarUnit: json['sugarUnit'] ?? 'mg/dL',
+        cholesterol: (json['cholesterol'] as num?)?.toDouble(),
+        cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
+        colonoscopyDate: json['colonoscopyDate'] != null
+            ? DateTime.parse(json['colonoscopyDate'])
+            : null,
+        periodDate: json['periodDate'] != null
+            ? DateTime.parse(json['periodDate'])
+            : null,
+        mammogramDate: json['mammogramDate'] != null
+            ? DateTime.parse(json['mammogramDate'])
+            : null,
         riskLevel: json['riskLevel'] ?? 'Low',
         notes: json['notes'] ?? '',
       );

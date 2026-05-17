@@ -467,7 +467,12 @@ class SummaryTabState extends State<SummaryTab> {
                   color: const Color(0xFF3B82F6),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(child: SizedBox()),
+                _VitalChip(
+                  icon: Icons.biotech_outlined,
+                  label: 'Cholesterol',
+                  value: v.cholesterolDisplay,
+                  color: const Color(0xFF8B5CF6),
+                ),
               ],
             ),
             if (v.notes.isNotEmpty) ...[
