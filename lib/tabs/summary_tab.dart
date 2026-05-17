@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import '../models/prescription.dart';
 import '../models/appointment.dart';
 import '../models/vital.dart';
+import '../models/activity.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../screens/add_prescription_screen.dart';
 import '../screens/add_appointment_screen.dart';
 import '../screens/add_vital_screen.dart';
+import '../screens/add_activity_screen.dart';
 
 const _gradient = LinearGradient(
   colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
@@ -26,6 +28,7 @@ class SummaryTabState extends State<SummaryTab> {
   List<Prescription> _prescriptions = [];
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
+  List<Activity> _activities = [];
   String? _email;
   bool _loading = true;
 
@@ -43,17 +46,21 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getAppointments(),
       StorageService.getVitals(),
       AuthService.getEmail(),
+      StorageService.getActivities(),
     ]);
     if (!mounted) return;
     final appts = (results[1] as List<Appointment>)
       ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
     final vitals = (results[2] as List<Vital>)
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    final activities = (results[4] as List<Activity>)
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
     setState(() {
       _prescriptions = results[0] as List<Prescription>;
       _appointments = appts;
       _vitals = vitals;
       _email = results[3] as String?;
+      _activities = activities;
       _loading = false;
     });
   }
@@ -113,6 +120,15 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Prescriptions tab to add one')
           else
             ..._prescriptions.map((p) => _buildPrescriptionRow(p)),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
+              onViewAll: () => widget.onTabChange(4)),
+          const SizedBox(height: 10),
+          if (_activities.isEmpty)
+            _buildEmptyState('No activities logged',
+                'Tap + on the Activities tab to log one')
+          else
+            ..._activities.take(3).map((a) => _buildActivityRow(a)),
         ],
       ),
     );
@@ -184,33 +200,50 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Stats row ──────────────────────────────────────────────────────────────
 
   Widget _buildStatsRow() {
-    return Row(
+    return Column(
       children: [
-        _StatCard(
-          label: 'Prescriptions',
-          count: _prescriptions.length,
-          icon: Icons.description_outlined,
-          color: const Color(0xFF3B82F6),
-          tooltip: 'View all prescriptions',
-          onTap: () => widget.onTabChange(1),
+        Row(
+          children: [
+            _StatCard(
+              label: 'Prescriptions',
+              count: _prescriptions.length,
+              icon: Icons.description_outlined,
+              color: const Color(0xFF3B82F6),
+              tooltip: 'View all prescriptions',
+              onTap: () => widget.onTabChange(1),
+            ),
+            const SizedBox(width: 10),
+            _StatCard(
+              label: 'Appointments',
+              count: _upcomingAppointments.length,
+              icon: Icons.calendar_today_outlined,
+              color: const Color(0xFF8B5CF6),
+              tooltip: 'View upcoming appointments',
+              onTap: () => widget.onTabChange(2),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        _StatCard(
-          label: 'Appointments',
-          count: _upcomingAppointments.length,
-          icon: Icons.calendar_today_outlined,
-          color: const Color(0xFF8B5CF6),
-          tooltip: 'View upcoming appointments',
-          onTap: () => widget.onTabChange(2),
-        ),
-        const SizedBox(width: 10),
-        _StatCard(
-          label: 'Vitals Logged',
-          count: _vitals.length,
-          icon: Icons.monitor_heart_outlined,
-          color: const Color(0xFF0D9488),
-          tooltip: 'View vitals history',
-          onTap: () => widget.onTabChange(3),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _StatCard(
+              label: 'Vitals Logged',
+              count: _vitals.length,
+              icon: Icons.monitor_heart_outlined,
+              color: const Color(0xFF0D9488),
+              tooltip: 'View vitals history',
+              onTap: () => widget.onTabChange(3),
+            ),
+            const SizedBox(width: 10),
+            _StatCard(
+              label: 'Activities',
+              count: _activities.length,
+              icon: Icons.directions_walk_outlined,
+              color: const Color(0xFF22C55E),
+              tooltip: 'View all activities',
+              onTap: () => widget.onTabChange(4),
+            ),
+          ],
         ),
       ],
     );
@@ -621,6 +654,127 @@ class SummaryTabState extends State<SummaryTab> {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  // ── Activity row ───────────────────────────────────────────────────────────
+
+  static const _activityColors = {
+    'Walk':       Color(0xFF22C55E),
+    'Run':        Color(0xFFF97316),
+    'Exercise':   Color(0xFF3B82F6),
+    'Yoga':       Color(0xFF8B5CF6),
+    'Meditation': Color(0xFF0D9488),
+  };
+
+  static const _activityIcons = {
+    'Walk':       Icons.directions_walk,
+    'Run':        Icons.directions_run,
+    'Exercise':   Icons.fitness_center,
+    'Yoga':       Icons.self_improvement,
+    'Meditation': Icons.spa,
+  };
+
+  Widget _buildActivityRow(Activity a) {
+    final color = _activityColors[a.type] ?? const Color(0xFF22C55E);
+    final icon  = _activityIcons[a.type]  ?? Icons.directions_walk;
+
+    return Tooltip(
+      message: 'Tap to edit activity',
+      child: GestureDetector(
+        onTap: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
+          );
+          if (result == true) _load();
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(a.type,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Color(0xFF1E293B))),
+                        if (a.type == 'Walk') ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(a.walkType,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: color)),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(_fmtDateTime(a.recordedAt),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(a.displayValue,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: color)),
+                  ),
+                  const SizedBox(height: 4),
+                  Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
