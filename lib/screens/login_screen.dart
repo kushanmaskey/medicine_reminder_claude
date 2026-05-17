@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'MedReminder',
+                  'Medical Wallet',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,

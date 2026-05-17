@@ -8,16 +8,16 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
-  runApp(const MedReminderApp());
+  runApp(const MedicalWalletApp());
 }
 
-class MedReminderApp extends StatelessWidget {
-  const MedReminderApp({super.key});
+class MedicalWalletApp extends StatelessWidget {
+  const MedicalWalletApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MedReminder',
+      title: 'Medical Wallet',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
