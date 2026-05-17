@@ -13,6 +13,11 @@ class StorageService {
   static const _keyVitals = 'vitals';
   static const _keyActivities = 'activities';
 
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
   static Future<List<Prescription>> getPrescriptions() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_keyPrescriptions) ?? [];

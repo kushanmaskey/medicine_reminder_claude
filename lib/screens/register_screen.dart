@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import 'home_screen.dart';
 
 const _gradient = LinearGradient(
@@ -7,6 +8,8 @@ const _gradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
+
+const _minPasswordLength = 8;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,15 +20,23 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _nameController     = TextEditingController();
+  final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
-  bool _loading = false;
-  bool _obscurePass = true;
-  bool _obscureConfirm = true;
-  String _sex = 'Male';
-  String? _error;
+  final _confirmController  = TextEditingController();
+
+  bool _loading         = false;
+  bool _obscurePass     = true;
+  bool _obscureConfirm  = true;
+  String _sex           = 'Male';
+  int _passwordLength   = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(
+        () => setState(() => _passwordLength = _passwordController.text.length));
+  }
 
   @override
   void dispose() {
@@ -36,35 +47,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  bool get _passwordMeetsLength => _passwordLength >= _minPasswordLength;
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
 
-    final success = await AuthService.register(
+    // If an account already exists, ask before wiping data
+    final existing = await AuthService.hasAccount();
+    if (existing && mounted) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: const Text('Replace Existing Account?'),
+          content: const Text(
+            'Creating a new account will permanently delete all current health data '
+            '(prescriptions, appointments, vitals, activities). '
+            'This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white),
+              child: const Text('Delete & Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    setState(() => _loading = true);
+
+    // Clear all existing data then register fresh
+    await StorageService.clearAll();
+    await AuthService.register(
       _emailController.text.trim(),
       _passwordController.text,
       _nameController.text.trim(),
       _sex,
     );
+    await AuthService.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
     if (!mounted) return;
     setState(() => _loading = false);
-
-    if (success) {
-      await AuthService.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (_) => false,
-      );
-    } else {
-      setState(
-          () => _error = 'An account already exists. Please sign in.');
-    }
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      (_) => false,
+    );
   }
 
   @override
@@ -89,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 if (Navigator.canPop(context))
                   Tooltip(
-                    message: 'Go back',
+                    message: 'Go back to sign in',
                     child: GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
@@ -110,18 +151,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text(
                       'Create Account',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Start tracking your health today',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 13,
-                      ),
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 13),
                     ),
                   ],
                 ),
@@ -133,180 +172,179 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 32),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _nameController,
-                          keyboardType: TextInputType.name,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: _inputDecoration(
-                              'Full Name', Icons.person_outline),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty)
-                                  ? 'Enter your full name'
-                                  : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSexSelector(),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration:
-                              _inputDecoration('Email', Icons.email_outlined),
-                          validator: (v) =>
-                              (v == null || !v.contains('@'))
-                                  ? 'Enter a valid email'
-                                  : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePass,
-                          decoration:
-                              _inputDecoration('Password', Icons.lock_outline)
-                                  .copyWith(
-                            suffixIcon: IconButton(
-                              tooltip: _obscurePass ? 'Show password' : 'Hide password',
-                              icon: Icon(
-                                _obscurePass
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(
-                                  () => _obscurePass = !_obscurePass),
-                            ),
-                          ),
-                          validator: (v) => (v == null || v.length < 6)
-                              ? 'Min 6 characters'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _confirmController,
-                          obscureText: _obscureConfirm,
-                          decoration: _inputDecoration(
-                                  'Confirm Password', Icons.lock_outline)
-                              .copyWith(
-                            suffixIcon: IconButton(
-                              tooltip: _obscureConfirm ? 'Show password' : 'Hide password',
-                              icon: Icon(
-                                _obscureConfirm
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(() =>
-                                  _obscureConfirm = !_obscureConfirm),
-                            ),
-                          ),
-                          validator: (v) =>
-                              v != _passwordController.text
-                                  ? 'Passwords do not match'
-                                  : null,
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline,
-                                    color: Colors.red, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(_error!,
-                                      style: const TextStyle(
-                                          color: Colors.red, fontSize: 13)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 28),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: _loading ? null : _gradient,
-                              color: _loading ? Colors.grey.shade200 : null,
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: _loading
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color: const Color(0xFF0D9488)
-                                            .withValues(alpha: 0.4),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: _loading ? null : _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              child: _loading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white),
-                                    )
-                                  : const Text('Create Account',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                  color: Colors.grey[500], fontSize: 14),
-                              children: const [
-                                TextSpan(text: 'Already have an account? '),
-                                TextSpan(
-                                  text: 'Sign In',
-                                  style: TextStyle(
-                                    color: Color(0xFF0D9488),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 28),
+
+                    // Full name
+                    TextFormField(
+                      controller: _nameController,
+                      keyboardType: TextInputType.name,
+                      textCapitalization: TextCapitalization.words,
+                      decoration:
+                          _inputDecoration('Full Name', Icons.person_outline),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Please enter your full name'
+                          : null,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // Sex selector
+                    _buildSexSelector(),
+                    const SizedBox(height: 16),
+
+                    // Email
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration:
+                          _inputDecoration('Email', Icons.email_outlined),
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Please enter a valid email address'
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePass,
+                      decoration:
+                          _inputDecoration('Password', Icons.lock_outline)
+                              .copyWith(
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePass
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscurePass
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () =>
+                              setState(() => _obscurePass = !_obscurePass),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Please enter a password';
+                        }
+                        if (v.length < _minPasswordLength) {
+                          return 'Password must be at least $_minPasswordLength characters '
+                              '(currently ${v.length})';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    _buildPasswordStrengthRow(),
+                    const SizedBox(height: 16),
+
+                    // Confirm password
+                    TextFormField(
+                      controller: _confirmController,
+                      obscureText: _obscureConfirm,
+                      decoration: _inputDecoration(
+                              'Confirm Password', Icons.lock_outline)
+                          .copyWith(
+                        suffixIcon: IconButton(
+                          tooltip: _obscureConfirm
+                              ? 'Show password'
+                              : 'Hide password',
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(
+                              () => _obscureConfirm = !_obscureConfirm),
+                        ),
+                      ),
+                      validator: (v) => v != _passwordController.text
+                          ? 'Passwords do not match'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: _loading ? null : _gradient,
+                          color:
+                              _loading ? Colors.grey.shade200 : null,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: _loading
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFF0D9488)
+                                        .withValues(alpha: 0.4),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white),
+                                )
+                              : const Text('Create Account',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Sign-in link
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 14),
+                            children: const [
+                              TextSpan(text: 'Already have an account? '),
+                              TextSpan(
+                                text: 'Sign In',
+                                style: TextStyle(
+                                    color: Color(0xFF0D9488),
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
@@ -314,6 +352,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
+  // ── Password strength row ──────────────────────────────────────────────────
+
+  Widget _buildPasswordStrengthRow() {
+    final segments = _minPasswordLength;
+    final filled = _passwordLength.clamp(0, segments);
+    final Color barColor;
+    final String label;
+
+    if (_passwordLength == 0) {
+      barColor = Colors.grey.shade200;
+      label = 'At least $_minPasswordLength characters required';
+    } else if (_passwordLength < _minPasswordLength) {
+      barColor = const Color(0xFFEF4444);
+      label =
+          '$_passwordLength of $_minPasswordLength characters — ${_minPasswordLength - _passwordLength} more needed';
+    } else if (_passwordLength < 12) {
+      barColor = const Color(0xFFF97316);
+      label = 'Good — consider using 12+ characters for stronger security';
+    } else {
+      barColor = const Color(0xFF22C55E);
+      label = 'Strong password';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Segment bar
+        Row(
+          children: List.generate(segments, (i) {
+            final active = i < filled;
+            return Expanded(
+              child: Container(
+                margin: EdgeInsets.only(right: i < segments - 1 ? 3 : 0),
+                height: 4,
+                decoration: BoxDecoration(
+                  color: active ? barColor : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: _passwordLength == 0
+                ? Colors.grey[400]
+                : _passwordMeetsLength
+                    ? (_passwordLength >= 12
+                        ? const Color(0xFF22C55E)
+                        : const Color(0xFFF97316))
+                    : const Color(0xFFEF4444),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Sex selector ───────────────────────────────────────────────────────────
 
   Widget _buildSexSelector() {
     const teal = Color(0xFF0D9488);
@@ -324,7 +424,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Row(
           children: [
-            Icon(Icons.wc_outlined, size: 16, color: teal),
+            const Icon(Icons.wc_outlined, size: 16, color: teal),
             const SizedBox(width: 8),
             Text(
               'SEX',
@@ -360,6 +460,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // ── Input decoration ───────────────────────────────────────────────────────
+
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -390,6 +492,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+// ── Sex chip ────────────────────────────────────────────────────────────────
 
 class _SexChip extends StatelessWidget {
   final String label;

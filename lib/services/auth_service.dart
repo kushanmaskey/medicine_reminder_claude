@@ -12,16 +12,18 @@ class AuthService {
   static String _hash(String password) =>
       sha256.convert(utf8.encode(password)).toString();
 
-  static Future<bool> register(
+  static Future<bool> hasAccount() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyEmail) != null;
+  }
+
+  static Future<void> register(
       String email, String password, String name, String sex) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(_keyEmail);
-    if (existing != null) return false;
     await prefs.setString(_keyEmail, email);
     await prefs.setString(_keyPassword, _hash(password));
     await prefs.setString(_keyName, name);
     await prefs.setString(_keySex, sex);
-    return true;
   }
 
   static Future<bool> login(String email, String password) async {
@@ -57,11 +59,6 @@ class AuthService {
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyLoggedIn) ?? false;
-  }
-
-  static Future<bool> hasAccount() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyEmail) != null;
   }
 
   static Future<String?> getEmail() async {
