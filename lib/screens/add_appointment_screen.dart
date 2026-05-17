@@ -4,7 +4,8 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 
 class AddAppointmentScreen extends StatefulWidget {
-  const AddAppointmentScreen({super.key});
+  final Appointment? existing;
+  const AddAppointmentScreen({super.key, this.existing});
 
   @override
   State<AddAppointmentScreen> createState() => _AddAppointmentScreenState();
@@ -20,6 +21,22 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   TimeOfDay? _appointmentTime;
   bool _saving = false;
 
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final e = widget.existing!;
+      _titleController.text = e.title;
+      _doctorController.text = e.doctorName;
+      _locationController.text = e.location;
+      _notesController.text = e.notes;
+      _appointmentDate = e.appointmentDateTime;
+      _appointmentTime = TimeOfDay.fromDateTime(e.appointmentDateTime);
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -32,8 +49,9 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _appointmentDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
+      initialDate: _appointmentDate ??
+          DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
@@ -88,7 +106,6 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       );
       return;
     }
-
     setState(() => _saving = true);
 
     final dt = DateTime(
@@ -100,7 +117,8 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     );
 
     final appointment = Appointment(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.existing?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text.trim(),
       doctorName: _doctorController.text.trim(),
       location: _locationController.text.trim(),
@@ -108,7 +126,15 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       appointmentDateTime: dt,
     );
 
-    await StorageService.saveAppointment(appointment);
+    // Cancel old notification before saving
+    await NotificationService.cancelNotification(
+        NotificationService.idFromString(appointment.id));
+
+    if (_isEditing) {
+      await StorageService.updateAppointment(appointment);
+    } else {
+      await StorageService.saveAppointment(appointment);
+    }
 
     await NotificationService.scheduleOnceNotification(
       id: NotificationService.idFromString(appointment.id),
@@ -129,9 +155,9 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Add Appointment',
-          style: TextStyle(
+        title: Text(
+          _isEditing ? 'Edit Appointment' : 'Add Appointment',
+          style: const TextStyle(
             color: Color(0xFF1E293B),
             fontWeight: FontWeight.bold,
           ),
@@ -157,10 +183,9 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                   controller: _doctorController,
                   decoration: _inputDecoration(
                       "Doctor's Name", Icons.person_outlined),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty)
-                          ? "Enter doctor's name"
-                          : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? "Enter doctor's name"
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -239,12 +264,12 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                            strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Save Appointment',
-                        style: TextStyle(fontSize: 16)),
+                    : Text(
+                        _isEditing ? 'Update Appointment' : 'Save Appointment',
+                        style: const TextStyle(fontSize: 16),
+                      ),
               ),
             ),
           ],

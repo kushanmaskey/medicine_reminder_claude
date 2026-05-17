@@ -4,7 +4,8 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 
 class AddPrescriptionScreen extends StatefulWidget {
-  const AddPrescriptionScreen({super.key});
+  final Prescription? existing;
+  const AddPrescriptionScreen({super.key, this.existing});
 
   @override
   State<AddPrescriptionScreen> createState() => _AddPrescriptionScreenState();
@@ -18,6 +19,19 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   TimeOfDay? _notificationTime;
   bool _saving = false;
 
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      _nameController.text = widget.existing!.name;
+      _instructionsController.text = widget.existing!.instructions;
+      _refillDate = widget.existing!.refillDate;
+      _notificationTime = widget.existing!.notificationTime;
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -28,8 +42,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   Future<void> _pickRefillDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
+      initialDate: _refillDate ?? DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
@@ -66,7 +80,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     setState(() => _saving = true);
 
     final prescription = Prescription(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.existing?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
       refillDate: _refillDate!,
       instructions: _instructionsController.text.trim(),
@@ -74,7 +89,13 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       notificationMinute: _notificationTime?.minute,
     );
 
-    await StorageService.savePrescription(prescription);
+    if (_isEditing) {
+      await StorageService.updatePrescription(prescription);
+      await NotificationService.cancelNotification(
+          NotificationService.idFromString(prescription.id));
+    } else {
+      await StorageService.savePrescription(prescription);
+    }
 
     if (_notificationTime != null) {
       await NotificationService.scheduleDailyNotification(
@@ -96,9 +117,9 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Add Prescription',
-          style: TextStyle(
+        title: Text(
+          _isEditing ? 'Edit Prescription' : 'Add Prescription',
+          style: const TextStyle(
             color: Color(0xFF1E293B),
             fontWeight: FontWeight.bold,
           ),
@@ -114,7 +135,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: _inputDecoration('Prescription Name', Icons.description_outlined),
+                  decoration: _inputDecoration(
+                      'Prescription Name', Icons.description_outlined),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Enter prescription name'
                       : null,
@@ -123,9 +145,11 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                 TextFormField(
                   controller: _instructionsController,
                   maxLines: 3,
-                  decoration: _inputDecoration('Instructions', Icons.notes_outlined),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Enter instructions' : null,
+                  decoration:
+                      _inputDecoration('Instructions', Icons.notes_outlined),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Enter instructions'
+                      : null,
                 ),
               ],
             ),
@@ -156,22 +180,27 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   hasValue: _notificationTime != null,
                   trailing: _notificationTime != null
                       ? IconButton(
-                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                          onPressed: () => setState(() => _notificationTime = null),
+                          icon: const Icon(Icons.close,
+                              size: 18, color: Colors.grey),
+                          onPressed: () =>
+                              setState(() => _notificationTime = null),
                         )
                       : null,
                 ),
                 if (_notificationTime != null) ...[
                   const Divider(height: 1),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     child: Row(
                       children: [
-                        const Icon(Icons.volume_up_outlined, size: 18, color: Color(0xFF3B82F6)),
+                        const Icon(Icons.volume_up_outlined,
+                            size: 18, color: Color(0xFF3B82F6)),
                         const SizedBox(width: 10),
                         Text(
                           'Uses your phone\'s default notification sound',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -197,11 +226,12 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+                            strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Save Prescription', style: TextStyle(fontSize: 16)),
+                    : Text(
+                        _isEditing ? 'Update Prescription' : 'Save Prescription',
+                        style: const TextStyle(fontSize: 16),
+                      ),
               ),
             ),
           ],

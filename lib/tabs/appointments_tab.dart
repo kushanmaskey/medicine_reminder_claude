@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/appointment.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../screens/add_appointment_screen.dart';
 
 class AppointmentsTab extends StatefulWidget {
   const AppointmentsTab({super.key});
@@ -33,6 +34,16 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     _load();
   }
 
+  Future<void> _edit(Appointment a) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddAppointmentScreen(existing: a),
+      ),
+    );
+    if (result == true) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -44,7 +55,8 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey[300]),
+            Icon(Icons.calendar_today_outlined,
+                size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text('No Appointments Yet',
                 style: TextStyle(
@@ -68,6 +80,7 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
           final a = _appointments[i];
           return _AppointmentCard(
             appointment: a,
+            onEdit: () => _edit(a),
             onDelete: () => _delete(a),
           );
         },
@@ -78,9 +91,14 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
 
 class _AppointmentCard extends StatelessWidget {
   final Appointment appointment;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _AppointmentCard({required this.appointment, required this.onDelete});
+  const _AppointmentCard({
+    required this.appointment,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   String _daysLabel(DateTime dt) {
     final now = DateTime.now();
@@ -113,10 +131,11 @@ class _AppointmentCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPast ? Colors.grey.shade200 : urgencyColor.withValues(alpha: 0.3),
+          color: isPast
+              ? Colors.grey.shade200
+              : urgencyColor.withValues(alpha: 0.3),
           width: isPast ? 1 : 1.5,
         ),
         boxShadow: [
@@ -127,100 +146,122 @@ class _AppointmentCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F3FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.calendar_month,
-                      color: isPast ? Colors.grey : const Color(0xFF8B5CF6),
-                      size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    appointment.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: isPast
-                          ? Colors.grey
-                          : const Color(0xFF1E293B),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F3FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.calendar_month,
+                          color: isPast
+                              ? Colors.grey
+                              : const Color(0xFF8B5CF6),
+                          size: 20),
                     ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: urgencyColor.withValues(alpha: isPast ? 0.08 : 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _daysLabel(dt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: urgencyColor,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        appointment.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isPast
+                              ? Colors.grey
+                              : const Color(0xFF1E293B),
+                        ),
+                      ),
                     ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: urgencyColor
+                            .withValues(alpha: isPast ? 0.08 : 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _daysLabel(dt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: urgencyColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined,
+                          color: Color(0xFF8B5CF6), size: 20),
+                      onPressed: onEdit,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Edit',
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.red, size: 20),
+                      onPressed: () => _confirmDelete(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _InfoRow(
+                  icon: Icons.access_time_outlined,
+                  label: 'Date & Time',
+                  value: _formatDateTime(dt),
+                  valueColor: isPast ? null : urgencyColor,
+                ),
+                const SizedBox(height: 8),
+                _InfoRow(
+                  icon: Icons.person_outlined,
+                  label: 'Doctor',
+                  value: appointment.doctorName,
+                ),
+                if (appointment.location.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.location_on_outlined,
+                    label: 'Location',
+                    value: appointment.location,
                   ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: Colors.red, size: 20),
-                  onPressed: () => _confirmDelete(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+                ],
+                if (appointment.notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.notes_outlined,
+                    label: 'Notes',
+                    value: appointment.notes,
+                  ),
+                ],
+                if (!isPast) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.notifications_active_outlined,
+                    label: 'Reminder',
+                    value: 'At appointment time',
+                    valueColor: const Color(0xFF8B5CF6),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.access_time_outlined,
-              label: 'Date & Time',
-              value: _formatDateTime(dt),
-              valueColor: isPast ? null : urgencyColor,
-            ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              icon: Icons.person_outlined,
-              label: 'Doctor',
-              value: appointment.doctorName,
-            ),
-            if (appointment.location.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.location_on_outlined,
-                label: 'Location',
-                value: appointment.location,
-              ),
-            ],
-            if (appointment.notes.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.notes_outlined,
-                label: 'Notes',
-                value: appointment.notes,
-              ),
-            ],
-            if (!isPast) ...[
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.notifications_active_outlined,
-                label: 'Reminder',
-                value: 'At appointment time',
-                valueColor: const Color(0xFF8B5CF6),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -231,11 +272,8 @@ class _AppointmentCard extends StatelessWidget {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    final hour = dt.hour == 0
-        ? 12
-        : dt.hour > 12
-            ? dt.hour - 12
-            : dt.hour;
+    final hour =
+        dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
     final minute = dt.minute.toString().padLeft(2, '0');
     final period = dt.hour < 12 ? 'AM' : 'PM';
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';

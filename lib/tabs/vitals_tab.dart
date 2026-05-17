@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/vital.dart';
 import '../services/storage_service.dart';
+import '../screens/add_vital_screen.dart';
 
 class VitalsTab extends StatefulWidget {
   const VitalsTab({super.key});
@@ -30,6 +31,16 @@ class _VitalsTabState extends State<VitalsTab> {
     _load();
   }
 
+  Future<void> _edit(Vital v) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddVitalScreen(existing: v),
+      ),
+    );
+    if (result == true) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -39,7 +50,8 @@ class _VitalsTabState extends State<VitalsTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.monitor_heart_outlined, size: 64, color: Colors.grey[300]),
+            Icon(Icons.monitor_heart_outlined,
+                size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text('No Vitals Logged Yet',
                 style: TextStyle(
@@ -61,6 +73,7 @@ class _VitalsTabState extends State<VitalsTab> {
         itemCount: _vitals.length,
         itemBuilder: (ctx, i) => _VitalCard(
           vital: _vitals[i],
+          onEdit: () => _edit(_vitals[i]),
           onDelete: () => _delete(_vitals[i]),
         ),
       ),
@@ -70,9 +83,14 @@ class _VitalsTabState extends State<VitalsTab> {
 
 class _VitalCard extends StatelessWidget {
   final Vital vital;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _VitalCard({required this.vital, required this.onDelete});
+  const _VitalCard({
+    required this.vital,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   Color get _riskColor {
     switch (vital.riskLevel) {
@@ -95,7 +113,6 @@ class _VitalCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
@@ -106,116 +123,136 @@ class _VitalCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row
-            Row(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.monitor_heart,
-                      color: Color(0xFF0D9488), size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _formatDateTime(vital.recordedAt),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF1E293B),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.monitor_heart,
+                          color: Color(0xFF0D9488), size: 20),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _formatDateTime(vital.recordedAt),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _riskBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: _riskColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.circle, size: 8, color: _riskColor),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${vital.riskLevel} Risk',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _riskColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined,
+                          color: Color(0xFF0D9488), size: 20),
+                      onPressed: onEdit,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Edit',
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.red, size: 20),
+                      onPressed: () => _confirmDelete(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Delete',
+                    ),
+                  ],
                 ),
-                // Risk badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _riskBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _riskColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _VitalChip(
+                      icon: Icons.favorite_outlined,
+                      label: 'Blood Pressure',
+                      value: vital.bpDisplay,
+                      color: const Color(0xFFEF4444),
+                    ),
+                    const SizedBox(width: 10),
+                    _VitalChip(
+                      icon: Icons.water_drop_outlined,
+                      label: 'Sugar Level',
+                      value: vital.sugarDisplay,
+                      color: const Color(0xFFF97316),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _VitalChip(
+                      icon: Icons.scale_outlined,
+                      label: 'Weight',
+                      value: vital.weightDisplay,
+                      color: const Color(0xFF3B82F6),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(child: SizedBox()),
+                  ],
+                ),
+                if (vital.notes.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.circle, size: 8, color: _riskColor),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${vital.riskLevel} Risk',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _riskColor,
+                      Icon(Icons.notes_outlined,
+                          size: 15, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          vital.notes,
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey[600]),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                  onPressed: () => _confirmDelete(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            // Vitals grid
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.favorite_outlined,
-                  label: 'Blood Pressure',
-                  value: vital.bpDisplay,
-                  color: const Color(0xFFEF4444),
-                ),
-                const SizedBox(width: 10),
-                _VitalChip(
-                  icon: Icons.water_drop_outlined,
-                  label: 'Sugar Level',
-                  value: vital.sugarDisplay,
-                  color: const Color(0xFFF97316),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.scale_outlined,
-                  label: 'Weight',
-                  value: vital.weightDisplay,
-                  color: const Color(0xFF3B82F6),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
-            if (vital.notes.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.notes_outlined, size: 15, color: Colors.grey[400]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      vital.notes,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                  ),
                 ],
-              ),
-            ],
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -226,7 +263,8 @@ class _VitalCard extends StatelessWidget {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    final hour = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
+    final hour =
+        dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
     final minute = dt.minute.toString().padLeft(2, '0');
     final period = dt.hour < 12 ? 'AM' : 'PM';
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
@@ -237,11 +275,13 @@ class _VitalCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Reading'),
-        content: Text('Remove vitals recorded on ${_formatDateTime(vital.recordedAt)}?'),
+        content:
+            Text('Remove vitals recorded on ${_formatDateTime(vital.recordedAt)}?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () { Navigator.pop(ctx); onDelete(); },
             style: ElevatedButton.styleFrom(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/prescription.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../screens/add_prescription_screen.dart';
 
 class PrescriptionsTab extends StatefulWidget {
   const PrescriptionsTab({super.key});
@@ -30,6 +31,16 @@ class _PrescriptionsTabState extends State<PrescriptionsTab> {
     await NotificationService.cancelNotification(
         NotificationService.idFromString(p.id));
     _load();
+  }
+
+  Future<void> _edit(Prescription p) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPrescriptionScreen(existing: p),
+      ),
+    );
+    if (result == true) _load();
   }
 
   @override
@@ -67,6 +78,7 @@ class _PrescriptionsTabState extends State<PrescriptionsTab> {
           final p = _prescriptions[i];
           return _PrescriptionCard(
             prescription: p,
+            onEdit: () => _edit(p),
             onDelete: () => _delete(p),
           );
         },
@@ -77,9 +89,14 @@ class _PrescriptionsTabState extends State<PrescriptionsTab> {
 
 class _PrescriptionCard extends StatelessWidget {
   final Prescription prescription;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _PrescriptionCard({required this.prescription, required this.onDelete});
+  const _PrescriptionCard({
+    required this.prescription,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +107,6 @@ class _PrescriptionCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUrgent ? Colors.orange.shade200 : Colors.grey.shade100,
@@ -103,66 +119,84 @@ class _PrescriptionCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.description,
-                      color: Color(0xFF3B82F6), size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    prescription.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Color(0xFF1E293B),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.description,
+                          color: Color(0xFF3B82F6), size: 20),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        prescription.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined,
+                          color: Color(0xFF3B82F6), size: 20),
+                      onPressed: onEdit,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Edit',
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.red, size: 20),
+                      onPressed: () => _confirmDelete(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _InfoRow(
+                  icon: Icons.notes_outlined,
+                  label: 'Instructions',
+                  value: prescription.instructions,
+                ),
+                const SizedBox(height: 8),
+                _InfoRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Refill Date',
+                  value:
+                      '${refill.day}/${refill.month}/${refill.year}  •  ${_daysLabel(daysLeft)}',
+                  valueColor: isUrgent ? Colors.orange[700] : null,
+                ),
+                if (prescription.notificationTime != null) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.notifications_active_outlined,
+                    label: 'Reminder',
+                    value: prescription.notificationTime!.format(context),
+                    valueColor: const Color(0xFF3B82F6),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: Colors.red, size: 20),
-                  onPressed: () => _confirmDelete(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+                ],
               ],
             ),
-            const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.notes_outlined,
-              label: 'Instructions',
-              value: prescription.instructions,
-            ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              icon: Icons.calendar_today_outlined,
-              label: 'Refill Date',
-              value:
-                  '${refill.day}/${refill.month}/${refill.year}  •  ${_daysLabel(daysLeft)}',
-              valueColor: isUrgent ? Colors.orange[700] : null,
-            ),
-            if (prescription.notificationTime != null) ...[
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.notifications_active_outlined,
-                label: 'Reminder',
-                value: prescription.notificationTime!.format(context),
-                valueColor: const Color(0xFF3B82F6),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

@@ -4,7 +4,8 @@ import '../models/vital.dart';
 import '../services/storage_service.dart';
 
 class AddVitalScreen extends StatefulWidget {
-  const AddVitalScreen({super.key});
+  final Vital? existing;
+  const AddVitalScreen({super.key, this.existing});
 
   @override
   State<AddVitalScreen> createState() => _AddVitalScreenState();
@@ -13,30 +14,38 @@ class AddVitalScreen extends StatefulWidget {
 class _AddVitalScreenState extends State<AddVitalScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // BP
   final _systolicController = TextEditingController();
   final _diastolicController = TextEditingController();
-
-  // Weight
   final _weightController = TextEditingController();
-  String _weightUnit = 'kg';
-
-  // Sugar
   final _sugarController = TextEditingController();
-  String _sugarUnit = 'mg/dL';
-
-  // Risk
-  String _riskLevel = 'Low';
-
-  // Notes
   final _notesController = TextEditingController();
 
-  // Date/time
+  String _weightUnit = 'kg';
+  String _sugarUnit = 'mg/dL';
+  String _riskLevel = 'Low';
   DateTime _recordedAt = DateTime.now();
 
   bool _saving = false;
+  bool get _isEditing => widget.existing != null;
 
   static const _teal = Color(0xFF0D9488);
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final e = widget.existing!;
+      _systolicController.text = e.bpSystolic?.toString() ?? '';
+      _diastolicController.text = e.bpDiastolic?.toString() ?? '';
+      _weightController.text = e.weight?.toString() ?? '';
+      _sugarController.text = e.sugarLevel?.toString() ?? '';
+      _notesController.text = e.notes;
+      _weightUnit = e.weightUnit;
+      _sugarUnit = e.sugarUnit;
+      _riskLevel = e.riskLevel;
+      _recordedAt = e.recordedAt;
+    }
+  }
 
   @override
   void dispose() {
@@ -82,27 +91,27 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final sys = int.tryParse(_systolicController.text.trim());
-    final dia = int.tryParse(_diastolicController.text.trim());
-    final weight = double.tryParse(_weightController.text.trim());
-    final sugar = double.tryParse(_sugarController.text.trim());
-
     setState(() => _saving = true);
 
     final vital = Vital(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.existing?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       recordedAt: _recordedAt,
-      bpSystolic: sys,
-      bpDiastolic: dia,
-      weight: weight,
+      bpSystolic: int.tryParse(_systolicController.text.trim()),
+      bpDiastolic: int.tryParse(_diastolicController.text.trim()),
+      weight: double.tryParse(_weightController.text.trim()),
       weightUnit: _weightUnit,
-      sugarLevel: sugar,
+      sugarLevel: double.tryParse(_sugarController.text.trim()),
       sugarUnit: _sugarUnit,
       riskLevel: _riskLevel,
       notes: _notesController.text.trim(),
     );
 
-    await StorageService.saveVital(vital);
+    if (_isEditing) {
+      await StorageService.updateVital(vital);
+    } else {
+      await StorageService.saveVital(vital);
+    }
 
     if (!mounted) return;
     Navigator.pop(context, true);
@@ -126,9 +135,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Log Vitals',
-          style: TextStyle(
+        title: Text(
+          _isEditing ? 'Edit Vitals' : 'Log Vitals',
+          style: const TextStyle(
               color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
@@ -184,7 +193,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                       child: TextFormField(
                         controller: _systolicController,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
                         decoration: _inputDecoration('Systolic', 'mmHg'),
                         validator: (v) {
                           if (v != null && v.trim().isNotEmpty) {
@@ -209,7 +220,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                       child: TextFormField(
                         controller: _diastolicController,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
                         decoration: _inputDecoration('Diastolic', 'mmHg'),
                         validator: (v) {
                           if (v != null && v.trim().isNotEmpty) {
@@ -286,7 +299,8 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                         controller: _sugarController,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration: _inputDecoration('Blood Glucose', _sugarUnit),
+                        decoration:
+                            _inputDecoration('Blood Glucose', _sugarUnit),
                         validator: (v) {
                           if (v != null && v.trim().isNotEmpty) {
                             final n = double.tryParse(v.trim());
@@ -319,9 +333,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
               iconColor: const Color(0xFF8B5CF6),
               children: [
                 ...[
-                  ('Low', const Color(0xFF22C55E), Icons.sentiment_satisfied_outlined),
-                  ('Medium', const Color(0xFFF97316), Icons.sentiment_neutral_outlined),
-                  ('High', const Color(0xFFEF4444), Icons.sentiment_dissatisfied_outlined),
+                  ('Low', const Color(0xFF22C55E),
+                      Icons.sentiment_satisfied_outlined),
+                  ('Medium', const Color(0xFFF97316),
+                      Icons.sentiment_neutral_outlined),
+                  ('High', const Color(0xFFEF4444),
+                      Icons.sentiment_dissatisfied_outlined),
                 ].map((entry) {
                   final (level, color, icon) = entry;
                   final selected = _riskLevel == level;
@@ -415,8 +432,10 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Save Vitals',
-                        style: TextStyle(fontSize: 16)),
+                    : Text(
+                        _isEditing ? 'Update Vitals' : 'Save Vitals',
+                        style: const TextStyle(fontSize: 16),
+                      ),
               ),
             ),
           ],
@@ -525,7 +544,9 @@ class _UnitToggle extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+              color: isSelected
+                  ? color.withValues(alpha: 0.1)
+                  : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: isSelected ? color : Colors.grey.shade200,
@@ -536,7 +557,8 @@ class _UnitToggle extends StatelessWidget {
               opt,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight:
+                    isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? color : Colors.grey[500],
               ),
             ),

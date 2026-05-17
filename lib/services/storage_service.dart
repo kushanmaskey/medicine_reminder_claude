@@ -24,6 +24,17 @@ class StorageService {
     await prefs.setStringList(_keyPrescriptions, list);
   }
 
+  static Future<void> updatePrescription(Prescription prescription) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyPrescriptions) ?? [];
+    final idx = list.indexWhere((s) =>
+        (jsonDecode(s) as Map<String, dynamic>)['id'] == prescription.id);
+    if (idx != -1) {
+      list[idx] = jsonEncode(prescription.toJson());
+      await prefs.setStringList(_keyPrescriptions, list);
+    }
+  }
+
   static Future<void> deletePrescription(String id) async {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList(_keyPrescriptions) ?? [];
@@ -70,6 +81,17 @@ class StorageService {
     await prefs.setStringList(_keyAppointments, list);
   }
 
+  static Future<void> updateAppointment(Appointment appointment) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyAppointments) ?? [];
+    final idx = list.indexWhere((s) =>
+        (jsonDecode(s) as Map<String, dynamic>)['id'] == appointment.id);
+    if (idx != -1) {
+      list[idx] = jsonEncode(appointment.toJson());
+      await prefs.setStringList(_keyAppointments, list);
+    }
+  }
+
   static Future<void> deleteAppointment(String id) async {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList(_keyAppointments) ?? [];
@@ -91,6 +113,17 @@ class StorageService {
     final list = prefs.getStringList(_keyVitals) ?? [];
     list.add(jsonEncode(vital.toJson()));
     await prefs.setStringList(_keyVitals, list);
+  }
+
+  static Future<void> updateVital(Vital vital) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyVitals) ?? [];
+    final idx = list.indexWhere((s) =>
+        (jsonDecode(s) as Map<String, dynamic>)['id'] == vital.id);
+    if (idx != -1) {
+      list[idx] = jsonEncode(vital.toJson());
+      await prefs.setStringList(_keyVitals, list);
+    }
   }
 
   static Future<void> deleteVital(String id) async {
