@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -7,12 +9,28 @@ import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_vital_screen.dart';
 import 'add_activity_screen.dart';
 
 const _gradientColors = [Color(0xFF0D9488), Color(0xFF0891B2)];
+
+const _defaultAvatarDefs = [
+  (bg: Color(0xFF0D9488), icon: Icons.person),
+  (bg: Color(0xFF3B82F6), icon: Icons.face),
+  (bg: Color(0xFF8B5CF6), icon: Icons.sentiment_satisfied),
+  (bg: Color(0xFFEF4444), icon: Icons.local_hospital),
+  (bg: Color(0xFFEC4899), icon: Icons.favorite),
+  (bg: Color(0xFFF59E0B), icon: Icons.star),
+  (bg: Color(0xFF22C55E), icon: Icons.self_improvement),
+  (bg: Color(0xFF14B8A6), icon: Icons.emoji_nature),
+  (bg: Color(0xFFF97316), icon: Icons.sports_soccer),
+  (bg: Color(0xFF6366F1), icon: Icons.music_note),
+  (bg: Color(0xFF84CC16), icon: Icons.pets),
+  (bg: Color(0xFF0EA5E9), icon: Icons.flight),
+];
 const _gradient = LinearGradient(
   colors: _gradientColors,
   begin: Alignment.topLeft,
@@ -28,6 +46,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  String? _avatarType;
+  int? _avatarIndex;
+  Uint8List? _avatarImageBytes;
   final _summaryKey = GlobalKey<SummaryTabState>();
   final _prescriptionsKey = GlobalKey<PrescriptionsTabState>();
   final _appointmentsKey = GlobalKey<AppointmentsTabState>();
@@ -40,10 +61,25 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _requestNotificationPermission();
+    _loadAvatar();
   }
 
   Future<void> _requestNotificationPermission() async {
     await NotificationService.requestPermission();
+  }
+
+  Future<void> _loadAvatar() async {
+    final data = await AuthService.getAvatarData();
+    if (!mounted) return;
+    Uint8List? imageBytes;
+    if (data['type'] == 'custom' && data['image'] != null) {
+      imageBytes = base64Decode(data['image'] as String);
+    }
+    setState(() {
+      _avatarType = data['type'] as String?;
+      _avatarIndex = data['index'] as int?;
+      _avatarImageBytes = imageBytes;
+    });
   }
 
   Future<void> _openAddScreen() async {
@@ -68,6 +104,40 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_currentIndex == 4) _activitiesKey.currentState?.reload();
       _summaryKey.currentState?.reload();
       setState(() {});
+    }
+  }
+
+  Widget _buildAvatarButton() {
+    if (_avatarType == 'custom' && _avatarImageBytes != null) {
+      return CircleAvatar(
+        radius: 16,
+        backgroundImage: MemoryImage(_avatarImageBytes!),
+      );
+    }
+    if (_avatarType == 'default' && _avatarIndex != null &&
+        _avatarIndex! < _defaultAvatarDefs.length) {
+      final def = _defaultAvatarDefs[_avatarIndex!];
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: def.bg,
+        child: Icon(def.icon, color: Colors.white, size: 16),
+      );
+    }
+    return const CircleAvatar(
+      radius: 16,
+      backgroundColor: Color(0xFFE2E8F0),
+      child: Icon(Icons.person_outline, color: Color(0xFF64748B), size: 18),
+    );
+  }
+
+  Future<void> _openProfile() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+    if (result == true) {
+      _loadAvatar();
+      _summaryKey.currentState?.reload();
     }
   }
 
@@ -141,6 +211,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
+          Tooltip(
+            message: 'Edit profile',
+            child: GestureDetector(
+              onTap: _openProfile,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: _buildAvatarButton(),
+              ),
+            ),
+          ),
           IconButton(
             onPressed: _logout,
             icon: const Icon(Icons.logout, color: Color(0xFF64748B)),

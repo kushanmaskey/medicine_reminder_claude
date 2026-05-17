@@ -6,16 +6,21 @@ class AuthService {
   static const _keyEmail = 'user_email';
   static const _keyPassword = 'user_password';
   static const _keyLoggedIn = 'is_logged_in';
+  static const _keyName = 'user_name';
+  static const _keySex = 'user_sex';
 
   static String _hash(String password) =>
       sha256.convert(utf8.encode(password)).toString();
 
-  static Future<bool> register(String email, String password) async {
+  static Future<bool> register(
+      String email, String password, String name, String sex) async {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getString(_keyEmail);
     if (existing != null) return false;
     await prefs.setString(_keyEmail, email);
     await prefs.setString(_keyPassword, _hash(password));
+    await prefs.setString(_keyName, name);
+    await prefs.setString(_keySex, sex);
     return true;
   }
 
@@ -62,5 +67,47 @@ class AuthService {
   static Future<String?> getEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyEmail);
+  }
+
+  static const _keyAvatarType = 'avatar_type';
+  static const _keyAvatarIndex = 'avatar_index';
+  static const _keyAvatarImage = 'avatar_image';
+
+  static Future<String?> getName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyName);
+  }
+
+  static Future<String?> getSex() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keySex);
+  }
+
+  static Future<void> updateName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyName, name);
+  }
+
+  static Future<void> setDefaultAvatar(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAvatarType, 'default');
+    await prefs.setInt(_keyAvatarIndex, index);
+    await prefs.remove(_keyAvatarImage);
+  }
+
+  static Future<void> setCustomAvatar(String base64Image) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyAvatarType, 'custom');
+    await prefs.setString(_keyAvatarImage, base64Image);
+    await prefs.remove(_keyAvatarIndex);
+  }
+
+  static Future<Map<String, dynamic>> getAvatarData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'type': prefs.getString(_keyAvatarType),
+      'index': prefs.getInt(_keyAvatarIndex),
+      'image': prefs.getString(_keyAvatarImage),
+    };
   }
 }

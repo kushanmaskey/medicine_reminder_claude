@@ -17,16 +17,19 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _loading = false;
   bool _obscurePass = true;
   bool _obscureConfirm = true;
+  String _sex = 'Male';
   String? _error;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -40,6 +43,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await AuthService.register(
       _emailController.text.trim(),
       _passwordController.text,
+      _nameController.text.trim(),
+      _sex,
     );
 
     if (!mounted) return;
@@ -136,6 +141,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
+                        TextFormField(
+                          controller: _nameController,
+                          keyboardType: TextInputType.name,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: _inputDecoration(
+                              'Full Name', Icons.person_outline),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Enter your full name'
+                                  : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSexSelector(),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
@@ -296,6 +315,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Widget _buildSexSelector() {
+    const teal = Color(0xFF0D9488);
+    const pink = Color(0xFFEC4899);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.wc_outlined, size: 16, color: teal),
+            const SizedBox(width: 8),
+            Text(
+              'SEX',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[500],
+                  letterSpacing: 0.6),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _SexChip(
+              label: 'Male',
+              icon: Icons.male,
+              selected: _sex == 'Male',
+              activeColor: teal,
+              onTap: () => setState(() => _sex = 'Male'),
+            ),
+            const SizedBox(width: 12),
+            _SexChip(
+              label: 'Female',
+              icon: Icons.female,
+              selected: _sex == 'Female',
+              activeColor: pink,
+              onTap: () => setState(() => _sex = 'Female'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -322,6 +386,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: Colors.red),
+      ),
+    );
+  }
+}
+
+class _SexChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const _SexChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Tooltip(
+        message: 'Select $label',
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: selected
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected
+                    ? activeColor.withValues(alpha: 0.6)
+                    : Colors.grey.shade200,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon,
+                    size: 20,
+                    color: selected ? activeColor : Colors.grey[400]),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? activeColor : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

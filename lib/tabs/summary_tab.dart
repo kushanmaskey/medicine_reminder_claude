@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/prescription.dart';
 import '../models/appointment.dart';
@@ -10,8 +12,26 @@ import '../screens/add_appointment_screen.dart';
 import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
 
-const _gradient = LinearGradient(
+const _defaultAvatarBgs = [
+  Color(0xFF0D9488), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
+  Color(0xFFEC4899), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
+  Color(0xFFF97316), Color(0xFF6366F1), Color(0xFF84CC16), Color(0xFF0EA5E9),
+];
+
+const _defaultAvatarIcons = [
+  Icons.person, Icons.face, Icons.sentiment_satisfied, Icons.local_hospital,
+  Icons.favorite, Icons.star, Icons.self_improvement, Icons.emoji_nature,
+  Icons.sports_soccer, Icons.music_note, Icons.pets, Icons.flight,
+];
+
+const _tealGradient = LinearGradient(
   colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+const _pinkGradient = LinearGradient(
+  colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -30,6 +50,11 @@ class SummaryTabState extends State<SummaryTab> {
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
   String? _email;
+  String? _name;
+  String? _sex;
+  String? _avatarType;
+  int? _avatarIndex;
+  Uint8List? _avatarImageBytes;
   bool _loading = true;
 
   @override
@@ -47,6 +72,9 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getVitals(),
       AuthService.getEmail(),
       StorageService.getActivities(),
+      AuthService.getName(),
+      AuthService.getSex(),
+      AuthService.getAvatarData(),
     ]);
     if (!mounted) return;
     final appts = (results[1] as List<Appointment>)
@@ -55,12 +83,22 @@ class SummaryTabState extends State<SummaryTab> {
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
     final activities = (results[4] as List<Activity>)
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    final avatarData = results[7] as Map<String, dynamic>;
+    Uint8List? imageBytes;
+    if (avatarData['type'] == 'custom' && avatarData['image'] != null) {
+      imageBytes = base64Decode(avatarData['image'] as String);
+    }
     setState(() {
       _prescriptions = results[0] as List<Prescription>;
       _appointments = appts;
       _vitals = vitals;
       _email = results[3] as String?;
       _activities = activities;
+      _name = results[5] as String?;
+      _sex = results[6] as String?;
+      _avatarType = avatarData['type'] as String?;
+      _avatarIndex = avatarData['index'] as int?;
+      _avatarImageBytes = imageBytes;
       _loading = false;
     });
   }
@@ -134,17 +172,54 @@ class SummaryTabState extends State<SummaryTab> {
     );
   }
 
+  // ── Avatar helpers ─────────────────────────────────────────────────────────
+
+  Widget _buildGreetingAvatar() {
+    if (_avatarType == 'custom' && _avatarImageBytes != null) {
+      return CircleAvatar(
+        radius: 26,
+        backgroundImage: MemoryImage(_avatarImageBytes!),
+      );
+    }
+    if (_avatarType == 'default' &&
+        _avatarIndex != null &&
+        _avatarIndex! < _defaultAvatarBgs.length) {
+      return CircleAvatar(
+        radius: 26,
+        backgroundColor: Colors.white.withValues(alpha: 0.25),
+        child: Icon(_defaultAvatarIcons[_avatarIndex!],
+            color: Colors.white, size: 28),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.monitor_heart, color: Colors.white, size: 28),
+    );
+  }
+
   // ── Greeting card ──────────────────────────────────────────────────────────
 
+  LinearGradient get _greetingGradient =>
+      _sex == 'Female' ? _pinkGradient : _tealGradient;
+
+  Color get _greetingShadowColor =>
+      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFF0D9488);
+
   Widget _buildGreetingCard() {
+    final displayName = (_name != null && _name!.isNotEmpty) ? _name! : _email;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: _gradient,
+        gradient: _greetingGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.35),
+            color: _greetingShadowColor.withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -152,15 +227,7 @@ class SummaryTabState extends State<SummaryTab> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.monitor_heart,
-                color: Colors.white, size: 28),
-          ),
+          _buildGreetingAvatar(),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -172,9 +239,9 @@ class SummaryTabState extends State<SummaryTab> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     )),
-                if (_email != null) ...[
+                if (displayName != null) ...[
                   const SizedBox(height: 2),
-                  Text(_email!,
+                  Text(displayName,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 13,
@@ -257,14 +324,14 @@ class SummaryTabState extends State<SummaryTab> {
       children: [
         ShaderMask(
           shaderCallback: (b) =>
-              _gradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
+              _tealGradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
           blendMode: BlendMode.srcIn,
           child: Icon(icon, size: 18, color: Colors.white),
         ),
         const SizedBox(width: 8),
         ShaderMask(
           shaderCallback: (b) =>
-              _gradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
+              _tealGradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
           blendMode: BlendMode.srcIn,
           child: Text(
             title,
@@ -281,7 +348,7 @@ class SummaryTabState extends State<SummaryTab> {
           child: GestureDetector(
           onTap: onViewAll,
           child: ShaderMask(
-            shaderCallback: (b) => _gradient
+            shaderCallback: (b) => _tealGradient
                 .createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
             blendMode: BlendMode.srcIn,
             child: const Text(
