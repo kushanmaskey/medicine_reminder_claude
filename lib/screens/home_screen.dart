@@ -221,12 +221,15 @@ class _GradientFAB extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: Colors.white.withValues(alpha: 0.25),
-          child: const Center(
-            child: Icon(Icons.add, color: Colors.white, size: 26),
+        child: Tooltip(
+          message: 'Add new item',
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(16),
+            splashColor: Colors.white.withValues(alpha: 0.25),
+            child: const Center(
+              child: Icon(Icons.add, color: Colors.white, size: 26),
+            ),
           ),
         ),
       ),

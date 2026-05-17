@@ -83,16 +83,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Row(
               children: [
                 if (Navigator.canPop(context))
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
+                  Tooltip(
+                    message: 'Go back',
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.arrow_back,
+                            color: Colors.white, size: 20),
                       ),
-                      child: const Icon(Icons.arrow_back,
-                          color: Colors.white, size: 20),
                     ),
                   ),
                 const SizedBox(width: 16),
@@ -151,6 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               _inputDecoration('Password', Icons.lock_outline)
                                   .copyWith(
                             suffixIcon: IconButton(
+                              tooltip: _obscurePass ? 'Show password' : 'Hide password',
                               icon: Icon(
                                 _obscurePass
                                     ? Icons.visibility_off_outlined
@@ -174,6 +178,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   'Confirm Password', Icons.lock_outline)
                               .copyWith(
                             suffixIcon: IconButton(
+                              tooltip: _obscureConfirm ? 'Show password' : 'Hide password',
                               icon: Icon(
                                 _obscureConfirm
                                     ? Icons.visibility_off_outlined

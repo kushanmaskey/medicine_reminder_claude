@@ -191,6 +191,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _prescriptions.length,
           icon: Icons.description_outlined,
           color: const Color(0xFF3B82F6),
+          tooltip: 'View all prescriptions',
           onTap: () => widget.onTabChange(1),
         ),
         const SizedBox(width: 10),
@@ -199,6 +200,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _upcomingAppointments.length,
           icon: Icons.calendar_today_outlined,
           color: const Color(0xFF8B5CF6),
+          tooltip: 'View upcoming appointments',
           onTap: () => widget.onTabChange(2),
         ),
         const SizedBox(width: 10),
@@ -207,6 +209,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _vitals.length,
           icon: Icons.monitor_heart_outlined,
           color: const Color(0xFF0D9488),
+          tooltip: 'View vitals history',
           onTap: () => widget.onTabChange(3),
         ),
       ],
@@ -240,7 +243,9 @@ class SummaryTabState extends State<SummaryTab> {
           ),
         ),
         const Spacer(),
-        GestureDetector(
+        Tooltip(
+          message: 'View all $title',
+          child: GestureDetector(
           onTap: onViewAll,
           child: ShaderMask(
             shaderCallback: (b) => _gradient
@@ -254,6 +259,7 @@ class SummaryTabState extends State<SummaryTab> {
                 fontWeight: FontWeight.w600,
               ),
             ),
+          ),
           ),
         ),
       ],
@@ -269,7 +275,9 @@ class SummaryTabState extends State<SummaryTab> {
             ? const Color(0xFFF97316)
             : const Color(0xFF22C55E);
 
-    return GestureDetector(
+    return Tooltip(
+      message: 'Tap to edit latest vitals',
+      child: GestureDetector(
       onTap: () async {
         final result = await Navigator.push<bool>(
           context,
@@ -382,6 +390,7 @@ class SummaryTabState extends State<SummaryTab> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -406,7 +415,9 @@ class SummaryTabState extends State<SummaryTab> {
             ? 'Tomorrow'
             : 'In $diff days';
 
-    return GestureDetector(
+    return Tooltip(
+      message: 'Tap to edit appointment',
+      child: GestureDetector(
       onTap: () async {
         final result = await Navigator.push<bool>(
           context,
@@ -490,6 +501,7 @@ class SummaryTabState extends State<SummaryTab> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -508,7 +520,9 @@ class SummaryTabState extends State<SummaryTab> {
             ? 'Today'
             : '$daysLeft days left';
 
-    return GestureDetector(
+    return Tooltip(
+      message: 'Tap to edit prescription',
+      child: GestureDetector(
       onTap: () async {
         final result = await Navigator.push<bool>(
           context,
@@ -607,6 +621,7 @@ class SummaryTabState extends State<SummaryTab> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -658,6 +673,7 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String? tooltip;
 
   const _StatCard({
     required this.label,
@@ -665,12 +681,15 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
+      child: Tooltip(
+        message: tooltip ?? 'View $label',
+        child: GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -697,6 +716,7 @@ class _StatCard extends StatelessWidget {
                   textAlign: TextAlign.center),
             ],
           ),
+        ),
         ),
       ),
     );

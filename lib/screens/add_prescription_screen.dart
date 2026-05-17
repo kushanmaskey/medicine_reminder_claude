@@ -180,6 +180,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   hasValue: _notificationTime != null,
                   trailing: _notificationTime != null
                       ? IconButton(
+                          tooltip: 'Clear reminder',
                           icon: const Icon(Icons.close,
                               size: 18, color: Colors.grey),
                           onPressed: () =>
@@ -302,7 +303,9 @@ class _PickerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Tooltip(
+      message: 'Tap to select $label',
+      child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
@@ -333,6 +336,7 @@ class _PickerTile extends StatelessWidget {
             trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
+      ),
       ),
     );
   }

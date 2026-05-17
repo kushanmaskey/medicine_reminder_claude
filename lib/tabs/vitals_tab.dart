@@ -128,7 +128,9 @@ class _VitalCard extends StatelessWidget {
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
+        child: Tooltip(
+          message: 'Tap to edit vitals',
+          child: InkWell(
           onTap: onEdit,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -254,6 +256,7 @@ class _VitalCard extends StatelessWidget {
                 ],
               ],
             ),
+          ),
           ),
         ),
       ),

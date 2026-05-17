@@ -152,7 +152,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
               title: 'Date & Time',
               icon: Icons.access_time_outlined,
               children: [
-                InkWell(
+                Tooltip(
+                  message: 'Tap to change date and time',
+                  child: InkWell(
                   onTap: _pickDateTime,
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
@@ -175,7 +177,8 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                       ],
                     ),
                   ),
-                ),
+                  ),
+                  ),
               ],
             ),
 
@@ -342,7 +345,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                 ].map((entry) {
                   final (level, color, icon) = entry;
                   final selected = _riskLevel == level;
-                  return InkWell(
+                  return Tooltip(
+                    message: 'Select $level risk level',
+                    child: InkWell(
                     onTap: () => setState(() => _riskLevel = level),
                     borderRadius: BorderRadius.circular(12),
                     child: AnimatedContainer(
@@ -390,6 +395,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   );
                 }),
@@ -537,7 +543,9 @@ class _UnitToggle extends StatelessWidget {
     return Column(
       children: options.map((opt) {
         final isSelected = opt == selected;
-        return GestureDetector(
+        return Tooltip(
+          message: 'Use $opt',
+          child: GestureDetector(
           onTap: () => onChanged(opt),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
@@ -562,6 +570,7 @@ class _UnitToggle extends StatelessWidget {
                 color: isSelected ? color : Colors.grey[500],
               ),
             ),
+          ),
           ),
         );
       }).toList(),
