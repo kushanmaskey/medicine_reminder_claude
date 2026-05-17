@@ -4,12 +4,14 @@ import '../models/prescription.dart';
 import '../models/medication.dart';
 import '../models/appointment.dart';
 import '../models/vital.dart';
+import '../models/activity.dart';
 
 class StorageService {
   static const _keyPrescriptions = 'prescriptions';
   static const _keyMedications = 'medications';
   static const _keyAppointments = 'appointments';
   static const _keyVitals = 'vitals';
+  static const _keyActivities = 'activities';
 
   static Future<List<Prescription>> getPrescriptions() async {
     final prefs = await SharedPreferences.getInstance();
@@ -134,5 +136,39 @@ class StorageService {
       return map['id'] == id;
     });
     await prefs.setStringList(_keyVitals, list);
+  }
+
+  static Future<List<Activity>> getActivities() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_keyActivities) ?? [];
+    return raw.map((s) => Activity.fromJson(jsonDecode(s))).toList();
+  }
+
+  static Future<void> saveActivity(Activity activity) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyActivities) ?? [];
+    list.add(jsonEncode(activity.toJson()));
+    await prefs.setStringList(_keyActivities, list);
+  }
+
+  static Future<void> updateActivity(Activity activity) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyActivities) ?? [];
+    final idx = list.indexWhere((s) =>
+        (jsonDecode(s) as Map<String, dynamic>)['id'] == activity.id);
+    if (idx != -1) {
+      list[idx] = jsonEncode(activity.toJson());
+      await prefs.setStringList(_keyActivities, list);
+    }
+  }
+
+  static Future<void> deleteActivity(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyActivities) ?? [];
+    list.removeWhere((s) {
+      final map = jsonDecode(s) as Map<String, dynamic>;
+      return map['id'] == id;
+    });
+    await prefs.setStringList(_keyActivities, list);
   }
 }

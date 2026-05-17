@@ -5,10 +5,12 @@ import '../tabs/summary_tab.dart';
 import '../tabs/prescriptions_tab.dart';
 import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
+import '../tabs/activities_tab.dart';
 import 'login_screen.dart';
 import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_vital_screen.dart';
+import 'add_activity_screen.dart';
 
 const _gradientColors = [Color(0xFF0D9488), Color(0xFF0891B2)];
 const _gradient = LinearGradient(
@@ -30,8 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _prescriptionsKey = GlobalKey<PrescriptionsTabState>();
   final _appointmentsKey = GlobalKey<AppointmentsTabState>();
   final _vitalsKey = GlobalKey<VitalsTabState>();
+  final _activitiesKey = GlobalKey<ActivitiesTabState>();
 
-  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals'];
+  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
 
   @override
   void initState() {
@@ -49,8 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
       screen = const AddPrescriptionScreen();
     } else if (_currentIndex == 2) {
       screen = const AddAppointmentScreen();
-    } else {
+    } else if (_currentIndex == 3) {
       screen = const AddVitalScreen();
+    } else {
+      screen = const AddActivityScreen();
     }
     final result = await Navigator.push<bool>(
       context,
@@ -60,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_currentIndex == 1) _prescriptionsKey.currentState?.reload();
       if (_currentIndex == 2) _appointmentsKey.currentState?.reload();
       if (_currentIndex == 3) _vitalsKey.currentState?.reload();
+      if (_currentIndex == 4) _activitiesKey.currentState?.reload();
       _summaryKey.currentState?.reload();
       setState(() {});
     }
@@ -159,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey),
+          ActivitiesTab(key: _activitiesKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -188,6 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon:
                 Icon(Icons.monitor_heart, color: Color(0xFF0D9488)),
             label: 'Vitals',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.directions_walk_outlined),
+            selectedIcon:
+                Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
+            label: 'Activities',
           ),
         ],
       ),
