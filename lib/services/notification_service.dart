@@ -61,6 +61,7 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           playSound: true,
+          visibility: NotificationVisibility.private,
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,
@@ -97,6 +98,7 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           playSound: true,
+          visibility: NotificationVisibility.private,
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../tabs/summary_tab.dart';
 import '../tabs/prescriptions_tab.dart';
 import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
@@ -25,11 +26,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final _summaryKey = GlobalKey<State>();
   final _prescriptionsKey = GlobalKey<State>();
   final _appointmentsKey = GlobalKey<State>();
   final _vitalsKey = GlobalKey<State>();
 
-  final List<String> _titles = ['Prescriptions', 'Appointments', 'Vitals'];
+  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals'];
 
   @override
   void initState() {
@@ -43,9 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openAddScreen() async {
     final Widget screen;
-    if (_currentIndex == 0) {
+    if (_currentIndex == 1) {
       screen = const AddPrescriptionScreen();
-    } else if (_currentIndex == 1) {
+    } else if (_currentIndex == 2) {
       screen = const AddAppointmentScreen();
     } else {
       screen = const AddVitalScreen();
@@ -144,6 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
+          SummaryTab(
+            key: _summaryKey,
+            onTabChange: (i) => setState(() => _currentIndex = i),
+          ),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey),
@@ -155,6 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard, color: Color(0xFF0D9488)),
+            label: 'Summary',
+          ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
             selectedIcon: Icon(Icons.description, color: Color(0xFF0D9488)),
@@ -174,7 +185,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: _GradientFAB(onPressed: _openAddScreen),
+      floatingActionButton: _currentIndex == 0
+          ? null
+          : _GradientFAB(onPressed: _openAddScreen),
     );
   }
 }
