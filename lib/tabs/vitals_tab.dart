@@ -7,10 +7,10 @@ class VitalsTab extends StatefulWidget {
   const VitalsTab({super.key});
 
   @override
-  State<VitalsTab> createState() => _VitalsTabState();
+  State<VitalsTab> createState() => VitalsTabState();
 }
 
-class _VitalsTabState extends State<VitalsTab> {
+class VitalsTabState extends State<VitalsTab> {
   List<Vital> _vitals = [];
   bool _loading = true;
 
@@ -25,6 +25,8 @@ class _VitalsTabState extends State<VitalsTab> {
     list.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
     if (mounted) setState(() { _vitals = list; _loading = false; });
   }
+
+  void reload() => _load();
 
   Future<void> _delete(Vital v) async {
     await StorageService.deleteVital(v.id);

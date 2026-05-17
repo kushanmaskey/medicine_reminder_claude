@@ -26,10 +26,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final _summaryKey = GlobalKey<State>();
-  final _prescriptionsKey = GlobalKey<State>();
-  final _appointmentsKey = GlobalKey<State>();
-  final _vitalsKey = GlobalKey<State>();
+  final _summaryKey = GlobalKey<SummaryTabState>();
+  final _prescriptionsKey = GlobalKey<PrescriptionsTabState>();
+  final _appointmentsKey = GlobalKey<AppointmentsTabState>();
+  final _vitalsKey = GlobalKey<VitalsTabState>();
 
   final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals'];
 
@@ -56,7 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (_) => screen),
     );
-    if (result == true) setState(() {});
+    if (result == true) {
+      if (_currentIndex == 1) _prescriptionsKey.currentState?.reload();
+      if (_currentIndex == 2) _appointmentsKey.currentState?.reload();
+      if (_currentIndex == 3) _vitalsKey.currentState?.reload();
+      _summaryKey.currentState?.reload();
+      setState(() {});
+    }
   }
 
   Future<void> _logout() async {

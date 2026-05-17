@@ -8,10 +8,10 @@ class AppointmentsTab extends StatefulWidget {
   const AppointmentsTab({super.key});
 
   @override
-  State<AppointmentsTab> createState() => _AppointmentsTabState();
+  State<AppointmentsTab> createState() => AppointmentsTabState();
 }
 
-class _AppointmentsTabState extends State<AppointmentsTab> {
+class AppointmentsTabState extends State<AppointmentsTab> {
   List<Appointment> _appointments = [];
   bool _loading = true;
 
@@ -26,6 +26,8 @@ class _AppointmentsTabState extends State<AppointmentsTab> {
     list.sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
     if (mounted) setState(() { _appointments = list; _loading = false; });
   }
+
+  void reload() => _load();
 
   Future<void> _delete(Appointment a) async {
     await StorageService.deleteAppointment(a.id);

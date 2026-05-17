@@ -8,10 +8,10 @@ class PrescriptionsTab extends StatefulWidget {
   const PrescriptionsTab({super.key});
 
   @override
-  State<PrescriptionsTab> createState() => _PrescriptionsTabState();
+  State<PrescriptionsTab> createState() => PrescriptionsTabState();
 }
 
-class _PrescriptionsTabState extends State<PrescriptionsTab> {
+class PrescriptionsTabState extends State<PrescriptionsTab> {
   List<Prescription> _prescriptions = [];
   bool _loading = true;
 
@@ -25,6 +25,8 @@ class _PrescriptionsTabState extends State<PrescriptionsTab> {
     final list = await StorageService.getPrescriptions();
     if (mounted) setState(() { _prescriptions = list; _loading = false; });
   }
+
+  void reload() => _load();
 
   Future<void> _delete(Prescription p) async {
     await StorageService.deletePrescription(p.id);

@@ -19,10 +19,10 @@ class SummaryTab extends StatefulWidget {
   const SummaryTab({super.key, required this.onTabChange});
 
   @override
-  State<SummaryTab> createState() => _SummaryTabState();
+  State<SummaryTab> createState() => SummaryTabState();
 }
 
-class _SummaryTabState extends State<SummaryTab> {
+class SummaryTabState extends State<SummaryTab> {
   List<Prescription> _prescriptions = [];
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
@@ -34,6 +34,8 @@ class _SummaryTabState extends State<SummaryTab> {
     super.initState();
     _load();
   }
+
+  void reload() => _load();
 
   Future<void> _load() async {
     final results = await Future.wait([
