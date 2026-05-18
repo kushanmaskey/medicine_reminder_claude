@@ -55,20 +55,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _loading = true);
 
-    // Check for duplicate email before writing anything
     final email = _emailController.text.trim();
-    if (await AuthService.emailExists(email)) {
+    final error = await AuthService.register(
+      email,
+      _passwordController.text,
+      _nameController.text.trim(),
+      _sex,
+    );
+
+    if (error != null) {
+      if (mounted) setState(() { _emailError = error; _loading = false; });
+      return;
+    }
+
+    // Supabase signs the user in automatically after signUp
+    // (only if email confirmation is disabled in Supabase settings)
+    final loggedIn = await AuthService.isLoggedIn();
+    if (!loggedIn) {
       if (mounted) {
         setState(() {
-          _emailError = 'An account with this email already exists. Please sign in.';
+          _emailError = 'Account created! Please check your email to confirm, then sign in.';
           _loading = false;
         });
       }
       return;
     }
-
-    await AuthService.register(email, _passwordController.text, _nameController.text.trim(), _sex);
-    await AuthService.login(email, _passwordController.text);
 
     if (!mounted) return;
     setState(() => _loading = false);
