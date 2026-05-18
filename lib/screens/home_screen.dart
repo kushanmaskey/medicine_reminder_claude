@@ -10,6 +10,7 @@ import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'settings_screen.dart';
 import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_vital_screen.dart';
@@ -220,6 +221,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _buildAvatarButton(),
               ),
             ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+            icon: const Icon(Icons.settings_outlined, color: Color(0xFF64748B)),
+            tooltip: 'Settings',
           ),
           IconButton(
             onPressed: _logout,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'ringtone_service.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -29,12 +30,30 @@ class NotificationService {
     return granted ?? true;
   }
 
+  static String _channelId(String? soundUri) {
+    if (soundUri == null) return 'med_reminder_default';
+    return 'med_reminder_${soundUri.hashCode.abs()}';
+  }
+
+  static AndroidNotificationSound? _androidSound(String? soundUri) {
+    if (soundUri == null) return null;
+    return UriAndroidNotificationSound(soundUri);
+  }
+
+  static Future<void> deleteOldChannel(String? oldSoundUri) async {
+    if (oldSoundUri == null) return;
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.deleteNotificationChannel(_channelId(oldSoundUri));
+  }
+
   static Future<void> scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
     required TimeOfDay time,
   }) async {
+    final soundUri = await RingtoneService.getSoundUri();
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
       tz.local,
@@ -55,12 +74,13 @@ class NotificationService {
       scheduled,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'med_reminder_channel',
+          _channelId(soundUri),
           'Medication Reminders',
           channelDescription: 'Daily medication and prescription reminders',
           importance: Importance.high,
           priority: Priority.high,
           playSound: true,
+          sound: _androidSound(soundUri),
           visibility: NotificationVisibility.private,
         ),
         iOS: const DarwinNotificationDetails(

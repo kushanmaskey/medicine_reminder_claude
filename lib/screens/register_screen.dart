@@ -25,17 +25,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmController  = TextEditingController();
 
-  bool _loading         = false;
-  bool _obscurePass     = true;
-  bool _obscureConfirm  = true;
-  String _sex           = 'Male';
-  int _passwordLength   = 0;
+  bool _loading           = false;
+  bool _obscurePass       = true;
+  bool _obscureConfirm    = true;
+  bool _hasExisting       = false;
+  String _sex             = 'Male';
+  int _passwordLength     = 0;
 
   @override
   void initState() {
     super.initState();
     _passwordController.addListener(
         () => setState(() => _passwordLength = _passwordController.text.length));
+    AuthService.hasAccount().then(
+        (has) { if (mounted) setState(() => _hasExisting = has); });
   }
 
   @override
@@ -60,11 +63,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16)),
-          title: const Text('Replace Existing Account?'),
+          title: const Text('Switch to New Account?'),
           content: const Text(
-            'Creating a new account will permanently delete all current health data '
-            '(prescriptions, appointments, vitals, activities). '
-            'This cannot be undone.',
+            'This device has an existing account. Creating a new account will '
+            'clear all stored health data (prescriptions, appointments, vitals, activities). '
+            '\n\nTap "Continue" to proceed with the new account.',
           ),
           actions: [
             TextButton(
@@ -74,9 +77,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: const Color(0xFF0D9488),
                   foregroundColor: Colors.white),
-              child: const Text('Delete & Continue'),
+              child: const Text('Continue'),
             ),
           ],
         ),
@@ -272,7 +275,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : null,
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
+
+                    // Existing-account notice
+                    if (_hasExisting)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xFFFED7AA)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline,
+                                color: Color(0xFFF97316), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'An account already exists on this device. Registering will switch to the new account and clear all existing data.',
+                                style: TextStyle(
+                                    color: Colors.orange.shade800,
+                                    fontSize: 12.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     // Submit button
                     SizedBox(

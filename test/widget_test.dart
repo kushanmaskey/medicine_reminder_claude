@@ -3,7 +3,7 @@ import 'package:medication_reminder/main.dart';
 
 void main() {
   testWidgets('App launches smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const MedReminderApp());
+    await tester.pumpWidget(const MedicalWalletApp());
     await tester.pump();
   });
 }
