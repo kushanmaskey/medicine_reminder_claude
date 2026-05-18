@@ -49,7 +49,6 @@ class SummaryTabState extends State<SummaryTab> {
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
-  String? _email;
   String? _name;
   String? _sex;
   String? _avatarType;
@@ -70,7 +69,6 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getPrescriptions(),
       StorageService.getAppointments(),
       StorageService.getVitals(),
-      AuthService.getEmail(),
       StorageService.getActivities(),
       AuthService.getName(),
       AuthService.getSex(),
@@ -81,9 +79,9 @@ class SummaryTabState extends State<SummaryTab> {
       ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
     final vitals = (results[2] as List<Vital>)
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final activities = (results[4] as List<Activity>)
+    final activities = (results[3] as List<Activity>)
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final avatarData = results[7] as Map<String, dynamic>;
+    final avatarData = results[6] as Map<String, dynamic>;
     Uint8List? imageBytes;
     if (avatarData['type'] == 'custom' && avatarData['image'] != null) {
       imageBytes = base64Decode(avatarData['image'] as String);
@@ -92,10 +90,9 @@ class SummaryTabState extends State<SummaryTab> {
       _prescriptions = results[0] as List<Prescription>;
       _appointments = appts;
       _vitals = vitals;
-      _email = results[3] as String?;
       _activities = activities;
-      _name = results[5] as String?;
-      _sex = results[6] as String?;
+      _name = results[4] as String?;
+      _sex = results[5] as String?;
       _avatarType = avatarData['type'] as String?;
       _avatarIndex = avatarData['index'] as int?;
       _avatarImageBytes = imageBytes;
@@ -210,7 +207,7 @@ class SummaryTabState extends State<SummaryTab> {
       _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFF0D9488);
 
   Widget _buildGreetingCard() {
-    final displayName = (_name != null && _name!.isNotEmpty) ? _name! : _email;
+    final displayName = (_name != null && _name!.isNotEmpty) ? _name! : 'User';
 
     return Container(
       padding: const EdgeInsets.all(20),

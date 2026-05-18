@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../services/storage_service.dart';
 import 'home_screen.dart';
 
 const _gradient = LinearGradient(
@@ -28,17 +27,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading           = false;
   bool _obscurePass       = true;
   bool _obscureConfirm    = true;
-  bool _hasExisting       = false;
   String _sex             = 'Male';
   int _passwordLength     = 0;
+  String? _emailError;
 
   @override
   void initState() {
     super.initState();
     _passwordController.addListener(
         () => setState(() => _passwordLength = _passwordController.text.length));
-    AuthService.hasAccount().then(
-        (has) { if (mounted) setState(() => _hasExisting = has); });
   }
 
   @override
@@ -53,54 +50,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool get _passwordMeetsLength => _passwordLength >= _minPasswordLength;
 
   Future<void> _register() async {
+    setState(() => _emailError = null);
     if (!_formKey.currentState!.validate()) return;
-
-    // If an account already exists, ask before wiping data
-    final existing = await AuthService.hasAccount();
-    if (existing && mounted) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-          title: const Text('Switch to New Account?'),
-          content: const Text(
-            'This device has an existing account. Creating a new account will '
-            'clear all stored health data (prescriptions, appointments, vitals, activities). '
-            '\n\nTap "Continue" to proceed with the new account.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  foregroundColor: Colors.white),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-    }
 
     setState(() => _loading = true);
 
-    // Clear all existing data then register fresh
-    await StorageService.clearAll();
-    await AuthService.register(
-      _emailController.text.trim(),
-      _passwordController.text,
-      _nameController.text.trim(),
-      _sex,
-    );
-    await AuthService.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    // Check for duplicate email before writing anything
+    final email = _emailController.text.trim();
+    if (await AuthService.emailExists(email)) {
+      if (mounted) {
+        setState(() {
+          _emailError = 'An account with this email already exists. Please sign in.';
+          _loading = false;
+        });
+      }
+      return;
+    }
+
+    await AuthService.register(email, _passwordController.text, _nameController.text.trim(), _sex);
+    await AuthService.login(email, _passwordController.text);
 
     if (!mounted) return;
     setState(() => _loading = false);
@@ -277,35 +245,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Existing-account notice
-                    if (_hasExisting)
+                    // Email-already-exists error
+                    if (_emailError != null) ...[
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
+                          color: Colors.red.shade50,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: const Color(0xFFFED7AA)),
+                          border: Border.all(color: Colors.red.shade200),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info_outline,
-                                color: Color(0xFFF97316), size: 18),
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 18),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'An account already exists on this device. Registering will switch to the new account and clear all existing data.',
-                                style: TextStyle(
-                                    color: Colors.orange.shade800,
-                                    fontSize: 12.5),
+                                _emailError!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 13),
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ],
 
                     // Submit button
                     SizedBox(

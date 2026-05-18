@@ -7,6 +7,7 @@ import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.migrateIfNeeded();
   await NotificationService.initialize();
   runApp(const MedicalWalletApp());
 }
