@@ -11,16 +11,25 @@ class AuthService {
   static Future<String?> register(
       String email, String password, String name, String sex) async {
     try {
-      await _db.auth.signUp(
+      final response = await _db.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name, 'sex': sex},
       );
+
+      // Create the profile row directly after signup
+      // (more reliable than a database trigger)
+      if (response.user != null) {
+        await _db.from('profiles').upsert({
+          'id': response.user!.id,
+          'name': name,
+          'sex': sex,
+        });
+      }
       return null;
     } on AuthException catch (e) {
       return e.message;
-    } catch (_) {
-      return 'Registration failed. Please try again.';
+    } catch (e) {
+      return 'Registration failed: $e';
     }
   }
 
