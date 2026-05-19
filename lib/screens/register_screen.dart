@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
 
 const _gradient = LinearGradient(
   colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
@@ -114,7 +115,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Tooltip(
                     message: 'Go back to sign in',
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () => Navigator.canPop(context)
+                            ? Navigator.pop(context)
+                            : Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -335,7 +338,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Sign-in link
                     Center(
                       child: TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.canPop(context)
+                            ? Navigator.pop(context)
+                            : Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
                         child: RichText(
                           text: TextSpan(
                             style: TextStyle(
