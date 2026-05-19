@@ -11,16 +11,19 @@ class AuthService {
   static Future<String?> register(
       String email, String password, String name, String sex) async {
     try {
-      final response = await _db.auth.signUp(
+      // Step 1: create the auth user
+      await _db.auth.signUp(email: email, password: password);
+
+      // Step 2: sign in to get an active session (required for RLS)
+      final signIn = await _db.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      // Create the profile row directly after signup
-      // (more reliable than a database trigger)
-      if (response.user != null) {
+      // Step 3: create profile now that auth.uid() is valid
+      if (signIn.user != null) {
         await _db.from('profiles').upsert({
-          'id': response.user!.id,
+          'id': signIn.user!.id,
           'name': name,
           'sex': sex,
         });
