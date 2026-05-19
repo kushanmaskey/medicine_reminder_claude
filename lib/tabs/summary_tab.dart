@@ -610,17 +610,22 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Prescription row ───────────────────────────────────────────────────────
 
   Widget _buildPrescriptionRow(Prescription p) {
-    final daysLeft =
-        p.refillDate.difference(DateTime.now()).inDays;
-    final isUrgent = daysLeft <= 7;
+    final daysLeft = p.refillDate?.difference(DateTime.now()).inDays;
+    final isRefillUrgent = daysLeft != null && daysLeft <= 7;
+    final isLowSupply = p.hasLowSupply;
+    final isUrgent = isRefillUrgent || isLowSupply;
     final color = isUrgent
-        ? (daysLeft <= 0 ? const Color(0xFFEF4444) : const Color(0xFFF97316))
+        ? ((daysLeft != null && daysLeft <= 0)
+            ? const Color(0xFFEF4444)
+            : const Color(0xFFF97316))
         : const Color(0xFF3B82F6);
-    final badge = daysLeft < 0
-        ? 'Overdue'
-        : daysLeft == 0
-            ? 'Today'
-            : '$daysLeft days left';
+    final badge = daysLeft == null
+        ? (isLowSupply ? 'Low supply' : null)
+        : daysLeft < 0
+            ? 'Overdue'
+            : daysLeft == 0
+                ? 'Today'
+                : '$daysLeft days left';
 
     return Tooltip(
       message: 'Tap to edit prescription',
@@ -702,19 +707,20 @@ class SummaryTabState extends State<SummaryTab> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(badge,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: color)),
                   ),
-                  child: Text(badge,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: color)),
-                ),
                 const SizedBox(height: 4),
                 Icon(Icons.edit_outlined,
                     size: 14, color: Colors.grey[400]),

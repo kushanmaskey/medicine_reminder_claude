@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../services/storage_service.dart';
 import '../tabs/summary_tab.dart';
 import '../tabs/prescriptions_tab.dart';
 import '../tabs/appointments_tab.dart';
@@ -63,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _requestNotificationPermission();
     _loadAvatar();
+    StorageService.decrementPillsIfNeeded();
   }
 
   Future<void> _requestNotificationPermission() async {

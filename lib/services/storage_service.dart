@@ -26,17 +26,20 @@ class StorageService {
       'id': p.id,
       'user_id': _uid,
       'name': p.name,
-      'refill_date': p.refillDate.toIso8601String(),
+      'refill_date': p.refillDate?.toIso8601String(),
       'instructions': p.instructions,
       'notification_hour': p.notificationHour,
       'notification_minute': p.notificationMinute,
+      'total_pills': p.totalPills,
+      'pills_per_day': p.pillsPerDay,
+      'last_decrement_date': p.lastDecrementDate?.toIso8601String(),
     });
   }
 
   static Future<void> updatePrescription(Prescription p) async {
     await _db.from('prescriptions').update({
       'name': p.name,
-      'refill_date': p.refillDate.toIso8601String(),
+      'refill_date': p.refillDate?.toIso8601String(),
       'instructions': p.instructions,
       'notification_hour': p.notificationHour,
       'notification_minute': p.notificationMinute,
@@ -47,6 +50,36 @@ class StorageService {
     await _db.from('prescriptions').delete().eq('id', id).eq('user_id', _uid);
   }
 
+  static Future<void> decrementPillsIfNeeded() async {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+
+    final rows = await _db
+        .from('prescriptions')
+        .select('id, total_pills, pills_per_day, last_decrement_date')
+        .eq('user_id', _uid)
+        .not('pills_per_day', 'is', null)
+        .not('total_pills', 'is', null);
+
+    for (final row in rows) {
+      final lastRaw = row['last_decrement_date'] as String?;
+      final lastDate = lastRaw != null ? DateTime.parse(lastRaw) : null;
+      final lastDay = lastDate != null
+          ? DateTime(lastDate.year, lastDate.month, lastDate.day)
+          : null;
+
+      if (lastDay == null || lastDay.isBefore(todayDate)) {
+        final current = (row['total_pills'] as int?) ?? 0;
+        final perDay = (row['pills_per_day'] as int?) ?? 0;
+        final newTotal = (current - perDay).clamp(0, current);
+        await _db.from('prescriptions').update({
+          'total_pills': newTotal,
+          'last_decrement_date': todayDate.toIso8601String(),
+        }).eq('id', row['id']).eq('user_id', _uid);
+      }
+    }
+  }
+
   static Map<String, dynamic> _prescriptionFromRow(Map<String, dynamic> r) => {
     'id': r['id'],
     'name': r['name'],
@@ -54,6 +87,9 @@ class StorageService {
     'instructions': r['instructions'] ?? '',
     'notificationHour': r['notification_hour'],
     'notificationMinute': r['notification_minute'],
+    'totalPills': r['total_pills'],
+    'pillsPerDay': r['pills_per_day'],
+    'lastDecrementDate': r['last_decrement_date'],
   };
 
   // ── Medications ───────────────────────────────────────────────────────────
@@ -199,7 +235,7 @@ class StorageService {
     'bpSystolic': r['bp_systolic'],
     'bpDiastolic': r['bp_diastolic'],
     'weight': r['weight'],
-    'weightUnit': r['weight_unit'] ?? 'kg',
+    'weightUnit': r['weight_unit'] ?? 'lbs',
     'sugarLevel': r['sugar_level'],
     'sugarUnit': r['sugar_unit'] ?? 'mg/dL',
     'cholesterol': r['cholesterol'],

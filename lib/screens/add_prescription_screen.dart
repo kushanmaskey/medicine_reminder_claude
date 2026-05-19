@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/prescription.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
@@ -15,6 +16,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _instructionsController = TextEditingController();
+  final _totalPillsController = TextEditingController();
+  final _pillsPerDayController = TextEditingController();
   DateTime? _refillDate;
   TimeOfDay? _notificationTime;
   bool _saving = false;
@@ -25,10 +28,13 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   void initState() {
     super.initState();
     if (_isEditing) {
-      _nameController.text = widget.existing!.name;
-      _instructionsController.text = widget.existing!.instructions;
-      _refillDate = widget.existing!.refillDate;
-      _notificationTime = widget.existing!.notificationTime;
+      final p = widget.existing!;
+      _nameController.text = p.name;
+      _instructionsController.text = p.instructions;
+      _refillDate = p.refillDate;
+      _notificationTime = p.notificationTime;
+      if (p.totalPills != null) _totalPillsController.text = p.totalPills.toString();
+      if (p.pillsPerDay != null) _pillsPerDayController.text = p.pillsPerDay.toString();
     }
   }
 
@@ -36,6 +42,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   void dispose() {
     _nameController.dispose();
     _instructionsController.dispose();
+    _totalPillsController.dispose();
+    _pillsPerDayController.dispose();
     super.dispose();
   }
 
@@ -71,22 +79,22 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_refillDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a refill date')),
-      );
-      return;
-    }
     setState(() => _saving = true);
+
+    final totalPills = int.tryParse(_totalPillsController.text.trim());
+    final pillsPerDay = int.tryParse(_pillsPerDayController.text.trim());
 
     final prescription = Prescription(
       id: widget.existing?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
-      refillDate: _refillDate!,
+      refillDate: _refillDate,
       instructions: _instructionsController.text.trim(),
       notificationHour: _notificationTime?.hour,
       notificationMinute: _notificationTime?.minute,
+      totalPills: _isEditing ? widget.existing!.totalPills : totalPills,
+      pillsPerDay: _isEditing ? widget.existing!.pillsPerDay : pillsPerDay,
+      lastDecrementDate: _isEditing ? widget.existing!.lastDecrementDate : null,
     );
 
     if (_isEditing) {
@@ -154,20 +162,135 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // Pill count section
+            _SectionCard(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.medication_outlined,
+                        size: 16, color: Color(0xFF3B82F6)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'PILL SUPPLY',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey[500],
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    if (_isEditing) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Locked after creation',
+                          style: TextStyle(
+                              fontSize: 10, color: Colors.grey[500]),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _totalPillsController,
+                        enabled: !_isEditing,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        decoration:
+                            _inputDecoration('Total Pills', Icons.medication_outlined)
+                                .copyWith(
+                          fillColor: _isEditing
+                              ? Colors.grey.shade100
+                              : const Color(0xFFF8FFFE),
+                          hintText: 'e.g. 90',
+                        ),
+                        validator: (v) {
+                          if (_isEditing) return null;
+                          if (v != null && v.isNotEmpty) {
+                            final n = int.tryParse(v);
+                            if (n == null || n <= 0) return 'Enter a valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _pillsPerDayController,
+                        enabled: !_isEditing,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        decoration:
+                            _inputDecoration('Pills / Day', Icons.today_outlined)
+                                .copyWith(
+                          fillColor: _isEditing
+                              ? Colors.grey.shade100
+                              : const Color(0xFFF8FFFE),
+                          hintText: 'e.g. 2',
+                        ),
+                        validator: (v) {
+                          if (_isEditing) return null;
+                          if (v != null && v.isNotEmpty) {
+                            final n = int.tryParse(v);
+                            if (n == null || n <= 0) return 'Enter a valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (!_isEditing) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Optional — pill count auto-decrements daily after saving',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+
             _SectionCard(
               children: [
                 _PickerTile(
                   icon: Icons.calendar_today_outlined,
-                  label: 'Refill Date',
+                  label: 'Refill Date (optional)',
                   value: _refillDate == null
-                      ? 'Select date'
+                      ? 'Not set'
                       : '${_refillDate!.day}/${_refillDate!.month}/${_refillDate!.year}',
                   onTap: _pickRefillDate,
                   hasValue: _refillDate != null,
+                  trailing: _refillDate != null
+                      ? IconButton(
+                          tooltip: 'Clear refill date',
+                          icon: const Icon(Icons.close,
+                              size: 18, color: Colors.grey),
+                          onPressed: () =>
+                              setState(() => _refillDate = null),
+                        )
+                      : null,
                 ),
               ],
             ),
             const SizedBox(height: 16),
+
             _SectionCard(
               children: [
                 _PickerTile(
@@ -246,7 +369,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       labelText: label,
       prefixIcon: Icon(icon),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -258,6 +381,10 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
       ),
     );
   }

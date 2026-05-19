@@ -22,7 +22,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   final _cholesterolController  = TextEditingController();
   final _notesController        = TextEditingController();
 
-  String _weightUnit       = 'kg';
+  String _weightUnit       = 'lbs';
   String _sugarUnit        = 'mg/dL';
   String _cholesterolUnit  = 'mg/dL';
   String _riskLevel        = 'Low';

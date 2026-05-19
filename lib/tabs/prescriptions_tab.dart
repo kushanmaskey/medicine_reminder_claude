@@ -103,8 +103,10 @@ class _PrescriptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final refill = prescription.refillDate;
-    final daysLeft = refill.difference(DateTime.now()).inDays;
-    final isUrgent = daysLeft <= 7;
+    final daysLeft = refill?.difference(DateTime.now()).inDays;
+    final isRefillUrgent = daysLeft != null && daysLeft <= 7;
+    final isLowSupply = prescription.hasLowSupply;
+    final isUrgent = isRefillUrgent || isLowSupply;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -181,14 +183,50 @@ class _PrescriptionCard extends StatelessWidget {
                   label: 'Instructions',
                   value: prescription.instructions,
                 ),
-                const SizedBox(height: 8),
-                _InfoRow(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Refill Date',
-                  value:
-                      '${refill.day}/${refill.month}/${refill.year}  •  ${_daysLabel(daysLeft)}',
-                  valueColor: isUrgent ? Colors.orange[700] : null,
-                ),
+                if (refill != null) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Refill Date',
+                    value:
+                        '${refill.day}/${refill.month}/${refill.year}  •  ${_daysLabel(daysLeft!)}',
+                    valueColor: isRefillUrgent ? Colors.orange[700] : null,
+                  ),
+                ],
+                if (prescription.totalPills != null &&
+                    prescription.pillsPerDay != null) ...[
+                  const SizedBox(height: 8),
+                  _InfoRow(
+                    icon: Icons.medication_outlined,
+                    label: 'Pill Supply',
+                    value:
+                        '${prescription.totalPills} pills left  •  ${prescription.pillsPerDay}/day',
+                    valueColor: isLowSupply ? Colors.orange[700] : null,
+                  ),
+                ],
+                if (isLowSupply) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            size: 14, color: Colors.orange[700]),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Low supply — consider refilling soon',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.orange[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (prescription.notificationTime != null) ...[
                   const SizedBox(height: 8),
                   _InfoRow(
