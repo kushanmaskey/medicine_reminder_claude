@@ -22,8 +22,17 @@ class VitalsTabState extends State<VitalsTab> {
 
   Future<void> _load() async {
     final list = await StorageService.getVitals();
-    list.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    if (mounted) setState(() { _vitals = list; _loading = false; });
+    final cutoff = DateTime.now().subtract(const Duration(days: 5));
+
+    for (final v in list.where((v) => v.recordedAt.isBefore(cutoff))) {
+      await StorageService.deleteVital(v.id);
+    }
+
+    final recent = list
+        .where((v) => !v.recordedAt.isBefore(cutoff))
+        .toList()
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    if (mounted) setState(() { _vitals = recent; _loading = false; });
   }
 
   void reload() => _load();

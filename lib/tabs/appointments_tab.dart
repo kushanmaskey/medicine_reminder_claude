@@ -25,6 +25,14 @@ class AppointmentsTabState extends State<AppointmentsTab> {
   Future<void> _load() async {
     final list = await StorageService.getAppointments();
     final now = DateTime.now();
+
+    // Auto-delete appointments whose time has passed
+    for (final a in list.where((a) => !a.appointmentDateTime.isAfter(now))) {
+      await StorageService.deleteAppointment(a.id);
+      await NotificationService.cancelNotification(
+          NotificationService.idFromString(a.id));
+    }
+
     final active = list
         .where((a) => a.appointmentDateTime.isAfter(now))
         .toList()
