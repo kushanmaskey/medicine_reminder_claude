@@ -32,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
 
   String? _sex;
+  String? _phone;
   String? _avatarType;
   int? _avatarIndex;
   Uint8List? _avatarImageBytes;
@@ -52,8 +53,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
-    final name = await AuthService.getName();
-    final sex = await AuthService.getSex();
+    final results = await Future.wait([
+      AuthService.getName(),
+      AuthService.getSex(),
+      AuthService.getPhone(),
+    ]);
+    final name = results[0];
+    final sex = results[1];
+    final phone = results[2];
     final avatar = await AuthService.getAvatarData();
     if (!mounted) return;
     _nameController.text = name ?? '';
@@ -63,6 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     setState(() {
       _sex = sex;
+      _phone = phone;
       _avatarType = avatar['type'] as String?;
       _avatarIndex = avatar['index'] as int?;
       _avatarImageBytes = imageBytes;
@@ -225,6 +233,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _buildNameSection(),
                   const SizedBox(height: 16),
+                  _buildPhoneSection(),
+                  const SizedBox(height: 16),
                   _buildSexSection(),
                   const SizedBox(height: 16),
                   _buildAvatarSection(),
@@ -232,6 +242,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSaveButton(),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.phone_outlined, size: 15, color: _accentColor),
+              const SizedBox(width: 8),
+              Text(
+                'MOBILE PHONE',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[500],
+                    letterSpacing: 0.6),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_outline, size: 11, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Cannot be changed',
+                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.phone_outlined,
+                    color: Colors.grey[400], size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  _phone?.isNotEmpty == true ? _phone! : 'Not provided',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: _phone?.isNotEmpty == true
+                        ? Colors.grey[700]
+                        : Colors.grey[400],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

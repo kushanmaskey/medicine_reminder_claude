@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController     = TextEditingController();
   final _emailController    = TextEditingController();
+  final _phoneController    = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController  = TextEditingController();
 
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -62,6 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _passwordController.text,
       _nameController.text.trim(),
       _sex,
+      _phoneController.text.trim(),
     );
 
     if (error != null) {
@@ -190,6 +193,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       validator: (v) => (v == null || !v.contains('@'))
                           ? 'Please enter a valid email address'
                           : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Phone
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputDecoration(
+                          'Mobile Phone Number', Icons.phone_outlined),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter your mobile phone number';
+                        }
+                        final digits = v.replaceAll(RegExp(r'\D'), '');
+                        if (digits.length < 7) {
+                          return 'Please enter a valid phone number';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
 

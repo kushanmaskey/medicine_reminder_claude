@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/appointment.dart';
+import '../models/appointment_alert.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../screens/add_appointment_screen.dart';
@@ -23,8 +24,12 @@ class AppointmentsTabState extends State<AppointmentsTab> {
 
   Future<void> _load() async {
     final list = await StorageService.getAppointments();
-    list.sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
-    if (mounted) setState(() { _appointments = list; _loading = false; });
+    final now = DateTime.now();
+    final active = list
+        .where((a) => a.appointmentDateTime.isAfter(now))
+        .toList()
+      ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
+    if (mounted) setState(() { _appointments = active; _loading = false; });
   }
 
   void reload() => _load();
@@ -39,11 +44,16 @@ class AppointmentsTabState extends State<AppointmentsTab> {
   Future<void> _edit(Appointment a) async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => AddAppointmentScreen(existing: a),
-      ),
+      MaterialPageRoute(builder: (_) => AddAppointmentScreen(existing: a)),
     );
     if (result == true) _load();
+  }
+
+  Future<void> _acknowledge(AppointmentAlert alert) async {
+    await StorageService.acknowledgeAlert(alert.id);
+    await NotificationService.cancelNotification(
+        NotificationService.idFromString(alert.id));
+    _load();
   }
 
   @override
@@ -84,6 +94,7 @@ class AppointmentsTabState extends State<AppointmentsTab> {
             appointment: a,
             onEdit: () => _edit(a),
             onDelete: () => _delete(a),
+            onAcknowledge: _acknowledge,
           );
         },
       ),
@@ -91,15 +102,19 @@ class AppointmentsTabState extends State<AppointmentsTab> {
   }
 }
 
+// ── Appointment Card ────────────────────────────────────────────────────────
+
 class _AppointmentCard extends StatelessWidget {
   final Appointment appointment;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final Future<void> Function(AppointmentAlert) onAcknowledge;
 
   const _AppointmentCard({
     required this.appointment,
     required this.onEdit,
     required this.onDelete,
+    required this.onAcknowledge,
   });
 
   String _daysLabel(DateTime dt) {
@@ -124,11 +139,22 @@ class _AppointmentCard extends StatelessWidget {
     return const Color(0xFF8B5CF6);
   }
 
+  String _formatDateTime(DateTime dt) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hour = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
+  }
+
   @override
   Widget build(BuildContext context) {
     final dt = appointment.appointmentDateTime;
     final isPast = dt.isBefore(DateTime.now());
     final urgencyColor = _urgencyColor(dt);
+    final activeAlerts = appointment.activeAlerts;
+    final acknowledgedAlerts =
+        appointment.alerts.where((a) => a.acknowledged).toList();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -151,9 +177,7 @@ class _AppointmentCard extends StatelessWidget {
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Tooltip(
-          message: 'Tap to edit appointment',
-          child: InkWell(
+        child: InkWell(
           onTap: onEdit,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
@@ -161,6 +185,7 @@ class _AppointmentCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header row
                 Row(
                   children: [
                     Container(
@@ -170,9 +195,7 @@ class _AppointmentCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.calendar_month,
-                          color: isPast
-                              ? Colors.grey
-                              : const Color(0xFF8B5CF6),
+                          color: isPast ? Colors.grey : const Color(0xFF8B5CF6),
                           size: 20),
                     ),
                     const SizedBox(width: 12),
@@ -182,9 +205,7 @@ class _AppointmentCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: isPast
-                              ? Colors.grey
-                              : const Color(0xFF1E293B),
+                          color: isPast ? Colors.grey : const Color(0xFF1E293B),
                         ),
                       ),
                     ),
@@ -226,6 +247,8 @@ class _AppointmentCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                // Info rows
                 _InfoRow(
                   icon: Icons.access_time_outlined,
                   label: 'Date & Time',
@@ -254,34 +277,76 @@ class _AppointmentCard extends StatelessWidget {
                     value: appointment.notes,
                   ),
                 ],
-                if (!isPast) ...[
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    icon: Icons.notifications_active_outlined,
-                    label: 'Reminder',
-                    value: 'At appointment time',
-                    valueColor: const Color(0xFF8B5CF6),
+
+                // Alerts section
+                if (appointment.alerts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.notifications_outlined,
+                          size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Alerts',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      if (activeAlerts.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${activeAlerts.length} active',
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF8B5CF6),
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+
+                  // Active alerts with acknowledge button
+                  ...activeAlerts.map((alert) => _ActiveAlertRow(
+                        alert: alert,
+                        formatDt: _formatDateTime,
+                        onAcknowledge: () => onAcknowledge(alert),
+                      )),
+
+                  // Acknowledged alerts (collapsed summary)
+                  if (acknowledgedAlerts.isNotEmpty) ...[
+                    if (activeAlerts.isNotEmpty) const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline,
+                            size: 14, color: Colors.green),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${acknowledgedAlerts.length} acknowledged',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[400]),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ],
             ),
           ),
-          ),
         ),
       ),
     );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    final hour =
-        dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
   }
 
   void _confirmDelete(BuildContext context) {
@@ -290,13 +355,17 @@ class _AppointmentCard extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Appointment'),
         content: Text('Remove "${appointment.title}"?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () { Navigator.pop(ctx); onDelete(); },
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDelete();
+            },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -306,6 +375,87 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 }
+
+// ── Active alert row ─────────────────────────────────────────────────────────
+
+class _ActiveAlertRow extends StatefulWidget {
+  final AppointmentAlert alert;
+  final String Function(DateTime) formatDt;
+  final Future<void> Function() onAcknowledge;
+
+  const _ActiveAlertRow({
+    required this.alert,
+    required this.formatDt,
+    required this.onAcknowledge,
+  });
+
+  @override
+  State<_ActiveAlertRow> createState() => _ActiveAlertRowState();
+}
+
+class _ActiveAlertRowState extends State<_ActiveAlertRow> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF8B5CF6).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: const Color(0xFF8B5CF6).withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.alarm_outlined,
+              size: 16, color: Color(0xFF8B5CF6)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              widget.formatDt(widget.alert.scheduledAt),
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1E293B)),
+            ),
+          ),
+          _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFF8B5CF6)),
+                )
+              : GestureDetector(
+                  onTap: () async {
+                    setState(() => _loading = true);
+                    await widget.onAcknowledge();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Info row ─────────────────────────────────────────────────────────────────
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;

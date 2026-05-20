@@ -9,7 +9,7 @@ class AuthService {
 
   /// Returns null on success, or an error message string on failure.
   static Future<String?> register(
-      String email, String password, String name, String sex) async {
+      String email, String password, String name, String sex, String phone) async {
     try {
       // Step 1: create the auth user
       await _db.auth.signUp(email: email, password: password);
@@ -26,6 +26,7 @@ class AuthService {
           'id': signIn.user!.id,
           'name': name,
           'sex': sex,
+          'phone': phone,
         });
       }
       return null;
@@ -72,6 +73,21 @@ class AuthService {
           .eq('id', id)
           .maybeSingle();
       return row?['name'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> getPhone() async {
+    final id = currentUserId;
+    if (id == null) return null;
+    try {
+      final row = await _db
+          .from('profiles')
+          .select('phone')
+          .eq('id', id)
+          .maybeSingle();
+      return row?['phone'] as String?;
     } catch (_) {
       return null;
     }

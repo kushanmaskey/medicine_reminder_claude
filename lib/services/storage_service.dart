@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/prescription.dart';
 import '../models/medication.dart';
 import '../models/appointment.dart';
+import '../models/appointment_alert.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
 import 'auth_service.dart';
@@ -136,7 +137,36 @@ class StorageService {
         .select()
         .eq('user_id', _uid)
         .order('appointment_date_time');
-    return rows.map((r) => Appointment.fromJson(_appointmentFromRow(r))).toList();
+
+    final alertRows = await _db
+        .from('appointment_alerts')
+        .select()
+        .eq('user_id', _uid)
+        .order('scheduled_at');
+
+    final alertsByApptId = <String, List<AppointmentAlert>>{};
+    for (final r in alertRows) {
+      final apptId = r['appointment_id'] as String;
+      alertsByApptId.putIfAbsent(apptId, () => []).add(AppointmentAlert(
+        id: r['id'],
+        appointmentId: apptId,
+        scheduledAt: DateTime.parse(r['scheduled_at']),
+        acknowledged: r['acknowledged'] as bool? ?? false,
+      ));
+    }
+
+    return rows.map((r) {
+      final apptId = r['id'] as String;
+      return Appointment(
+        id: apptId,
+        title: r['title'],
+        doctorName: r['doctor_name'] ?? '',
+        location: r['location'] ?? '',
+        notes: r['notes'] ?? '',
+        appointmentDateTime: DateTime.parse(r['appointment_date_time']),
+        alerts: alertsByApptId[apptId] ?? [],
+      );
+    }).toList();
   }
 
   static Future<void> saveAppointment(Appointment a) async {
@@ -162,17 +192,32 @@ class StorageService {
   }
 
   static Future<void> deleteAppointment(String id) async {
+    await _db.from('appointment_alerts').delete().eq('appointment_id', id).eq('user_id', _uid);
     await _db.from('appointments').delete().eq('id', id).eq('user_id', _uid);
   }
 
-  static Map<String, dynamic> _appointmentFromRow(Map<String, dynamic> r) => {
-    'id': r['id'],
-    'title': r['title'],
-    'doctorName': r['doctor_name'] ?? '',
-    'location': r['location'] ?? '',
-    'notes': r['notes'] ?? '',
-    'appointmentDateTime': r['appointment_date_time'],
-  };
+  // ── Appointment Alerts ────────────────────────────────────────────────────
+
+  static Future<void> saveAlert(AppointmentAlert alert) async {
+    await _db.from('appointment_alerts').insert({
+      'id': alert.id,
+      'appointment_id': alert.appointmentId,
+      'user_id': _uid,
+      'scheduled_at': alert.scheduledAt.toIso8601String(),
+      'acknowledged': false,
+    });
+  }
+
+  static Future<void> deleteAlert(String alertId) async {
+    await _db.from('appointment_alerts').delete().eq('id', alertId).eq('user_id', _uid);
+  }
+
+  static Future<void> acknowledgeAlert(String alertId) async {
+    await _db.from('appointment_alerts')
+        .update({'acknowledged': true})
+        .eq('id', alertId)
+        .eq('user_id', _uid);
+  }
 
   // ── Vitals ────────────────────────────────────────────────────────────────
 

@@ -1,3 +1,5 @@
+import 'appointment_alert.dart';
+
 class Appointment {
   final String id;
   final String title;
@@ -5,6 +7,7 @@ class Appointment {
   final String location;
   final String notes;
   final DateTime appointmentDateTime;
+  final List<AppointmentAlert> alerts;
 
   Appointment({
     required this.id,
@@ -13,7 +16,11 @@ class Appointment {
     required this.location,
     required this.notes,
     required this.appointmentDateTime,
+    this.alerts = const [],
   });
+
+  List<AppointmentAlert> get activeAlerts =>
+      alerts.where((a) => !a.acknowledged).toList();
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -22,6 +29,7 @@ class Appointment {
         'location': location,
         'notes': notes,
         'appointmentDateTime': appointmentDateTime.toIso8601String(),
+        'alerts': alerts.map((a) => a.toJson()).toList(),
       };
 
   factory Appointment.fromJson(Map<String, dynamic> json) => Appointment(
@@ -31,5 +39,8 @@ class Appointment {
         location: json['location'],
         notes: json['notes'],
         appointmentDateTime: DateTime.parse(json['appointmentDateTime']),
+        alerts: (json['alerts'] as List<dynamic>? ?? [])
+            .map((a) => AppointmentAlert.fromJson(a as Map<String, dynamic>))
+            .toList(),
       );
 }
