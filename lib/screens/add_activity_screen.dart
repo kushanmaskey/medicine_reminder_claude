@@ -67,7 +67,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
   bool get _isDistanceBased => _type == 'Walk' || _type == 'Run';
 
-  Future<void> _pickDateTime() async {
+  Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
       initialDate: _recordedAt,
@@ -80,21 +80,36 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       ),
     );
     if (date == null || !mounted) return;
+    setState(() {
+      _recordedAt = DateTime(date.year, date.month, date.day);
+    });
+  }
 
-    final time = await showTimePicker(
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_recordedAt),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx)
-            .copyWith(colorScheme: ColorScheme.light(primary: _activeColor)),
-        child: child!,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Activity'),
+        content: Text('Remove this ${widget.existing!.type} activity?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
-    if (time == null) return;
-    setState(() {
-      _recordedAt =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
+    if (confirmed == true) {
+      await StorageService.deleteActivity(widget.existing!.id);
+      if (!mounted) return;
+      Navigator.pop(context, 'deleted');
+    }
   }
 
   Future<void> _save() async {
@@ -122,17 +137,6 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     Navigator.pop(context, true);
   }
 
-  String _formatDateTime(DateTime dt) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    final hour = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,6 +150,15 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
               color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        actions: _isEditing
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete activity',
+                  onPressed: _confirmDelete,
+                ),
+              ]
+            : null,
       ),
       body: Form(
         key: _formKey,
@@ -377,34 +390,35 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   // ── Date & time section ────────────────────────────────────────────────────
 
   Widget _buildDateTimeSection() {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dateLabel =
+        '${months[_recordedAt.month - 1]} ${_recordedAt.day}, ${_recordedAt.year}';
+
     return _SectionCard(
-      title: 'Date & Time',
-      icon: Icons.access_time_outlined,
+      title: 'Date',
+      icon: Icons.calendar_today_outlined,
       iconColor: _activeColor,
-      child: Tooltip(
-        message: 'Tap to change the date and time of this activity',
-        child: InkWell(
-          onTap: _pickDateTime,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    color: _activeColor, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _formatDateTime(_recordedAt),
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF1E293B)),
-                  ),
+      child: InkWell(
+        onTap: _pickDate,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, color: _activeColor, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  dateLabel,
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1E293B)),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.grey),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
           ),
         ),
       ),

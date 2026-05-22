@@ -264,50 +264,38 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Stats row ──────────────────────────────────────────────────────────────
 
   Widget _buildStatsRow() {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            _StatCard(
-              label: 'Prescriptions',
-              count: _prescriptions.length,
-              icon: Icons.description_outlined,
-              color: const Color(0xFF3B82F6),
-              tooltip: 'View all prescriptions',
-              onTap: () => widget.onTabChange(1),
-            ),
-            const SizedBox(width: 10),
-            _StatCard(
-              label: 'Appointments',
-              count: _upcomingAppointments.length,
-              icon: Icons.calendar_today_outlined,
-              color: const Color(0xFF8B5CF6),
-              tooltip: 'View upcoming appointments',
-              onTap: () => widget.onTabChange(2),
-            ),
-          ],
+        _StatCard(
+          label: 'Rx',
+          count: _prescriptions.length,
+          icon: Icons.description_outlined,
+          color: const Color(0xFF3B82F6),
+          onTap: () => widget.onTabChange(1),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            _StatCard(
-              label: 'Vitals Logged',
-              count: _vitals.length,
-              icon: Icons.monitor_heart_outlined,
-              color: const Color(0xFF0D9488),
-              tooltip: 'View vitals history',
-              onTap: () => widget.onTabChange(3),
-            ),
-            const SizedBox(width: 10),
-            _StatCard(
-              label: 'Activities',
-              count: _activities.length,
-              icon: Icons.directions_walk_outlined,
-              color: const Color(0xFF22C55E),
-              tooltip: 'View all activities',
-              onTap: () => widget.onTabChange(4),
-            ),
-          ],
+        const SizedBox(width: 8),
+        _StatCard(
+          label: 'Appts',
+          count: _upcomingAppointments.length,
+          icon: Icons.calendar_today_outlined,
+          color: const Color(0xFF8B5CF6),
+          onTap: () => widget.onTabChange(2),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
+          label: 'Vitals',
+          count: _vitals.length,
+          icon: Icons.monitor_heart_outlined,
+          color: const Color(0xFF0D9488),
+          onTap: () => widget.onTabChange(3),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
+          label: 'Activity',
+          count: _activities.length,
+          icon: Icons.directions_walk_outlined,
+          color: const Color(0xFF22C55E),
+          onTap: () => widget.onTabChange(4),
         ),
       ],
     );
@@ -517,20 +505,17 @@ class SummaryTabState extends State<SummaryTab> {
             ? 'Tomorrow'
             : 'In $diff days';
 
-    return Tooltip(
-      message: 'Tap to edit appointment',
-      child: GestureDetector(
+    return GestureDetector(
       onTap: () async {
-        final result = await Navigator.push<bool>(
+        final result = await Navigator.push<dynamic>(
           context,
-          MaterialPageRoute(
-              builder: (_) => AddAppointmentScreen(existing: a)),
+          MaterialPageRoute(builder: (_) => AddAppointmentScreen(existing: a)),
         );
-        if (result == true) _load();
+        if (result == true || result == 'deleted') _load();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -548,61 +533,47 @@ class SummaryTabState extends State<SummaryTab> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F3FF),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.calendar_month,
-                  color: color, size: 18),
+              child: Icon(Icons.calendar_month, color: color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(a.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Color(0xFF1E293B))),
+                  Text(
+                    'Appt with ${a.doctorName}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF1E293B)),
+                  ),
                   const SizedBox(height: 3),
                   Text(
-                    '${a.doctorName}${a.location.isNotEmpty ? '  •  ${a.location}' : ''}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    overflow: TextOverflow.ellipsis,
+                    _fmtDateTime(dt),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
-                  const SizedBox(height: 2),
-                  Text(_fmtDateTime(dt),
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[400])),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(badge,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: color)),
-                ),
-                const SizedBox(height: 4),
-                Icon(Icons.edit_outlined,
-                    size: 14, color: Colors.grey[400]),
-              ],
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(badge,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: color)),
             ),
           ],
         ),
-      ),
       ),
     );
   }
@@ -610,43 +581,52 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Prescription row ───────────────────────────────────────────────────────
 
   Widget _buildPrescriptionRow(Prescription p) {
-    final daysLeft = p.refillDate?.difference(DateTime.now()).inDays;
+    final refill = p.refillDate;
+    final daysLeft = refill?.difference(DateTime.now()).inDays;
     final isRefillUrgent = daysLeft != null && daysLeft <= 7;
     final isLowSupply = p.hasLowSupply;
     final isUrgent = isRefillUrgent || isLowSupply;
     final color = isUrgent
-        ? ((daysLeft != null && daysLeft <= 0)
+        ? (daysLeft != null && daysLeft <= 0
             ? const Color(0xFFEF4444)
             : const Color(0xFFF97316))
         : const Color(0xFF3B82F6);
-    final badge = daysLeft == null
-        ? (isLowSupply ? 'Low supply' : null)
-        : daysLeft < 0
-            ? 'Overdue'
-            : daysLeft == 0
-                ? 'Today'
-                : '$daysLeft days left';
+    final badge = isLowSupply && (daysLeft == null || daysLeft > 7)
+        ? 'Low supply'
+        : daysLeft == null
+            ? null
+            : daysLeft < 0
+                ? 'Overdue'
+                : daysLeft == 0
+                    ? 'Today'
+                    : '$daysLeft days left';
 
-    return Tooltip(
-      message: 'Tap to edit prescription',
-      child: GestureDetector(
+    String refillLabel() {
+      if (refill == null) return 'No refill date set';
+      const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                      'Jul','Aug','Sep','Oct','Nov','Dec'];
+      final suffix = daysLeft! < 0 ? 'Overdue' : daysLeft == 0 ? 'Today' : 'In $daysLeft days';
+      return '${months[refill.month - 1]} ${refill.day}, ${refill.year}  •  $suffix';
+    }
+
+    return GestureDetector(
       onTap: () async {
-        final result = await Navigator.push<bool>(
+        final result = await Navigator.push<dynamic>(
           context,
           MaterialPageRoute(
               builder: (_) => AddPrescriptionScreen(existing: p)),
         );
-        if (result == true) _load();
+        if (result == true || result == 'deleted') _load();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isUrgent
-                ? color.withValues(alpha: 0.3)
+                ? color.withValues(alpha: 0.25)
                 : Colors.grey.shade100,
             width: isUrgent ? 1.5 : 1,
           ),
@@ -680,55 +660,36 @@ class SummaryTabState extends State<SummaryTab> {
                           fontSize: 14,
                           color: Color(0xFF1E293B))),
                   const SizedBox(height: 3),
-                  Text(p.instructions,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[500]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  if (p.notificationTime != null) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.notifications_active_outlined,
-                            size: 11, color: Colors.grey[400]),
-                        const SizedBox(width: 3),
-                        Text(
-                          'Reminder: ${p.notificationTime!.format(context)}',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[400]),
-                        ),
-                      ],
+                  Text(
+                    refillLabel(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isRefillUrgent
+                          ? const Color(0xFFF97316)
+                          : Colors.grey[500],
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(badge,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: color)),
-                  ),
-                const SizedBox(height: 4),
-                Icon(Icons.edit_outlined,
-                    size: 14, color: Colors.grey[400]),
-              ],
-            ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(badge,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: color)),
+              ),
+            ],
           ],
         ),
-      ),
       ),
     );
   }
@@ -916,36 +877,33 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Tooltip(
-        message: tooltip ?? 'View $label',
-        child: GestureDetector(
+      child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withValues(alpha: 0.15)),
           ),
           child: Column(
             children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 8),
+              Icon(icon, color: color, size: 16),
+              const SizedBox(height: 4),
               Text('$count',
                   style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: color)),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(label,
                   style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9,
                       color: color.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center),
             ],
           ),
-        ),
         ),
       ),
     );

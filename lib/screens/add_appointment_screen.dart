@@ -24,6 +24,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   // Alert state
   final List<DateTime> _newAlerts = [];
   final Set<String> _removedAlertIds = {};
+  final Set<String> _acknowledgedAlertIds = {};
 
   bool _saving = false;
 
@@ -43,10 +44,23 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       _appointmentDate = e.appointmentDateTime;
       _appointmentTime = TimeOfDay.fromDateTime(e.appointmentDateTime);
     }
+    _doctorController.addListener(_syncTitle);
+  }
+
+  void _syncTitle() {
+    final doctor = _doctorController.text.trim();
+    final newTitle = doctor.isEmpty ? '' : 'Appt with $doctor';
+    if (_titleController.text != newTitle) {
+      _titleController.value = _titleController.value.copyWith(
+        text: newTitle,
+        selection: TextSelection.collapsed(offset: newTitle.length),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _doctorController.removeListener(_syncTitle);
     _titleController.dispose();
     _doctorController.dispose();
     _locationController.dispose();
@@ -142,6 +156,43 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
   }
 
+  Future<void> _acknowledgeAlert(AppointmentAlert alert) async {
+    await StorageService.acknowledgeAlert(alert.id);
+    await NotificationService.cancelNotification(
+        NotificationService.idFromString(alert.id));
+    setState(() => _acknowledgedAlertIds.add(alert.id));
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Appointment'),
+        content: Text('Remove "${widget.existing!.title}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await StorageService.deleteAppointment(widget.existing!.id);
+    for (final alert in widget.existing!.alerts) {
+      await NotificationService.cancelNotification(
+          NotificationService.idFromString(alert.id));
+    }
+    if (!mounted) return;
+    Navigator.pop(context, 'deleted');
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_appointmentDate == null) {
@@ -219,6 +270,16 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
             .toList()
         : <AppointmentAlert>[];
 
+    // Treat locally acknowledged as acknowledged
+    AppointmentAlert _withLocalAck(AppointmentAlert a) =>
+        _acknowledgedAlertIds.contains(a.id)
+            ? AppointmentAlert(
+                id: a.id,
+                appointmentId: a.appointmentId,
+                scheduledAt: a.scheduledAt,
+                acknowledged: true)
+            : a;
+
     final hasAnyAlert = existingAlerts.isNotEmpty || _newAlerts.isNotEmpty;
 
     return Scaffold(
@@ -227,11 +288,20 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          _isEditing ? 'Edit Appointment' : 'Add Appointment',
+          _isEditing ? 'Appointment Details' : 'Add Appointment',
           style: const TextStyle(
               color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        actions: _isEditing
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete appointment',
+                  onPressed: _confirmDelete,
+                ),
+              ]
+            : null,
       ),
       body: Form(
         key: _formKey,
@@ -339,15 +409,20 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
               ],
 
               // Existing alerts (edit mode)
-              ...existingAlerts.map((alert) => _AlertRow(
-                    dateTime: alert.scheduledAt,
-                    acknowledged: alert.acknowledged,
-                    formatDt: _formatAlertDt,
-                    onRemove: alert.acknowledged
-                        ? null
-                        : () => setState(
-                            () => _removedAlertIds.add(alert.id)),
-                  )),
+              ...existingAlerts.map((alert) {
+                final a = _withLocalAck(alert);
+                return _AlertRow(
+                  dateTime: a.scheduledAt,
+                  acknowledged: a.acknowledged,
+                  formatDt: _formatAlertDt,
+                  onAcknowledge: a.acknowledged
+                      ? null
+                      : () => _acknowledgeAlert(a),
+                  onRemove: a.acknowledged
+                      ? null
+                      : () => setState(() => _removedAlertIds.add(a.id)),
+                );
+              }),
 
               // Newly added alerts
               ...List.generate(_newAlerts.length, (i) => _AlertRow(
@@ -419,6 +494,7 @@ class _AlertRow extends StatelessWidget {
   final bool acknowledged;
   final bool isNew;
   final String Function(DateTime) formatDt;
+  final VoidCallback? onAcknowledge;
   final VoidCallback? onRemove;
 
   const _AlertRow({
@@ -426,6 +502,7 @@ class _AlertRow extends StatelessWidget {
     required this.acknowledged,
     required this.formatDt,
     this.isNew = false,
+    this.onAcknowledge,
     this.onRemove,
   });
 
@@ -479,7 +556,27 @@ class _AlertRow extends StatelessWidget {
               ],
             ),
           ),
-          if (onRemove != null)
+          if (onAcknowledge != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onAcknowledge,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Done',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+          if (onRemove != null) ...[
+            const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.close, size: 18, color: Colors.grey),
               onPressed: onRemove,
@@ -487,6 +584,7 @@ class _AlertRow extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
+          ],
         ],
       ),
     );

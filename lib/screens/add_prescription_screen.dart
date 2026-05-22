@@ -77,6 +77,35 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     if (picked != null) setState(() => _notificationTime = picked);
   }
 
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Prescription'),
+        content: Text('Remove "${widget.existing!.name}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await StorageService.deletePrescription(widget.existing!.id);
+      await NotificationService.cancelNotification(
+          NotificationService.idFromString(widget.existing!.id));
+      if (!mounted) return;
+      Navigator.pop(context, 'deleted');
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -133,6 +162,15 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
           ),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        actions: _isEditing
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete prescription',
+                  onPressed: _confirmDelete,
+                ),
+              ]
+            : null,
       ),
       body: Form(
         key: _formKey,

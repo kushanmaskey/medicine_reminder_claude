@@ -30,32 +30,29 @@ class ActivitiesTabState extends State<ActivitiesTab> {
 
   Future<void> _load() async {
     final list = await StorageService.getActivities();
-    final cutoff = DateTime.now().subtract(const Duration(days: 5));
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
 
     for (final a in list.where((a) => a.recordedAt.isBefore(cutoff))) {
       await StorageService.deleteActivity(a.id);
     }
 
-    final recent = list
+    final recent = (list
         .where((a) => !a.recordedAt.isBefore(cutoff))
         .toList()
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt)))
+        .take(10)
+        .toList();
     if (mounted) setState(() { _activities = recent; _loading = false; });
   }
 
   void reload() => _load();
 
-  Future<void> _edit(Activity a) async {
-    final result = await Navigator.push<bool>(
+  Future<void> _open(Activity a) async {
+    final result = await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
     );
-    if (result == true) _load();
-  }
-
-  Future<void> _delete(Activity a) async {
-    await StorageService.deleteActivity(a.id);
-    _load();
+    if (result == true || result == 'deleted') _load();
   }
 
   @override
@@ -93,8 +90,7 @@ class ActivitiesTabState extends State<ActivitiesTab> {
         itemCount: _activities.length,
         itemBuilder: (ctx, i) => _ActivityCard(
           activity: _activities[i],
-          onEdit: () => _edit(_activities[i]),
-          onDelete: () => _delete(_activities[i]),
+          onTap: () => _open(_activities[i]),
         ),
       ),
     );
@@ -103,14 +99,15 @@ class ActivitiesTabState extends State<ActivitiesTab> {
 
 class _ActivityCard extends StatelessWidget {
   final Activity activity;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
 
-  const _ActivityCard({
-    required this.activity,
-    required this.onEdit,
-    required this.onDelete,
-  });
+  const _ActivityCard({required this.activity, required this.onTap});
+
+  String _formatDate(DateTime dt) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,168 +115,85 @@ class _ActivityCard extends StatelessWidget {
         (icon: Icons.directions_walk, color: const Color(0xFF22C55E), bg: const Color(0xFFF0FDF4));
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        child: Tooltip(
-          message: 'Tap to edit this activity',
-          child: InkWell(
-            onTap: onEdit,
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cfg.bg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(cfg.icon, color: cfg.color, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(9),
-                        decoration: BoxDecoration(
-                          color: cfg.bg,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(cfg.icon, color: cfg.color, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  activity.type,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                      color: Color(0xFF1E293B)),
-                                ),
-                                if (activity.type == 'Walk') ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: cfg.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      activity.walkType,
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: cfg.color),
-                                    ),
-                                  ),
-                                ],
-                              ],
+                      Row(
+                        children: [
+                          Text(
+                            activity.type,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(0xFF1E293B),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatDateTime(activity.recordedAt),
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[400]),
+                          ),
+                          if (activity.type == 'Walk') ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: cfg.color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                activity.walkType,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: cfg.color),
+                              ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                      _ValueBadge(
-                          value: activity.displayValue, color: cfg.color),
-                      const SizedBox(width: 4),
-                      Tooltip(
-                        message: 'Edit activity',
-                        child: IconButton(
-                          icon: Icon(Icons.edit_outlined,
-                              color: cfg.color, size: 20),
-                          onPressed: onEdit,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Tooltip(
-                        message: 'Delete activity',
-                        child: IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.red, size: 20),
-                          onPressed: () => _confirmDelete(context),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _formatDate(activity.recordedAt),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                     ],
                   ),
-                  if (activity.notes.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.notes_outlined,
-                            size: 14, color: Colors.grey[400]),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            activity.notes,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[500]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                _ValueBadge(value: activity.displayValue, color: cfg.color),
+              ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final months = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec',
-    ];
-    final hour = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
-  }
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Activity'),
-        content: Text('Remove this ${activity.type} activity?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () { Navigator.pop(ctx); onDelete(); },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Delete'),
-          ),
-        ],
       ),
     );
   }
