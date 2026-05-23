@@ -69,8 +69,10 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     super.dispose();
   }
 
+  void _dismissFocus() => FocusScope.of(context).requestFocus(FocusNode());
+
   Future<void> _pickDate() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _appointmentDate ?? DateTime.now().add(const Duration(days: 1)),
@@ -83,11 +85,12 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (picked != null) setState(() => _appointmentDate = picked);
   }
 
   Future<void> _pickTime() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final picked = await showTimePicker(
       context: context,
       initialTime: _appointmentTime ?? const TimeOfDay(hour: 9, minute: 0),
@@ -98,11 +101,12 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (picked != null) setState(() => _appointmentTime = picked);
   }
 
   Future<void> _addAlert() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final defaultDate = _appointmentDate ?? DateTime.now().add(const Duration(days: 1));
     final date = await showDatePicker(
       context: context,
@@ -116,6 +120,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (date == null || !mounted) return;
 
     final time = await showTimePicker(
@@ -128,6 +133,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (time == null || !mounted) return;
 
     final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);

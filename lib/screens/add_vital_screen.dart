@@ -86,8 +86,10 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Date / time pickers ────────────────────────────────────────────────────
 
+  void _dismissFocus() => FocusScope.of(context).requestFocus(FocusNode());
+
   Future<void> _pickDateTime() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final date = await showDatePicker(
       context: context,
       initialDate: _recordedAt,
@@ -99,6 +101,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
@@ -109,6 +112,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (time == null) return;
     setState(() {
       _recordedAt =
@@ -117,7 +121,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   }
 
   Future<DateTime?> _pickPastDate(DateTime? initial, String label) async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     return showDatePicker(
       context: context,
       initialDate: initial ?? DateTime.now(),

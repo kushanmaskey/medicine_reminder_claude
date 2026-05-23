@@ -67,8 +67,10 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     super.dispose();
   }
 
+  void _dismissFocus() => FocusScope.of(context).requestFocus(FocusNode());
+
   Future<void> _pickNotificationTime() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final picked = await showTimePicker(
       context: context,
       initialTime: _notificationTime ?? const TimeOfDay(hour: 8, minute: 0),
@@ -79,11 +81,12 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (picked != null) setState(() => _notificationTime = picked);
   }
 
   Future<void> _addAlert() async {
-    FocusScope.of(context).unfocus();
+    _dismissFocus();
     final date = await showDatePicker(
       context: context,
       initialDate: DateTime.now().add(const Duration(days: 1)),
@@ -96,6 +99,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (date == null || !mounted) return;
 
     final time = await showTimePicker(
@@ -108,6 +112,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         child: child!,
       ),
     );
+    _dismissFocus();
     if (time == null || !mounted) return;
 
     final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -169,67 +174,76 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   }
 
   Future<void> _save() async {
+    _dismissFocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final totalPills = int.tryParse(_totalPillsController.text.trim());
-    final pillsPerDay = int.tryParse(_pillsPerDayController.text.trim());
+    try {
+      final totalPills = int.tryParse(_totalPillsController.text.trim());
+      final pillsPerDay = int.tryParse(_pillsPerDayController.text.trim());
 
-    final prescription = Prescription(
-      id: widget.existing?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text.trim(),
-      refillDate: _calculatedRefillDate,
-      instructions: _instructionsController.text.trim(),
-      notificationHour: _notificationTime?.hour,
-      notificationMinute: _notificationTime?.minute,
-      totalPills: _isEditing ? widget.existing!.totalPills : totalPills,
-      pillsPerDay: _isEditing ? widget.existing!.pillsPerDay : pillsPerDay,
-      lastDecrementDate: _isEditing ? widget.existing!.lastDecrementDate : null,
-    );
+      final prescription = Prescription(
+        id: widget.existing?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _nameController.text.trim(),
+        refillDate: _calculatedRefillDate,
+        instructions: _instructionsController.text.trim(),
+        notificationHour: _notificationTime?.hour,
+        notificationMinute: _notificationTime?.minute,
+        totalPills: _isEditing ? widget.existing!.totalPills : totalPills,
+        pillsPerDay: _isEditing ? widget.existing!.pillsPerDay : pillsPerDay,
+        lastDecrementDate: _isEditing ? widget.existing!.lastDecrementDate : null,
+      );
 
-    if (_isEditing) {
-      await StorageService.updatePrescription(prescription);
-      await NotificationService.cancelNotification(
-          NotificationService.idFromString(prescription.id));
-      for (final id in _removedAlertIds) {
-        await StorageService.deletePrescriptionAlert(id);
+      if (_isEditing) {
+        await StorageService.updatePrescription(prescription);
         await NotificationService.cancelNotification(
-            NotificationService.idFromString(id));
+            NotificationService.idFromString(prescription.id));
+        for (final id in _removedAlertIds) {
+          await StorageService.deletePrescriptionAlert(id);
+          await NotificationService.cancelNotification(
+              NotificationService.idFromString(id));
+        }
+      } else {
+        await StorageService.savePrescription(prescription);
       }
-    } else {
-      await StorageService.savePrescription(prescription);
-    }
 
-    if (_notificationTime != null) {
-      await NotificationService.scheduleDailyNotification(
-        id: NotificationService.idFromString(prescription.id),
-        title: 'Prescription Reminder',
-        body: '${prescription.name} — ${prescription.instructions}',
-        time: _notificationTime!,
+      if (_notificationTime != null) {
+        await NotificationService.scheduleDailyNotification(
+          id: NotificationService.idFromString(prescription.id),
+          title: 'Prescription Reminder',
+          body: '${prescription.name} — ${prescription.instructions}',
+          time: _notificationTime!,
+        );
+      }
+
+      for (final alertDt in _newAlerts) {
+        final alertId = '${prescription.id}_${alertDt.millisecondsSinceEpoch}';
+        final alert = PrescriptionAlert(
+          id: alertId,
+          prescriptionId: prescription.id,
+          scheduledAt: alertDt,
+        );
+        await StorageService.savePrescriptionAlert(alert);
+        await NotificationService.scheduleOnceNotification(
+          id: NotificationService.idFromString(alertId),
+          title: 'Refill Reminder: ${prescription.name}',
+          body: prescription.instructions.isNotEmpty
+              ? prescription.instructions
+              : 'Time to refill your prescription',
+          scheduledDateTime: alertDt,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save: ${e.toString()}')),
       );
     }
-
-    for (final alertDt in _newAlerts) {
-      final alertId = '${prescription.id}_${alertDt.millisecondsSinceEpoch}';
-      final alert = PrescriptionAlert(
-        id: alertId,
-        prescriptionId: prescription.id,
-        scheduledAt: alertDt,
-      );
-      await StorageService.savePrescriptionAlert(alert);
-      await NotificationService.scheduleOnceNotification(
-        id: NotificationService.idFromString(alertId),
-        title: 'Refill Reminder: ${prescription.name}',
-        body: prescription.instructions.isNotEmpty
-            ? prescription.instructions
-            : 'Time to refill your prescription',
-        scheduledDateTime: alertDt,
-      );
-    }
-
-    if (!mounted) return;
-    Navigator.pop(context, true);
   }
 
   @override
@@ -274,7 +288,10 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
               ]
             : null,
       ),
-      body: Form(
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _dismissFocus,
+        child: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -295,11 +312,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   controller: _instructionsController,
                   maxLines: 3,
                   maxLength: 500,
-                  decoration:
-                      _inputDecoration('Instructions', Icons.notes_outlined),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter instructions'
-                      : null,
+                  decoration: _inputDecoration(
+                      'Instructions (optional)', Icons.notes_outlined),
                 ),
               ],
             ),
@@ -588,6 +602,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
