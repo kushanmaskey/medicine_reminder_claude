@@ -21,23 +21,26 @@ class StorageService {
         .eq('user_id', _uid)
         .order('created_at');
 
-    final alertRows = await _db
-        .from('prescription_alerts')
-        .select()
-        .eq('user_id', _uid)
-        .order('scheduled_at');
-
     final alertsByPrescriptionId = <String, List<PrescriptionAlert>>{};
-    for (final r in alertRows) {
-      final prescriptionId = r['prescription_id'] as String;
-      alertsByPrescriptionId.putIfAbsent(prescriptionId, () => []).add(
-        PrescriptionAlert(
-          id: r['id'],
-          prescriptionId: prescriptionId,
-          scheduledAt: _tryParseDate(r['scheduled_at']) ?? DateTime.now(),
-          acknowledged: r['acknowledged'] as bool? ?? false,
-        ),
-      );
+    try {
+      final alertRows = await _db
+          .from('prescription_alerts')
+          .select()
+          .eq('user_id', _uid)
+          .order('scheduled_at');
+      for (final r in alertRows) {
+        final prescriptionId = r['prescription_id'] as String;
+        alertsByPrescriptionId.putIfAbsent(prescriptionId, () => []).add(
+          PrescriptionAlert(
+            id: r['id'],
+            prescriptionId: prescriptionId,
+            scheduledAt: _tryParseDate(r['scheduled_at']) ?? DateTime.now(),
+            acknowledged: r['acknowledged'] as bool? ?? false,
+          ),
+        );
+      }
+    } catch (_) {
+      // prescription_alerts table not yet created — alerts will be empty
     }
 
     return rows.map((r) {
@@ -91,24 +94,30 @@ class StorageService {
   // ── Prescription Alerts ───────────────────────────────────────────────────
 
   static Future<void> savePrescriptionAlert(PrescriptionAlert alert) async {
-    await _db.from('prescription_alerts').insert({
-      'id': alert.id,
-      'prescription_id': alert.prescriptionId,
-      'user_id': _uid,
-      'scheduled_at': alert.scheduledAt.toIso8601String(),
-      'acknowledged': false,
-    });
+    try {
+      await _db.from('prescription_alerts').insert({
+        'id': alert.id,
+        'prescription_id': alert.prescriptionId,
+        'user_id': _uid,
+        'scheduled_at': alert.scheduledAt.toIso8601String(),
+        'acknowledged': false,
+      });
+    } catch (_) {}
   }
 
   static Future<void> deletePrescriptionAlert(String alertId) async {
-    await _db.from('prescription_alerts').delete().eq('id', alertId).eq('user_id', _uid);
+    try {
+      await _db.from('prescription_alerts').delete().eq('id', alertId).eq('user_id', _uid);
+    } catch (_) {}
   }
 
   static Future<void> acknowledgePrescriptionAlert(String alertId) async {
-    await _db.from('prescription_alerts')
-        .update({'acknowledged': true})
-        .eq('id', alertId)
-        .eq('user_id', _uid);
+    try {
+      await _db.from('prescription_alerts')
+          .update({'acknowledged': true})
+          .eq('id', alertId)
+          .eq('user_id', _uid);
+    } catch (_) {}
   }
 
   static Future<void> decrementPillsIfNeeded() async {
