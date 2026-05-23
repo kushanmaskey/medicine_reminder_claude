@@ -52,6 +52,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool get _passwordMeetsLength => _passwordLength >= _minPasswordLength;
 
+  String _sanitizeAuthError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('already registered') || lower.contains('already exists')) {
+      return 'An account with this email already exists.';
+    }
+    if (lower.contains('rate limit') || lower.contains('too many')) {
+      return 'Too many attempts. Please try again later.';
+    }
+    if (lower.contains('invalid email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (lower.contains('password') && (lower.contains('6') || lower.contains('weak'))) {
+      return 'Password does not meet security requirements.';
+    }
+    return 'Registration failed. Please try again.';
+  }
+
   Future<void> _register() async {
     setState(() => _emailError = null);
     if (!_formKey.currentState!.validate()) return;
@@ -68,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (error != null) {
-      if (mounted) setState(() { _emailError = error; _loading = false; });
+      if (mounted) setState(() { _emailError = _sanitizeAuthError(error); _loading = false; });
       return;
     }
 

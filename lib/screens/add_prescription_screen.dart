@@ -181,6 +181,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
               children: [
                 TextFormField(
                   controller: _nameController,
+                  maxLength: 100,
                   decoration: _inputDecoration(
                       'Prescription Name', Icons.description_outlined),
                   validator: (v) => (v == null || v.trim().isEmpty)
@@ -191,6 +192,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                 TextFormField(
                   controller: _instructionsController,
                   maxLines: 3,
+                  maxLength: 500,
                   decoration:
                       _inputDecoration('Instructions', Icons.notes_outlined),
                   validator: (v) => (v == null || v.trim().isEmpty)

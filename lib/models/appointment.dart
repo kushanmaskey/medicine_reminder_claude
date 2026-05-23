@@ -32,13 +32,18 @@ class Appointment {
         'alerts': alerts.map((a) => a.toJson()).toList(),
       };
 
+  static DateTime _tryParse(dynamic value, DateTime fallback) {
+    if (value == null) return fallback;
+    try { return DateTime.parse(value as String); } catch (_) { return fallback; }
+  }
+
   factory Appointment.fromJson(Map<String, dynamic> json) => Appointment(
         id: json['id'],
         title: json['title'],
         doctorName: json['doctorName'],
         location: json['location'],
         notes: json['notes'],
-        appointmentDateTime: DateTime.parse(json['appointmentDateTime']),
+        appointmentDateTime: _tryParse(json['appointmentDateTime'], DateTime.now()),
         alerts: (json['alerts'] as List<dynamic>? ?? [])
             .map((a) => AppointmentAlert.fromJson(a as Map<String, dynamic>))
             .toList(),

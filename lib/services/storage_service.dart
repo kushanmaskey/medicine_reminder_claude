@@ -64,7 +64,7 @@ class StorageService {
 
     for (final row in rows) {
       final lastRaw = row['last_decrement_date'] as String?;
-      final lastDate = lastRaw != null ? DateTime.parse(lastRaw) : null;
+      final lastDate = lastRaw != null ? _tryParseDate(lastRaw) : null;
       final lastDay = lastDate != null
           ? DateTime(lastDate.year, lastDate.month, lastDate.day)
           : null;
@@ -79,6 +79,11 @@ class StorageService {
         }).eq('id', row['id']).eq('user_id', _uid);
       }
     }
+  }
+
+  static DateTime? _tryParseDate(String? s) {
+    if (s == null) return null;
+    try { return DateTime.parse(s); } catch (_) { return null; }
   }
 
   static Map<String, dynamic> _prescriptionFromRow(Map<String, dynamic> r) => {

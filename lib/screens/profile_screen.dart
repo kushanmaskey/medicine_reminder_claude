@@ -201,6 +201,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_sex != null) await AuthService.updateSex(_sex!);
 
     if (_avatarType == 'custom' && _avatarImageBytes != null) {
+      if (_avatarImageBytes!.length > 500000) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Image is too large. Please choose an image under 500 KB.'),
+          ));
+          setState(() => _saving = false);
+        }
+        return;
+      }
       await AuthService.setCustomAvatar(base64Encode(_avatarImageBytes!));
     } else if (_avatarType == 'default' && _avatarIndex != null) {
       await AuthService.setDefaultAvatar(_avatarIndex!);

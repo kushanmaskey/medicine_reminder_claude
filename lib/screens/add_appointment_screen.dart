@@ -330,6 +330,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _doctorController,
+                maxLength: 100,
                 decoration:
                     _inputDecoration("Doctor's Name", Icons.person_outlined),
                 validator: (v) => (v == null || v.trim().isEmpty)
@@ -339,6 +340,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _locationController,
+                maxLength: 200,
                 decoration: _inputDecoration(
                     'Location / Clinic (optional)', Icons.location_on_outlined),
               ),
@@ -346,6 +348,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
+                maxLength: 500,
                 decoration:
                     _inputDecoration('Notes (optional)', Icons.notes_outlined),
               ),

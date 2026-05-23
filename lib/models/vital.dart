@@ -75,9 +75,14 @@ class Vital {
         'notes': notes,
       };
 
+  static DateTime? _tryParse(dynamic value) {
+    if (value == null) return null;
+    try { return DateTime.parse(value as String); } catch (_) { return null; }
+  }
+
   factory Vital.fromJson(Map<String, dynamic> json) => Vital(
         id: json['id'],
-        recordedAt: DateTime.parse(json['recordedAt']),
+        recordedAt: _tryParse(json['recordedAt']) ?? DateTime.now(),
         bpSystolic: json['bpSystolic'],
         bpDiastolic: json['bpDiastolic'],
         weight: (json['weight'] as num?)?.toDouble(),
@@ -86,15 +91,9 @@ class Vital {
         sugarUnit: json['sugarUnit'] ?? 'mg/dL',
         cholesterol: (json['cholesterol'] as num?)?.toDouble(),
         cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
-        colonoscopyDate: json['colonoscopyDate'] != null
-            ? DateTime.parse(json['colonoscopyDate'])
-            : null,
-        periodDate: json['periodDate'] != null
-            ? DateTime.parse(json['periodDate'])
-            : null,
-        mammogramDate: json['mammogramDate'] != null
-            ? DateTime.parse(json['mammogramDate'])
-            : null,
+        colonoscopyDate: _tryParse(json['colonoscopyDate']),
+        periodDate: _tryParse(json['periodDate']),
+        mammogramDate: _tryParse(json['mammogramDate']),
         riskLevel: json['riskLevel'] ?? 'Low',
         notes: json['notes'] ?? '',
       );

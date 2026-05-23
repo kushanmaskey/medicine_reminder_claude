@@ -45,19 +45,20 @@ class Prescription {
         'lastDecrementDate': lastDecrementDate?.toIso8601String(),
       };
 
+  static DateTime? _tryParse(dynamic value) {
+    if (value == null) return null;
+    try { return DateTime.parse(value as String); } catch (_) { return null; }
+  }
+
   factory Prescription.fromJson(Map<String, dynamic> json) => Prescription(
         id: json['id'],
         name: json['name'],
-        refillDate: json['refillDate'] != null
-            ? DateTime.parse(json['refillDate'])
-            : null,
+        refillDate: _tryParse(json['refillDate']),
         instructions: json['instructions'],
         notificationHour: json['notificationHour'],
         notificationMinute: json['notificationMinute'],
         totalPills: json['totalPills'],
         pillsPerDay: json['pillsPerDay'],
-        lastDecrementDate: json['lastDecrementDate'] != null
-            ? DateTime.parse(json['lastDecrementDate'])
-            : null,
+        lastDecrementDate: _tryParse(json['lastDecrementDate']),
       );
 }

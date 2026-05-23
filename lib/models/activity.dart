@@ -36,13 +36,18 @@ class Activity {
         'notes': notes,
       };
 
+  static DateTime _tryParse(dynamic value) {
+    if (value == null) return DateTime.now();
+    try { return DateTime.parse(value as String); } catch (_) { return DateTime.now(); }
+  }
+
   factory Activity.fromJson(Map<String, dynamic> json) => Activity(
         id: json['id'] as String,
         type: json['type'] as String,
         walkType: (json['walkType'] as String?) ?? 'Regular',
         distance: (json['distance'] as num?)?.toDouble(),
         duration: (json['duration'] as num?)?.toDouble(),
-        recordedAt: DateTime.parse(json['recordedAt'] as String),
+        recordedAt: _tryParse(json['recordedAt']),
         notes: (json['notes'] as String?) ?? '',
       );
 }

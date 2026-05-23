@@ -18,11 +18,16 @@ class AppointmentAlert {
         'acknowledged': acknowledged,
       };
 
+  static DateTime _tryParse(dynamic value) {
+    if (value == null) return DateTime.now();
+    try { return DateTime.parse(value as String); } catch (_) { return DateTime.now(); }
+  }
+
   factory AppointmentAlert.fromJson(Map<String, dynamic> json) =>
       AppointmentAlert(
         id: json['id'],
         appointmentId: json['appointmentId'],
-        scheduledAt: DateTime.parse(json['scheduledAt']),
+        scheduledAt: _tryParse(json['scheduledAt']),
         acknowledged: json['acknowledged'] as bool? ?? false,
       );
 }
