@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'prescription_alert.dart';
 
 class Prescription {
   final String id;
@@ -10,6 +11,7 @@ class Prescription {
   final int? totalPills;
   final int? pillsPerDay;
   final DateTime? lastDecrementDate;
+  final List<PrescriptionAlert> alerts;
 
   Prescription({
     required this.id,
@@ -21,6 +23,7 @@ class Prescription {
     this.totalPills,
     this.pillsPerDay,
     this.lastDecrementDate,
+    this.alerts = const [],
   });
 
   TimeOfDay? get notificationTime {

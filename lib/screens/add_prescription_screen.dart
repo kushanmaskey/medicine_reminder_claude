@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/prescription.dart';
+import '../models/prescription_alert.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 
@@ -19,7 +20,12 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   final _totalPillsController = TextEditingController();
   final _pillsPerDayController = TextEditingController();
   TimeOfDay? _notificationTime;
+  final List<DateTime> _newAlerts = [];
+  final Set<String> _removedAlertIds = {};
+  final Set<String> _acknowledgedAlertIds = {};
   bool _saving = false;
+
+  static const _blue = Color(0xFF3B82F6);
 
   bool get _isEditing => widget.existing != null;
 
@@ -76,6 +82,59 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     if (picked != null) setState(() => _notificationTime = picked);
   }
 
+  Future<void> _addAlert() async {
+    FocusScope.of(context).unfocus();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: _blue),
+        ),
+        child: child!,
+      ),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: _blue),
+        ),
+        child: child!,
+      ),
+    );
+    if (time == null || !mounted) return;
+
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    if (dt.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Alert time must be in the future')),
+      );
+      return;
+    }
+    setState(() => _newAlerts.add(dt));
+  }
+
+  Future<void> _acknowledgeAlert(PrescriptionAlert alert) async {
+    await StorageService.acknowledgePrescriptionAlert(alert.id);
+    await NotificationService.cancelNotification(
+        NotificationService.idFromString(alert.id));
+    setState(() => _acknowledgedAlertIds.add(alert.id));
+  }
+
+  String _formatAlertDt(DateTime dt) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hour = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
+    final minute = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -100,6 +159,10 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       await StorageService.deletePrescription(widget.existing!.id);
       await NotificationService.cancelNotification(
           NotificationService.idFromString(widget.existing!.id));
+      for (final alert in widget.existing!.alerts) {
+        await NotificationService.cancelNotification(
+            NotificationService.idFromString(alert.id));
+      }
       if (!mounted) return;
       Navigator.pop(context, 'deleted');
     }
@@ -129,6 +192,11 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       await StorageService.updatePrescription(prescription);
       await NotificationService.cancelNotification(
           NotificationService.idFromString(prescription.id));
+      for (final id in _removedAlertIds) {
+        await StorageService.deletePrescriptionAlert(id);
+        await NotificationService.cancelNotification(
+            NotificationService.idFromString(id));
+      }
     } else {
       await StorageService.savePrescription(prescription);
     }
@@ -142,12 +210,47 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       );
     }
 
+    for (final alertDt in _newAlerts) {
+      final alertId = '${prescription.id}_${alertDt.millisecondsSinceEpoch}';
+      final alert = PrescriptionAlert(
+        id: alertId,
+        prescriptionId: prescription.id,
+        scheduledAt: alertDt,
+      );
+      await StorageService.savePrescriptionAlert(alert);
+      await NotificationService.scheduleOnceNotification(
+        id: NotificationService.idFromString(alertId),
+        title: 'Refill Reminder: ${prescription.name}',
+        body: prescription.instructions.isNotEmpty
+            ? prescription.instructions
+            : 'Time to refill your prescription',
+        scheduledDateTime: alertDt,
+      );
+    }
+
     if (!mounted) return;
     Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final existingAlerts = _isEditing
+        ? widget.existing!.alerts
+            .where((a) => !_removedAlertIds.contains(a.id))
+            .toList()
+        : <PrescriptionAlert>[];
+
+    PrescriptionAlert _withLocalAck(PrescriptionAlert a) =>
+        _acknowledgedAlertIds.contains(a.id)
+            ? PrescriptionAlert(
+                id: a.id,
+                prescriptionId: a.prescriptionId,
+                scheduledAt: a.scheduledAt,
+                acknowledged: true)
+            : a;
+
+    final hasAnyAlert = existingAlerts.isNotEmpty || _newAlerts.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -385,6 +488,78 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                 ],
               ],
             ),
+            const SizedBox(height: 16),
+
+            // Refill alerts card
+            _SectionCard(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.notifications_outlined,
+                        size: 16, color: _blue),
+                    const SizedBox(width: 8),
+                    Text(
+                      'REFILL ALERTS',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey[500],
+                          letterSpacing: 0.6),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _addAlert,
+                      icon: const Icon(Icons.add, size: 16, color: _blue),
+                      label: const Text('Add Alert',
+                          style: TextStyle(color: _blue, fontSize: 13)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (!hasAnyAlert) ...[
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      'No alerts set — tap Add Alert to get refill reminders',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+
+                ...existingAlerts.map((alert) {
+                  final a = _withLocalAck(alert);
+                  return _AlertRow(
+                    dateTime: a.scheduledAt,
+                    acknowledged: a.acknowledged,
+                    formatDt: _formatAlertDt,
+                    onAcknowledge: a.acknowledged
+                        ? null
+                        : () => _acknowledgeAlert(a),
+                    onRemove: a.acknowledged
+                        ? null
+                        : () => setState(() => _removedAlertIds.add(a.id)),
+                  );
+                }),
+
+                ...List.generate(
+                    _newAlerts.length,
+                    (i) => _AlertRow(
+                          dateTime: _newAlerts[i],
+                          acknowledged: false,
+                          isNew: true,
+                          formatDt: _formatAlertDt,
+                          onRemove: () =>
+                              setState(() => _newAlerts.removeAt(i)),
+                        )),
+              ],
+            ),
+
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -438,6 +613,107 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+    );
+  }
+}
+
+class _AlertRow extends StatelessWidget {
+  final DateTime dateTime;
+  final bool acknowledged;
+  final bool isNew;
+  final String Function(DateTime) formatDt;
+  final VoidCallback? onAcknowledge;
+  final VoidCallback? onRemove;
+
+  const _AlertRow({
+    required this.dateTime,
+    required this.acknowledged,
+    required this.formatDt,
+    this.isNew = false,
+    this.onAcknowledge,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color iconColor;
+    final IconData iconData;
+    if (acknowledged) {
+      iconColor = Colors.green;
+      iconData = Icons.check_circle_outline;
+    } else if (isNew) {
+      iconColor = const Color(0xFF3B82F6);
+      iconData = Icons.alarm_add_outlined;
+    } else {
+      iconColor = const Color(0xFF3B82F6);
+      iconData = Icons.alarm_outlined;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          Icon(iconData, size: 18, color: iconColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatDt(dateTime),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: acknowledged
+                        ? Colors.grey[400]
+                        : const Color(0xFFE8607C),
+                    decoration:
+                        acknowledged ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                if (acknowledged)
+                  Text('Acknowledged',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                if (isNew)
+                  Text('New — will be scheduled on save',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[400],
+                          fontStyle: FontStyle.italic)),
+              ],
+            ),
+          ),
+          if (onAcknowledge != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onAcknowledge,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Done',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+          if (onRemove != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+              onPressed: onRemove,
+              tooltip: 'Remove alert',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
       ),
     );
   }

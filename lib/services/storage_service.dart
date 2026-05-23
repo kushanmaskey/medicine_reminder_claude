@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/prescription.dart';
+import '../models/prescription_alert.dart';
 import '../models/medication.dart';
 import '../models/appointment.dart';
 import '../models/appointment_alert.dart';
@@ -19,7 +20,42 @@ class StorageService {
         .select()
         .eq('user_id', _uid)
         .order('created_at');
-    return rows.map((r) => Prescription.fromJson(_prescriptionFromRow(r))).toList();
+
+    final alertRows = await _db
+        .from('prescription_alerts')
+        .select()
+        .eq('user_id', _uid)
+        .order('scheduled_at');
+
+    final alertsByPrescriptionId = <String, List<PrescriptionAlert>>{};
+    for (final r in alertRows) {
+      final prescriptionId = r['prescription_id'] as String;
+      alertsByPrescriptionId.putIfAbsent(prescriptionId, () => []).add(
+        PrescriptionAlert(
+          id: r['id'],
+          prescriptionId: prescriptionId,
+          scheduledAt: _tryParseDate(r['scheduled_at']) ?? DateTime.now(),
+          acknowledged: r['acknowledged'] as bool? ?? false,
+        ),
+      );
+    }
+
+    return rows.map((r) {
+      final prescriptionId = r['id'] as String;
+      final p = Prescription.fromJson(_prescriptionFromRow(r));
+      return Prescription(
+        id: p.id,
+        name: p.name,
+        refillDate: p.refillDate,
+        instructions: p.instructions,
+        notificationHour: p.notificationHour,
+        notificationMinute: p.notificationMinute,
+        totalPills: p.totalPills,
+        pillsPerDay: p.pillsPerDay,
+        lastDecrementDate: p.lastDecrementDate,
+        alerts: alertsByPrescriptionId[prescriptionId] ?? [],
+      );
+    }).toList();
   }
 
   static Future<void> savePrescription(Prescription p) async {
@@ -48,7 +84,31 @@ class StorageService {
   }
 
   static Future<void> deletePrescription(String id) async {
+    await _db.from('prescription_alerts').delete().eq('prescription_id', id).eq('user_id', _uid);
     await _db.from('prescriptions').delete().eq('id', id).eq('user_id', _uid);
+  }
+
+  // ── Prescription Alerts ───────────────────────────────────────────────────
+
+  static Future<void> savePrescriptionAlert(PrescriptionAlert alert) async {
+    await _db.from('prescription_alerts').insert({
+      'id': alert.id,
+      'prescription_id': alert.prescriptionId,
+      'user_id': _uid,
+      'scheduled_at': alert.scheduledAt.toIso8601String(),
+      'acknowledged': false,
+    });
+  }
+
+  static Future<void> deletePrescriptionAlert(String alertId) async {
+    await _db.from('prescription_alerts').delete().eq('id', alertId).eq('user_id', _uid);
+  }
+
+  static Future<void> acknowledgePrescriptionAlert(String alertId) async {
+    await _db.from('prescription_alerts')
+        .update({'acknowledged': true})
+        .eq('id', alertId)
+        .eq('user_id', _uid);
   }
 
   static Future<void> decrementPillsIfNeeded() async {
