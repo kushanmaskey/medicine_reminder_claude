@@ -17,10 +17,10 @@ import 'add_appointment_screen.dart';
 import 'add_vital_screen.dart';
 import 'add_activity_screen.dart';
 
-const _gradientColors = [Color(0xFF0D9488), Color(0xFF0891B2)];
+const _gradientColors = [Color(0xFFE8607C), Color(0xFFF4A0B8)];
 
 const _defaultAvatarDefs = [
-  (bg: Color(0xFF0D9488), icon: Icons.person),
+  (bg: Color(0xFFE8607C), icon: Icons.person),
   (bg: Color(0xFF3B82F6), icon: Icons.face),
   (bg: Color(0xFF8B5CF6), icon: Icons.sentiment_satisfied),
   (bg: Color(0xFFEF4444), icon: Icons.local_hospital),
@@ -189,14 +189,13 @@ class _HomeScreenState extends State<HomeScreen> {
         scrolledUnderElevation: 1,
         shadowColor: Colors.black.withValues(alpha: 0.06),
         leading: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: _gradient,
-              shape: BoxShape.circle,
+          padding: const EdgeInsets.all(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/icons/app_icon.png',
+              fit: BoxFit.cover,
             ),
-            child: const Icon(Icons.monitor_heart,
-                color: Colors.white, size: 18),
           ),
         ),
         title: ShaderMask(
@@ -263,29 +262,29 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF0D9488).withValues(alpha: 0.12),
+        indicatorColor: const Color(0xFFE8607C).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: Color(0xFF0D9488)),
+            selectedIcon: Icon(Icons.dashboard, color: Color(0xFFE8607C)),
             label: 'Summary',
           ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description, color: Color(0xFF0D9488)),
+            selectedIcon: Icon(Icons.description, color: Color(0xFFE8607C)),
             label: 'Prescriptions',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon:
-                Icon(Icons.calendar_month, color: Color(0xFF0D9488)),
+                Icon(Icons.calendar_month, color: Color(0xFFE8607C)),
             label: 'Appointments',
           ),
           NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
             selectedIcon:
-                Icon(Icons.monitor_heart, color: Color(0xFF0D9488)),
+                Icon(Icons.monitor_heart, color: Color(0xFFE8607C)),
             label: 'Vitals',
           ),
           NavigationDestination(
@@ -317,7 +316,7 @@ class _GradientFAB extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.45),
+            color: const Color(0xFFE8607C).withValues(alpha: 0.45),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),

@@ -78,11 +78,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         title: const Text(
           'Add Medication',
           style: TextStyle(
-            color: Color(0xFF1E293B),
+            color: Color(0xFFE8607C),
             fontWeight: FontWeight.bold,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
       ),
       body: Form(
         key: _formKey,
@@ -265,7 +265,7 @@ class _PickerTile extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: hasValue
-                          ? const Color(0xFF1E293B)
+                          ? const Color(0xFFE8607C)
                           : Colors.grey[400],
                     ),
                   ),

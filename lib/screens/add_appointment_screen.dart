@@ -50,6 +50,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   void _syncTitle() {
     final doctor = _doctorController.text.trim();
     final newTitle = doctor.isEmpty ? '' : 'Appt with $doctor';
+    if (_titleController.text == newTitle) return;
     if (_titleController.text != newTitle) {
       _titleController.value = _titleController.value.copyWith(
         text: newTitle,
@@ -290,9 +291,9 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         title: Text(
           _isEditing ? 'Appointment Details' : 'Add Appointment',
           style: const TextStyle(
-              color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
+              color: Color(0xFFE8607C), fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
         actions: _isEditing
             ? [
                 IconButton(
@@ -312,10 +313,19 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
             _SectionCard(children: [
               TextFormField(
                 controller: _titleController,
+                readOnly: true,
                 decoration: _inputDecoration(
-                    'Appointment Title', Icons.calendar_month_outlined),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter a title' : null,
+                    'Appointment Title', Icons.calendar_month_outlined)
+                    .copyWith(
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  hintText: 'Appt with ...',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  suffixIcon: const Tooltip(
+                    message: 'Auto-filled from Doctor\'s name',
+                    child: Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -538,7 +548,7 @@ class _AlertRow extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: acknowledged
                         ? Colors.grey[400]
-                        : const Color(0xFF1E293B),
+                        : const Color(0xFFE8607C),
                     decoration: acknowledged
                         ? TextDecoration.lineThrough
                         : null,
@@ -654,7 +664,7 @@ class _PickerTile extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: hasValue
-                            ? const Color(0xFF1E293B)
+                            ? const Color(0xFFE8607C)
                             : Colors.grey[400],
                       ),
                     ),

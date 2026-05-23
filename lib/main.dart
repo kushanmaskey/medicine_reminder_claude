@@ -27,7 +27,7 @@ class MedicalWalletApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0D9488),
+          seedColor: const Color(0xFFE8607C),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -54,7 +54,7 @@ class _SplashRouter extends StatelessWidget {
             backgroundColor: Colors.white,
             body: Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF0D9488),
+                color: Color(0xFFE8607C),
               ),
             ),
           );

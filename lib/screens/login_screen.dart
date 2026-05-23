@@ -4,7 +4,7 @@ import 'register_screen.dart';
 import 'home_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -73,15 +73,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 28, MediaQuery.of(context).padding.top + 36, 28, 40),
             child: Column(
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/icons/app_icon.png',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
                   ),
-                  child: const Icon(Icons.monitor_heart,
-                      size: 44, color: Colors.white),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -118,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      color: Color(0xFFE8607C),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -200,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? null
                                   : [
                                       BoxShadow(
-                                        color: const Color(0xFF0D9488)
+                                        color: const Color(0xFFE8607C)
                                             .withValues(alpha: 0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
@@ -248,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 TextSpan(
                                   text: 'Register',
                                   style: TextStyle(
-                                    color: Color(0xFF0D9488),
+                                    color: Color(0xFFE8607C),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -271,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF0D9488)),
+      prefixIcon: Icon(icon, color: const Color(0xFFE8607C)),
       filled: true,
       fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(
@@ -285,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide:
-            const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+            const BorderSide(color: Color(0xFFE8607C), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

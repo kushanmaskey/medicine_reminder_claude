@@ -8,7 +8,7 @@ const _typeConfig = {
   'Run':       (icon: Icons.directions_run,   color: Color(0xFFF97316), bg: Color(0xFFFFF7ED)),
   'Exercise':  (icon: Icons.fitness_center,   color: Color(0xFF3B82F6), bg: Color(0xFFEFF6FF)),
   'Yoga':      (icon: Icons.self_improvement, color: Color(0xFF8B5CF6), bg: Color(0xFFF5F3FF)),
-  'Meditation':(icon: Icons.spa,              color: Color(0xFF0D9488), bg: Color(0xFFECFDF5)),
+  'Meditation':(icon: Icons.spa,              color: Color(0xFFE8607C), bg: Color(0xFFECFDF5)),
 };
 
 class ActivitiesTab extends StatefulWidget {
@@ -158,7 +158,7 @@ class _ActivityCard extends StatelessWidget {
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
-                              color: Color(0xFF1E293B),
+                              color: Color(0xFFE8607C),
                             ),
                           ),
                           if (activity.type == 'Walk') ...[

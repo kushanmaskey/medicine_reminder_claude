@@ -149,7 +149,7 @@ class _VitalCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: const Icon(Icons.monitor_heart,
-                          color: Color(0xFF0D9488), size: 17),
+                          color: Color(0xFFE8607C), size: 17),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -158,7 +158,7 @@ class _VitalCard extends StatelessWidget {
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFF1E293B),
+                          color: Color(0xFFE8607C),
                         ),
                       ),
                     ),

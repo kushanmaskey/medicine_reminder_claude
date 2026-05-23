@@ -40,7 +40,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   // Show female-specific fields when sex is Female OR when sex is not yet set
   // (null means the account predates the sex feature — show everything).
   bool get _isMaleOnly => _sex == 'Male';
-  static const _teal  = Color(0xFF0D9488);
+  static const _teal  = Color(0xFFE8607C);
   static const _pink  = Color(0xFFEC4899);
 
   Color get _accentColor => _isMaleOnly ? _teal : _pink;
@@ -225,9 +225,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         title: Text(
           _isEditing ? 'Edit Vitals' : 'Log Vitals',
           style: const TextStyle(
-              color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
+              color: Color(0xFFE8607C), fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
         actions: _isEditing
             ? [
                 IconButton(
@@ -300,7 +300,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                       style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF1E293B)),
+                          color: Color(0xFFE8607C)),
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.grey),
@@ -802,7 +802,7 @@ class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.icon,
-    this.iconColor = const Color(0xFF0D9488),
+    this.iconColor = const Color(0xFFE8607C),
     required this.children,
   });
 

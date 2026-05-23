@@ -4,7 +4,7 @@ import 'home_screen.dart';
 import 'login_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -324,7 +324,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? null
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFF0D9488)
+                                    color: const Color(0xFFE8607C)
                                         .withValues(alpha: 0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
@@ -372,7 +372,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               TextSpan(
                                 text: 'Sign In',
                                 style: TextStyle(
-                                    color: Color(0xFF0D9488),
+                                    color: Color(0xFFE8607C),
                                     fontWeight: FontWeight.w600),
                               ),
                             ],
@@ -454,7 +454,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── Sex selector ───────────────────────────────────────────────────────────
 
   Widget _buildSexSelector() {
-    const teal = Color(0xFF0D9488);
+    const teal = Color(0xFFE8607C);
     const pink = Color(0xFFEC4899);
 
     return Column(
@@ -503,7 +503,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF0D9488)),
+      prefixIcon: Icon(icon, color: const Color(0xFFE8607C)),
       filled: true,
       fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(
@@ -517,7 +517,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide:
-            const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+            const BorderSide(color: Color(0xFFE8607C), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

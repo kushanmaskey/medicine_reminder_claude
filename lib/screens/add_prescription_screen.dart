@@ -157,11 +157,11 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         title: Text(
           _isEditing ? 'Edit Prescription' : 'Add Prescription',
           style: const TextStyle(
-            color: Color(0xFF1E293B),
+            color: Color(0xFFE8607C),
             fontWeight: FontWeight.bold,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
+        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
         actions: _isEditing
             ? [
                 IconButton(
@@ -491,7 +491,7 @@ class _PickerTile extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: hasValue
-                          ? const Color(0xFF1E293B)
+                          ? const Color(0xFFE8607C)
                           : Colors.grey[400],
                     ),
                   ),

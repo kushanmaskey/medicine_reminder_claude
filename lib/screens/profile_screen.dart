@@ -6,7 +6,7 @@ import '../services/auth_service.dart';
 
 // Default avatar definitions: (icon, background color, foreground color)
 const _defaultAvatars = [
-  (icon: Icons.person,             bg: Color(0xFF0D9488), fg: Colors.white),
+  (icon: Icons.person,             bg: Color(0xFFE8607C), fg: Colors.white),
   (icon: Icons.face,               bg: Color(0xFF3B82F6), fg: Colors.white),
   (icon: Icons.sentiment_satisfied,bg: Color(0xFF8B5CF6), fg: Colors.white),
   (icon: Icons.local_hospital,     bg: Color(0xFFEF4444), fg: Colors.white),
@@ -79,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Color get _accentColor =>
-      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFF0D9488);
+      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFFE8607C);
 
   LinearGradient get _headerGradient => _sex == 'Female'
       ? const LinearGradient(
@@ -88,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           end: Alignment.bottomRight,
         )
       : const LinearGradient(
-          colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+          colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -325,7 +325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSexSection() {
-    const teal = Color(0xFF0D9488);
+    const teal = Color(0xFFE8607C);
     const pink = Color(0xFFEC4899);
     final current = _sex ?? 'Male';
 

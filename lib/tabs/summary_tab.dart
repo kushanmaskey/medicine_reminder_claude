@@ -13,7 +13,7 @@ import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
 
 const _defaultAvatarBgs = [
-  Color(0xFF0D9488), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
+  Color(0xFFE8607C), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
   Color(0xFFEC4899), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
   Color(0xFFF97316), Color(0xFF6366F1), Color(0xFF84CC16), Color(0xFF0EA5E9),
 ];
@@ -25,7 +25,7 @@ const _defaultAvatarIcons = [
 ];
 
 const _tealGradient = LinearGradient(
-  colors: [Color(0xFF0D9488), Color(0xFF0891B2)],
+  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -117,12 +117,12 @@ class SummaryTabState extends State<SummaryTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF0D9488)));
+          child: CircularProgressIndicator(color: Color(0xFFE8607C)));
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: const Color(0xFF0D9488),
+      color: const Color(0xFFE8607C),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
@@ -204,7 +204,7 @@ class SummaryTabState extends State<SummaryTab> {
       _sex == 'Female' ? _pinkGradient : _tealGradient;
 
   Color get _greetingShadowColor =>
-      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFF0D9488);
+      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFFE8607C);
 
   Widget _buildGreetingCard() {
     final displayName = (_name != null && _name!.isNotEmpty) ? _name! : 'User';
@@ -286,7 +286,7 @@ class SummaryTabState extends State<SummaryTab> {
           label: 'Vitals',
           count: _vitals.length,
           icon: Icons.monitor_heart_outlined,
-          color: const Color(0xFF0D9488),
+          color: const Color(0xFFE8607C),
           onTap: () => widget.onTabChange(3),
         ),
         const SizedBox(width: 8),
@@ -421,7 +421,7 @@ class SummaryTabState extends State<SummaryTab> {
                 ),
                 const SizedBox(width: 8),
                 const Icon(Icons.edit_outlined,
-                    size: 16, color: Color(0xFF0D9488)),
+                    size: 16, color: Color(0xFFE8607C)),
               ],
             ),
             const SizedBox(height: 14),
@@ -548,7 +548,7 @@ class SummaryTabState extends State<SummaryTab> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        color: Color(0xFF1E293B)),
+                        color: Color(0xFFE8607C)),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -658,7 +658,7 @@ class SummaryTabState extends State<SummaryTab> {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFF1E293B))),
+                          color: Color(0xFFE8607C))),
                   const SizedBox(height: 3),
                   Text(
                     refillLabel(),
@@ -701,7 +701,7 @@ class SummaryTabState extends State<SummaryTab> {
     'Run':        Color(0xFFF97316),
     'Exercise':   Color(0xFF3B82F6),
     'Yoga':       Color(0xFF8B5CF6),
-    'Meditation': Color(0xFF0D9488),
+    'Meditation': Color(0xFFE8607C),
   };
 
   static const _activityIcons = {
@@ -762,7 +762,7 @@ class SummaryTabState extends State<SummaryTab> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
-                                color: Color(0xFF1E293B))),
+                                color: Color(0xFFE8607C))),
                         if (a.type == 'Walk') ...[
                           const SizedBox(width: 6),
                           Container(
@@ -880,28 +880,35 @@ class _StatCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withValues(alpha: 0.15)),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(height: 4),
-              Text('$count',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: color)),
-              const SizedBox(height: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color, size: 14),
+                  const SizedBox(width: 4),
+                  Text('$count',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: color)),
+                ],
+              ),
+              const SizedBox(height: 3),
               Text(label,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 9,
                       color: color.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
