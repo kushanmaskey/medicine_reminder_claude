@@ -70,6 +70,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   }
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _appointmentDate ?? DateTime.now().add(const Duration(days: 1)),
@@ -86,6 +87,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   }
 
   Future<void> _pickTime() async {
+    FocusScope.of(context).unfocus();
     final picked = await showTimePicker(
       context: context,
       initialTime: _appointmentTime ?? const TimeOfDay(hour: 9, minute: 0),
@@ -100,6 +102,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   }
 
   Future<void> _addAlert() async {
+    FocusScope.of(context).unfocus();
     final defaultDate = _appointmentDate ?? DateTime.now().add(const Duration(days: 1));
     final date = await showDatePicker(
       context: context,

@@ -87,6 +87,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   // ── Date / time pickers ────────────────────────────────────────────────────
 
   Future<void> _pickDateTime() async {
+    FocusScope.of(context).unfocus();
     final date = await showDatePicker(
       context: context,
       initialDate: _recordedAt,
@@ -116,6 +117,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   }
 
   Future<DateTime?> _pickPastDate(DateTime? initial, String label) async {
+    FocusScope.of(context).unfocus();
     return showDatePicker(
       context: context,
       initialDate: initial ?? DateTime.now(),

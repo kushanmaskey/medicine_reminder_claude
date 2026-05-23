@@ -68,6 +68,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   bool get _isDistanceBased => _type == 'Walk' || _type == 'Run';
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
     final date = await showDatePicker(
       context: context,
       initialDate: _recordedAt,

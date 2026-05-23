@@ -18,7 +18,6 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   final _instructionsController = TextEditingController();
   final _totalPillsController = TextEditingController();
   final _pillsPerDayController = TextEditingController();
-  DateTime? _refillDate;
   TimeOfDay? _notificationTime;
   bool _saving = false;
 
@@ -27,15 +26,30 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   @override
   void initState() {
     super.initState();
+    _totalPillsController.addListener(() => setState(() {}));
+    _pillsPerDayController.addListener(() => setState(() {}));
     if (_isEditing) {
       final p = widget.existing!;
       _nameController.text = p.name;
       _instructionsController.text = p.instructions;
-      _refillDate = p.refillDate;
       _notificationTime = p.notificationTime;
       if (p.totalPills != null) _totalPillsController.text = p.totalPills.toString();
       if (p.pillsPerDay != null) _pillsPerDayController.text = p.pillsPerDay.toString();
     }
+  }
+
+  DateTime? get _calculatedRefillDate {
+    final total = int.tryParse(_totalPillsController.text.trim());
+    final perDay = int.tryParse(_pillsPerDayController.text.trim());
+    if (total == null || perDay == null || perDay <= 0) return null;
+    return DateTime.now().add(Duration(days: (total / perDay).ceil()));
+  }
+
+  String get _refillDateDisplay {
+    final d = _calculatedRefillDate;
+    if (d == null) return 'Enter pill count above';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
   @override
@@ -47,23 +61,8 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     super.dispose();
   }
 
-  Future<void> _pickRefillDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _refillDate ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFF3B82F6)),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _refillDate = picked);
-  }
-
   Future<void> _pickNotificationTime() async {
+    FocusScope.of(context).unfocus();
     final picked = await showTimePicker(
       context: context,
       initialTime: _notificationTime ?? const TimeOfDay(hour: 8, minute: 0),
@@ -117,7 +116,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       id: widget.existing?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
-      refillDate: _refillDate,
+      refillDate: _calculatedRefillDate,
       instructions: _instructionsController.text.trim(),
       notificationHour: _notificationTime?.hour,
       notificationMinute: _notificationTime?.minute,
@@ -309,23 +308,37 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
 
             _SectionCard(
               children: [
-                _PickerTile(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Refill Date (optional)',
-                  value: _refillDate == null
-                      ? 'Not set'
-                      : '${_refillDate!.day}/${_refillDate!.month}/${_refillDate!.year}',
-                  onTap: _pickRefillDate,
-                  hasValue: _refillDate != null,
-                  trailing: _refillDate != null
-                      ? IconButton(
-                          tooltip: 'Clear refill date',
-                          icon: const Icon(Icons.close,
-                              size: 18, color: Colors.grey),
-                          onPressed: () =>
-                              setState(() => _refillDate = null),
-                        )
-                      : null,
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today_outlined,
+                        color: Color(0xFF3B82F6), size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Estimated Refill Date',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500])),
+                          Text(
+                            _refillDateDisplay,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: _calculatedRefillDate != null
+                                  ? const Color(0xFFE8607C)
+                                  : Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Tooltip(
+                      message: 'Auto-calculated: total pills ÷ pills per day',
+                      child: Icon(Icons.lock_outline,
+                          size: 16, color: Colors.grey),
+                    ),
+                  ],
                 ),
               ],
             ),
