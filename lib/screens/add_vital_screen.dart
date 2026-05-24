@@ -231,9 +231,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         title: Text(
           _isEditing ? 'Edit Vitals' : 'Log Vitals',
           style: const TextStyle(
-              color: Color(0xFFE8607C), fontWeight: FontWeight.bold),
+              color: Color(0xFF484141), fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
+        iconTheme: const IconThemeData(color: Color(0xFF484141)),
         actions: _isEditing
             ? [
                 IconButton(

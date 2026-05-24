@@ -78,11 +78,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         title: const Text(
           'Add Medication',
           style: TextStyle(
-            color: Color(0xFFE8607C),
+            color: Color(0xFF484141),
             fontWeight: FontWeight.bold,
           ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
+        iconTheme: const IconThemeData(color: Color(0xFF484141)),
       ),
       body: Form(
         key: _formKey,

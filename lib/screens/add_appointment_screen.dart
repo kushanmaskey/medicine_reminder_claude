@@ -300,9 +300,9 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         title: Text(
           _isEditing ? 'Appointment Details' : 'Add Appointment',
           style: const TextStyle(
-              color: Color(0xFFE8607C), fontWeight: FontWeight.bold),
+              color: Color(0xFF484141), fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFFE8607C)),
+        iconTheme: const IconThemeData(color: Color(0xFF484141)),
         actions: _isEditing
             ? [
                 IconButton(

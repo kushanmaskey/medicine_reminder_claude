@@ -198,18 +198,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        title: ShaderMask(
-          shaderCallback: (bounds) => _gradient.createShader(
-            Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-          ),
-          blendMode: BlendMode.srcIn,
-          child: Text(
-            _titles[_currentIndex],
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(
+            color: Color(0xFF484141),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
           ),
         ),
         actions: [
