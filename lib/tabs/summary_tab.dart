@@ -307,44 +307,29 @@ class SummaryTabState extends State<SummaryTab> {
       {required VoidCallback onViewAll}) {
     return Row(
       children: [
-        ShaderMask(
-          shaderCallback: (b) =>
-              _tealGradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
-          blendMode: BlendMode.srcIn,
-          child: Icon(icon, size: 18, color: Colors.white),
-        ),
+        Icon(icon, size: 18, color: const Color(0xFF484141)),
         const SizedBox(width: 8),
-        ShaderMask(
-          shaderCallback: (b) =>
-              _tealGradient.createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
-          blendMode: BlendMode.srcIn,
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF484141),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
         const Spacer(),
         Tooltip(
           message: 'View all $title',
           child: GestureDetector(
-          onTap: onViewAll,
-          child: ShaderMask(
-            shaderCallback: (b) => _tealGradient
-                .createShader(Rect.fromLTWH(0, 0, b.width, b.height)),
-            blendMode: BlendMode.srcIn,
+            onTap: onViewAll,
             child: const Text(
               'View All →',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF484141),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ),
           ),
         ),
       ],
