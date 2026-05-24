@@ -111,7 +111,7 @@ class SummaryTabState extends State<SummaryTab> {
       .where((a) => a.appointmentDateTime.isAfter(DateTime.now()))
       .toList();
 
-  Vital? get _latestVital => _vitals.isEmpty ? null : _vitals.first;
+  List<Vital> get _latestVitals => _vitals.take(3).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -130,12 +130,15 @@ class SummaryTabState extends State<SummaryTab> {
           const SizedBox(height: 16),
           _buildStatsRow(),
           const SizedBox(height: 24),
-          if (_latestVital != null) ...[
+          if (_latestVitals.isNotEmpty) ...[
             _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
                 onViewAll: () => widget.onTabChange(3)),
             const SizedBox(height: 10),
-            _buildLatestVitalsCard(_latestVital!),
-            const SizedBox(height: 24),
+            ..._latestVitals.map((v) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildLatestVitalsCard(v),
+            )),
+            const SizedBox(height: 14),
           ],
           _buildSectionHeader('Upcoming Appointments',
               Icons.calendar_today_outlined,
@@ -154,7 +157,7 @@ class SummaryTabState extends State<SummaryTab> {
             _buildEmptyState('No prescriptions',
                 'Tap + on the Prescriptions tab to add one')
           else
-            ..._prescriptions.map((p) => _buildPrescriptionRow(p)),
+            ..._prescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
               onViewAll: () => widget.onTabChange(4)),
