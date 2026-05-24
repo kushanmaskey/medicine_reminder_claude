@@ -533,7 +533,7 @@ class SummaryTabState extends State<SummaryTab> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        color: Color(0xFFE8607C)),
+                        color: Color(0xFF635A5A)),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -643,7 +643,7 @@ class SummaryTabState extends State<SummaryTab> {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
-                          color: Color(0xFFE8607C))),
+                          color: Color(0xFF635A5A))),
                   const SizedBox(height: 3),
                   Text(
                     refillLabel(),
@@ -747,7 +747,7 @@ class SummaryTabState extends State<SummaryTab> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
-                                color: Color(0xFFE8607C))),
+                                color: Color(0xFF635A5A))),
                         if (a.type == 'Walk') ...[
                           const SizedBox(width: 6),
                           Container(
