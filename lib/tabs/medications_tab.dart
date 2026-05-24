@@ -120,7 +120,7 @@ class _MedicationCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
-                      color: Color(0xFFE8607C),
+                      color: Color(0xFF635A5A),
                     ),
                   ),
                 ),
@@ -214,7 +214,7 @@ class _InfoRow extends StatelessWidget {
                 TextSpan(
                   text: value,
                   style: TextStyle(
-                    color: valueColor ?? const Color(0xFFE8607C),
+                    color: valueColor ?? const Color(0xFF635A5A),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
