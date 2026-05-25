@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/ringtone_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -203,22 +204,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
                 if (!isAndroid) ...[
                   Divider(height: 1, indent: 72, color: Colors.grey.shade100),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 40),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            'To change notification sounds on iOS, go to Settings → Medical Wallet → Notifications.',
-                            style: TextStyle(
-                                color: Colors.grey[500], fontSize: 12),
-                          ),
-                        ),
-                      ],
+                  ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.settings_outlined,
+                          color: Color(0xFF3B82F6), size: 20),
                     ),
+                    title: const Text(
+                      'Change Sound in iOS Settings',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    ),
+                    subtitle: Text(
+                      'Tap to open Notifications settings for this app',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.open_in_new,
+                        color: Color(0xFF94A3B8), size: 18),
+                    onTap: () => openAppSettings(),
                   ),
                 ],
               ],

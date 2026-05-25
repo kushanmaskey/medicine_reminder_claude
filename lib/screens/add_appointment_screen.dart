@@ -219,56 +219,65 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     }
     setState(() => _saving = true);
 
-    final dt = DateTime(
-      _appointmentDate!.year, _appointmentDate!.month, _appointmentDate!.day,
-      _appointmentTime!.hour, _appointmentTime!.minute,
-    );
+    try {
+      final dt = DateTime(
+        _appointmentDate!.year, _appointmentDate!.month, _appointmentDate!.day,
+        _appointmentTime!.hour, _appointmentTime!.minute,
+      );
 
-    final appointment = Appointment(
-      id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      doctorName: _doctorController.text.trim(),
-      location: _locationController.text.trim(),
-      notes: _notesController.text.trim(),
-      appointmentDateTime: dt,
-    );
+      final appointment = Appointment(
+        id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: _titleController.text.trim(),
+        doctorName: _doctorController.text.trim(),
+        location: _locationController.text.trim(),
+        notes: _notesController.text.trim(),
+        appointmentDateTime: dt,
+      );
 
-    // Cancel existing single notification
-    await NotificationService.cancelNotification(
-        NotificationService.idFromString(appointment.id));
+      // Cancel existing single notification
+      await NotificationService.cancelNotification(
+          NotificationService.idFromString(appointment.id));
 
-    if (_isEditing) {
-      await StorageService.updateAppointment(appointment);
-      // Delete removed alerts
-      for (final id in _removedAlertIds) {
-        await StorageService.deleteAlert(id);
-        await NotificationService.cancelNotification(
-            NotificationService.idFromString(id));
+      if (_isEditing) {
+        await StorageService.updateAppointment(appointment);
+        // Delete removed alerts
+        for (final id in _removedAlertIds) {
+          await StorageService.deleteAlert(id);
+          await NotificationService.cancelNotification(
+              NotificationService.idFromString(id));
+        }
+      } else {
+        await StorageService.saveAppointment(appointment);
       }
-    } else {
-      await StorageService.saveAppointment(appointment);
-    }
 
-    // Save and schedule new alerts
-    for (final alertDt in _newAlerts) {
-      final alertId = '${appointment.id}_${alertDt.millisecondsSinceEpoch}';
-      final alert = AppointmentAlert(
-        id: alertId,
-        appointmentId: appointment.id,
-        scheduledAt: alertDt,
-      );
-      await StorageService.saveAlert(alert);
-      await NotificationService.scheduleOnceNotification(
-        id: NotificationService.idFromString(alertId),
-        title: 'Appointment Alert: ${appointment.title}',
-        body: 'With ${appointment.doctorName}'
-            '${appointment.location.isNotEmpty ? ' at ${appointment.location}' : ''}',
-        scheduledDateTime: alertDt,
-      );
-    }
+      // Save and schedule new alerts
+      for (final alertDt in _newAlerts) {
+        final alertId = '${appointment.id}_${alertDt.millisecondsSinceEpoch}';
+        final alert = AppointmentAlert(
+          id: alertId,
+          appointmentId: appointment.id,
+          scheduledAt: alertDt,
+        );
+        await StorageService.saveAlert(alert);
+        await NotificationService.scheduleOnceNotification(
+          id: NotificationService.idFromString(alertId),
+          title: 'Appointment Alert: ${appointment.title}',
+          body: 'With ${appointment.doctorName}'
+              '${appointment.location.isNotEmpty ? ' at ${appointment.location}' : ''}',
+          scheduledDateTime: alertDt,
+        );
+      }
 
-    if (!mounted) return;
-    Navigator.pop(context, true);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not save: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ));
+    }
   }
 
   @override

@@ -33,6 +33,12 @@ class MedicalWalletApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: const TextScaler.linear(1.15),
+        ),
+        child: child!,
+      ),
       home: const _SplashRouter(),
     );
   }
