@@ -125,3 +125,128 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
+
+
+-----------------
+
+
+ drop trigger if exists on_auth_user_created on auth.users;
+  drop function if exists handle_new_user();
+
+
+  ALTER TABLE prescriptions
+    ADD COLUMN IF NOT EXISTS total_pills integer,
+    ADD COLUMN IF NOT EXISTS pills_per_day integer,
+    ADD COLUMN IF NOT EXISTS last_decrement_date date;
+
+  ALTER TABLE prescriptions
+    ALTER COLUMN refill_date DROP NOT NULL;
+
+
+     ALTER TABLE prescriptions
+    ADD COLUMN IF NOT EXISTS total_pills integer,
+    ADD COLUMN IF NOT EXISTS pills_per_day integer,
+    ADD COLUMN IF NOT EXISTS last_decrement_date date;
+
+  ALTER TABLE prescriptions
+    ALTER COLUMN refill_date DROP NOT NULL;
+
+      ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS phone text;
+
+
+    CREATE TABLE IF NOT EXISTS appointment_alerts (
+    id text PRIMARY KEY,
+    appointment_id text NOT NULL,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    scheduled_at timestamptz NOT NULL,
+    acknowledged boolean NOT NULL DEFAULT false,
+    created_at timestamptz DEFAULT now()
+  );
+
+  ALTER TABLE appointment_alerts ENABLE ROW LEVEL SECURITY;
+
+  CREATE POLICY "Users manage their own appointment alerts"
+    ON appointment_alerts FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+
+  --   create table prescription_alerts (
+  --   id text primary key,
+  --   prescription_id text not null references prescriptions(id) on delete cascade,
+  --   user_id uuid not null references auth.users(id) on delete cascade,
+  --   scheduled_at timestamptz not null,
+  --   acknowledged boolean not null default false,
+  --   created_at timestamptz not null default now()
+  -- );
+
+  -- alter table prescription_alerts enable row level security;
+
+  -- create policy "Users manage their own prescription alerts"
+  --   on prescription_alerts for all
+  --   using (auth.uid() = user_id)
+  --   with check (auth.uid() = user_id);
+
+  --    create table prescription_alerts (
+  --   id text primary key,
+  --   prescription_id text not null references prescriptions(id) on delete cascade,
+  --   user_id uuid not null references auth.users(id) on delete cascade,
+  --   scheduled_at timestamptz not null,
+  --   acknowledged boolean not null default false,
+  --   created_at timestamptz not null default now()
+  -- );
+
+  -- alter table prescription_alerts enable row level security;
+
+  -- create policy "Users manage their own prescription alerts"
+  --   on prescription_alerts for all
+  --   using (auth.uid() = user_id)
+  --   with check (auth.uid() = user_id);
+
+
+create table prescription_alerts (
+    id text primary key,
+    prescription_id text not null references prescriptions(id) on delete cascade,
+    user_id uuid not null references auth.users(id) on delete cascade,
+    scheduled_at timestamptz not null,
+    acknowledged boolean not null default false,
+    created_at timestamptz not null default now()
+  );
+
+  alter table prescription_alerts enable row level security;
+
+  create policy "Users manage their own prescription alerts"
+    on prescription_alerts for all
+    using (auth.uid() = user_id)
+    with check (auth.uid() = user_id);
+
+-- Vitals: add category and event_name columns (run once)
+ALTER TABLE vitals
+  ADD COLUMN IF NOT EXISTS category   text NOT NULL DEFAULT 'daily',
+  ADD COLUMN IF NOT EXISTS event_name text NOT NULL DEFAULT '';
+
+-- Doctors
+CREATE TABLE IF NOT EXISTS doctors (
+  id          text PRIMARY KEY,
+  user_id     uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  first_name  text NOT NULL DEFAULT '',
+  last_name   text NOT NULL DEFAULT '',
+  credential  text NOT NULL DEFAULT '',
+  specialty   text NOT NULL DEFAULT '',
+  phone       text NOT NULL DEFAULT '',
+  address     text NOT NULL DEFAULT '',
+  city        text NOT NULL DEFAULT '',
+  state       text NOT NULL DEFAULT '',
+  zip         text NOT NULL DEFAULT '',
+  npi_number  text NOT NULL DEFAULT '',
+  notes       text NOT NULL DEFAULT '',
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "doctors_all" ON doctors FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+

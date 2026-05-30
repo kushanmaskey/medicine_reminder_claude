@@ -21,6 +21,8 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   DateTime? _appointmentDate;
   TimeOfDay? _appointmentTime;
 
+  List<String> _doctorOptions = [];
+
   // Alert state
   final List<DateTime> _newAlerts = [];
   final Set<String> _removedAlertIds = {};
@@ -45,6 +47,77 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       _appointmentTime = TimeOfDay.fromDateTime(e.appointmentDateTime);
     }
     _doctorController.addListener(_syncTitle);
+    _loadDoctors();
+  }
+
+  Future<void> _loadDoctors() async {
+    try {
+      final doctors = await StorageService.getDoctors();
+      if (mounted) {
+        setState(() {
+          _doctorOptions = doctors
+              .map((d) => d.displayName)
+              .where((n) => n.isNotEmpty)
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showDoctorPicker() async {
+    _dismissFocus();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Select a Doctor',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold,
+                      color: Color(0xFF484141))),
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _doctorOptions.length,
+              itemBuilder: (ctx, i) => ListTile(
+                leading: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0xFFEFF6FF),
+                  child: Icon(Icons.person_outlined,
+                      size: 16, color: _purple),
+                ),
+                title: Text(_doctorOptions[i],
+                    style: const TextStyle(fontSize: 14)),
+                onTap: () => Navigator.pop(ctx, _doctorOptions[i]),
+              ),
+            ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
+        ],
+      ),
+    );
+    if (selected != null && mounted) {
+      _doctorController.text = selected;
+      _syncTitle();
+    }
   }
 
   void _syncTitle() {
@@ -69,7 +142,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     super.dispose();
   }
 
-  void _dismissFocus() => FocusScope.of(context).requestFocus(FocusNode());
+  void _dismissFocus() => FocusScope.of(context).unfocus();
 
   Future<void> _pickDate() async {
     _dismissFocus();
@@ -107,43 +180,65 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
 
   Future<void> _addAlert() async {
     _dismissFocus();
-    final defaultDate = _appointmentDate ?? DateTime.now().add(const Duration(days: 1));
-    final date = await showDatePicker(
-      context: context,
-      initialDate: defaultDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: _purple),
+    try {
+      final defaultDate = _appointmentDate ?? DateTime.now().add(const Duration(days: 1));
+      final date = await showDatePicker(
+        context: context,
+        initialDate: defaultDate,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+        builder: (ctx, child) => Theme(
+          data: Theme.of(ctx).copyWith(
+            colorScheme: const ColorScheme.light(primary: _purple),
+          ),
+          child: child!,
         ),
-        child: child!,
-      ),
-    );
-    _dismissFocus();
-    if (date == null || !mounted) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _appointmentTime ?? const TimeOfDay(hour: 8, minute: 0),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: _purple),
-        ),
-        child: child!,
-      ),
-    );
-    _dismissFocus();
-    if (time == null || !mounted) return;
-
-    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    if (dt.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alert time must be in the future')),
       );
-      return;
+      if (date == null || !mounted) return;
+
+      // Default time: appointment time if set, otherwise current time + 1 hour
+      final now = DateTime.now();
+      final defaultTime = _appointmentTime ??
+          TimeOfDay(hour: (now.hour + 1) % 24, minute: 0);
+
+      final time = await showTimePicker(
+        context: context,
+        initialTime: defaultTime,
+        builder: (ctx, child) => Theme(
+          data: Theme.of(ctx).copyWith(
+            colorScheme: const ColorScheme.light(primary: _purple),
+          ),
+          child: child!,
+        ),
+      );
+      if (time == null || !mounted) return;
+
+      final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      if (!dt.isAfter(DateTime.now())) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Alert in the Past'),
+            content: const Text(
+                'Please pick a date and time that is still in the future.'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      setState(() => _newAlerts.add(dt));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not add alert: ${e.toString()}')),
+      );
     }
-    setState(() => _newAlerts.add(dt));
   }
 
   String _formatDate(DateTime d) {
@@ -178,7 +273,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Appointment'),
-        content: Text('Remove "${widget.existing!.title}"?'),
+        content: Text('Remove appointment with ${widget.existing!.doctorName}?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
@@ -204,22 +299,30 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_appointmentDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an appointment date')),
-      );
-      return;
-    }
-    if (_appointmentTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an appointment time')),
-      );
-      return;
-    }
-    setState(() => _saving = true);
-
     try {
+      // Trigger inline field errors if form is available; also validate manually
+      _formKey.currentState?.validate();
+      final doctor = _doctorController.text.trim();
+      if (doctor.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Doctor's name is required")),
+        );
+        return;
+      }
+      if (_appointmentDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select an appointment date')),
+        );
+        return;
+      }
+      if (_appointmentTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select an appointment time')),
+        );
+        return;
+      }
+      setState(() => _saving = true);
+
       final dt = DateTime(
         _appointmentDate!.year, _appointmentDate!.month, _appointmentDate!.day,
         _appointmentTime!.hour, _appointmentTime!.minute,
@@ -234,13 +337,11 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         appointmentDateTime: dt,
       );
 
-      // Cancel existing single notification
       await NotificationService.cancelNotification(
           NotificationService.idFromString(appointment.id));
 
       if (_isEditing) {
         await StorageService.updateAppointment(appointment);
-        // Delete removed alerts
         for (final id in _removedAlertIds) {
           await StorageService.deleteAlert(id);
           await NotificationService.cancelNotification(
@@ -250,33 +351,59 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         await StorageService.saveAppointment(appointment);
       }
 
-      // Save and schedule new alerts
+      // Save alerts separately — alert failures don't block the appointment save.
+      bool alertSaveFailed = false;
       for (final alertDt in _newAlerts) {
-        final alertId = '${appointment.id}_${alertDt.millisecondsSinceEpoch}';
-        final alert = AppointmentAlert(
-          id: alertId,
-          appointmentId: appointment.id,
-          scheduledAt: alertDt,
-        );
-        await StorageService.saveAlert(alert);
-        await NotificationService.scheduleOnceNotification(
-          id: NotificationService.idFromString(alertId),
-          title: 'Appointment Alert: ${appointment.title}',
-          body: 'With ${appointment.doctorName}'
-              '${appointment.location.isNotEmpty ? ' at ${appointment.location}' : ''}',
-          scheduledDateTime: alertDt,
-        );
+        try {
+          final alertId = '${appointment.id}_${alertDt.millisecondsSinceEpoch}';
+          final alert = AppointmentAlert(
+            id: alertId,
+            appointmentId: appointment.id,
+            scheduledAt: alertDt,
+          );
+          await StorageService.saveAlert(alert);
+          await NotificationService.scheduleOnceNotification(
+            id: NotificationService.idFromString(alertId),
+            title: 'Appointment Alert: ${appointment.title}',
+            body: 'With ${appointment.doctorName}'
+                '${appointment.location.isNotEmpty ? ' at ${appointment.location}' : ''}',
+            scheduledDateTime: alertDt,
+          );
+        } catch (_) {
+          alertSaveFailed = true;
+        }
       }
 
       if (!mounted) return;
       Navigator.pop(context, true);
+
+      if (alertSaveFailed && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Appointment saved. Alerts could not be saved — check Supabase RLS policy for appointment_alerts.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Could not save: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ));
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Could not save'),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -325,32 +452,30 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.fromLTRB(
+            20, 20, 20,
+            20 + MediaQuery.of(context).padding.bottom,
+          ),
           children: [
             // Details card
             _SectionCard(children: [
               TextFormField(
-                controller: _titleController,
-                readOnly: true,
-                decoration: _inputDecoration(
-                    'Appointment Title', Icons.calendar_month_outlined)
-                    .copyWith(
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  hintText: 'Appt with ...',
-                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                  suffixIcon: const Tooltip(
-                    message: 'Auto-filled from Doctor\'s name',
-                    child: Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
                 controller: _doctorController,
                 maxLength: 100,
-                decoration:
-                    _inputDecoration("Doctor's Name", Icons.person_outlined),
+                decoration: _inputDecoration(
+                  "Doctor's Name",
+                  Icons.person_outlined,
+                ).copyWith(
+                  suffixIcon: _doctorOptions.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.arrow_drop_down,
+                              color: _purple),
+                          tooltip: 'Pick from saved doctors',
+                          onPressed: _showDoctorPicker,
+                        ),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? "Enter doctor's name"
                     : null,
@@ -569,7 +694,7 @@ class _AlertRow extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: acknowledged
                         ? Colors.grey[400]
-                        : const Color(0xFFE8607C),
+                        : const Color(0xFF501513),
                     decoration: acknowledged
                         ? TextDecoration.lineThrough
                         : null,
@@ -685,7 +810,7 @@ class _PickerTile extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: hasValue
-                            ? const Color(0xFFE8607C)
+                            ? const Color(0xFF501513)
                             : Colors.grey[400],
                       ),
                     ),

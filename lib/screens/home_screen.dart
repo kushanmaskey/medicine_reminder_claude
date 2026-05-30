@@ -9,22 +9,22 @@ import '../tabs/prescriptions_tab.dart';
 import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
+import '../tabs/doctors_tab.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
-import 'add_vital_screen.dart';
 import 'add_activity_screen.dart';
 
-const _gradientColors = [Color(0xFFE8607C), Color(0xFFF4A0B8)];
+const _gradientColors = [Color(0xFF501513), Color(0xFF7A2420)];
 
 const _defaultAvatarDefs = [
-  (bg: Color(0xFFE8607C), icon: Icons.person),
+  (bg: Color(0xFF501513), icon: Icons.person),
   (bg: Color(0xFF3B82F6), icon: Icons.face),
   (bg: Color(0xFF8B5CF6), icon: Icons.sentiment_satisfied),
   (bg: Color(0xFFEF4444), icon: Icons.local_hospital),
-  (bg: Color(0xFFEC4899), icon: Icons.favorite),
+  (bg: Color(0xFF7A2420), icon: Icons.favorite),
   (bg: Color(0xFFF59E0B), icon: Icons.star),
   (bg: Color(0xFF22C55E), icon: Icons.self_improvement),
   (bg: Color(0xFF14B8A6), icon: Icons.emoji_nature),
@@ -56,8 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _appointmentsKey = GlobalKey<AppointmentsTabState>();
   final _vitalsKey = GlobalKey<VitalsTabState>();
   final _activitiesKey = GlobalKey<ActivitiesTabState>();
+  final _doctorsKey = GlobalKey<DoctorsTabState>();
 
-  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
+  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals', 'Activities', 'Doctors'];
 
   @override
   void initState() {
@@ -86,13 +87,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openAddScreen() async {
+    if (_currentIndex == 3) {
+      // VitalsTab knows which sub-tab (Daily/Monthly/Misc) is active
+      final changed = await _vitalsKey.currentState?.openAdd() ?? false;
+      if (changed) {
+        _summaryKey.currentState?.reload();
+        setState(() {});
+      }
+      return;
+    }
+
+    if (_currentIndex == 5) {
+      await _doctorsKey.currentState?.openAdd();
+      setState(() {});
+      return;
+    }
+
     final Widget screen;
     if (_currentIndex == 1) {
       screen = const AddPrescriptionScreen();
     } else if (_currentIndex == 2) {
       screen = const AddAppointmentScreen();
-    } else if (_currentIndex == 3) {
-      screen = const AddVitalScreen();
     } else {
       screen = const AddActivityScreen();
     }
@@ -103,7 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == true) {
       if (_currentIndex == 1) _prescriptionsKey.currentState?.reload();
       if (_currentIndex == 2) _appointmentsKey.currentState?.reload();
-      if (_currentIndex == 3) _vitalsKey.currentState?.reload();
       if (_currentIndex == 4) _activitiesKey.currentState?.reload();
       _summaryKey.currentState?.reload();
       setState(() {});
@@ -250,35 +264,36 @@ class _HomeScreenState extends State<HomeScreen> {
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey),
           ActivitiesTab(key: _activitiesKey),
+          DoctorsTab(key: _doctorsKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFE8607C).withValues(alpha: 0.12),
+        indicatorColor: const Color(0xFF501513).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: Color(0xFFE8607C)),
+            selectedIcon: Icon(Icons.dashboard, color: Color(0xFF501513)),
             label: 'Summary',
           ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description, color: Color(0xFFE8607C)),
+            selectedIcon: Icon(Icons.description, color: Color(0xFF501513)),
             label: 'Prescriptions',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon:
-                Icon(Icons.calendar_month, color: Color(0xFFE8607C)),
+                Icon(Icons.calendar_month, color: Color(0xFF501513)),
             label: 'Appointments',
           ),
           NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
             selectedIcon:
-                Icon(Icons.monitor_heart, color: Color(0xFFE8607C)),
+                Icon(Icons.monitor_heart, color: Color(0xFF501513)),
             label: 'Vitals',
           ),
           NavigationDestination(
@@ -286,6 +301,12 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon:
                 Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
             label: 'Activities',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.medical_services_outlined),
+            selectedIcon:
+                Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
+            label: 'Doctors',
           ),
         ],
       ),
@@ -310,7 +331,7 @@ class _GradientFAB extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE8607C).withValues(alpha: 0.45),
+            color: const Color(0xFF501513).withValues(alpha: 0.45),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),

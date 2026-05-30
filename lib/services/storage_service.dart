@@ -6,6 +6,7 @@ import '../models/appointment.dart';
 import '../models/appointment_alert.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
+import '../models/doctor.dart';
 import 'auth_service.dart';
 
 class StorageService {
@@ -212,11 +213,14 @@ class StorageService {
         .eq('user_id', _uid)
         .order('appointment_date_time');
 
-    final alertRows = await _db
-        .from('appointment_alerts')
-        .select()
-        .eq('user_id', _uid)
-        .order('scheduled_at');
+    List<dynamic> alertRows = [];
+    try {
+      alertRows = await _db
+          .from('appointment_alerts')
+          .select()
+          .eq('user_id', _uid)
+          .order('scheduled_at');
+    } catch (_) {}
 
     final alertsByApptId = <String, List<AppointmentAlert>>{};
     for (final r in alertRows) {
@@ -224,7 +228,7 @@ class StorageService {
       alertsByApptId.putIfAbsent(apptId, () => []).add(AppointmentAlert(
         id: r['id'],
         appointmentId: apptId,
-        scheduledAt: DateTime.parse(r['scheduled_at']),
+        scheduledAt: DateTime.parse(r['scheduled_at']).toLocal(),
         acknowledged: r['acknowledged'] as bool? ?? false,
       ));
     }
@@ -237,7 +241,7 @@ class StorageService {
         doctorName: r['doctor_name'] ?? '',
         location: r['location'] ?? '',
         notes: r['notes'] ?? '',
-        appointmentDateTime: DateTime.parse(r['appointment_date_time']),
+        appointmentDateTime: DateTime.parse(r['appointment_date_time']).toLocal(),
         alerts: alertsByApptId[apptId] ?? [],
       );
     }).toList();
@@ -251,7 +255,7 @@ class StorageService {
       'doctor_name': a.doctorName,
       'location': a.location,
       'notes': a.notes,
-      'appointment_date_time': a.appointmentDateTime.toIso8601String(),
+      'appointment_date_time': a.appointmentDateTime.toUtc().toIso8601String(),
     });
   }
 
@@ -261,7 +265,7 @@ class StorageService {
       'doctor_name': a.doctorName,
       'location': a.location,
       'notes': a.notes,
-      'appointment_date_time': a.appointmentDateTime.toIso8601String(),
+      'appointment_date_time': a.appointmentDateTime.toUtc().toIso8601String(),
     }).eq('id', a.id).eq('user_id', _uid);
   }
 
@@ -277,7 +281,7 @@ class StorageService {
       'id': alert.id,
       'appointment_id': alert.appointmentId,
       'user_id': _uid,
-      'scheduled_at': alert.scheduledAt.toIso8601String(),
+      'scheduled_at': alert.scheduledAt.toUtc().toIso8601String(),
       'acknowledged': false,
     });
   }
@@ -309,6 +313,8 @@ class StorageService {
       'id': v.id,
       'user_id': _uid,
       'recorded_at': v.recordedAt.toIso8601String(),
+      'category': v.category,
+      'event_name': v.eventName,
       'bp_systolic': v.bpSystolic,
       'bp_diastolic': v.bpDiastolic,
       'weight': v.weight,
@@ -328,6 +334,8 @@ class StorageService {
   static Future<void> updateVital(Vital v) async {
     await _db.from('vitals').update({
       'recorded_at': v.recordedAt.toIso8601String(),
+      'category': v.category,
+      'event_name': v.eventName,
       'bp_systolic': v.bpSystolic,
       'bp_diastolic': v.bpDiastolic,
       'weight': v.weight,
@@ -351,6 +359,8 @@ class StorageService {
   static Map<String, dynamic> _vitalFromRow(Map<String, dynamic> r) => {
     'id': r['id'],
     'recordedAt': r['recorded_at'],
+    'category': r['category'] ?? 'daily',
+    'eventName': r['event_name'] ?? '',
     'bpSystolic': r['bp_systolic'],
     'bpDiastolic': r['bp_diastolic'],
     'weight': r['weight'],
@@ -414,4 +424,66 @@ class StorageService {
     'recordedAt': r['recorded_at'],
     'notes': r['notes'] ?? '',
   };
+
+  // ── Doctors ───────────────────────────────────────────────────────────────
+
+  static Future<List<Doctor>> getDoctors() async {
+    final rows = await _db
+        .from('doctors')
+        .select()
+        .eq('user_id', _uid)
+        .order('last_name');
+    return rows.map((r) => Doctor.fromJson({
+      'id': r['id'],
+      'firstName': r['first_name'] ?? '',
+      'lastName': r['last_name'] ?? '',
+      'credential': r['credential'] ?? '',
+      'specialty': r['specialty'] ?? '',
+      'phone': r['phone'] ?? '',
+      'address': r['address'] ?? '',
+      'city': r['city'] ?? '',
+      'state': r['state'] ?? '',
+      'zip': r['zip'] ?? '',
+      'npiNumber': r['npi_number'] ?? '',
+      'notes': r['notes'] ?? '',
+    })).toList();
+  }
+
+  static Future<void> saveDoctor(Doctor d) async {
+    await _db.from('doctors').insert({
+      'id': d.id,
+      'user_id': _uid,
+      'first_name': d.firstName,
+      'last_name': d.lastName,
+      'credential': d.credential,
+      'specialty': d.specialty,
+      'phone': d.phone,
+      'address': d.address,
+      'city': d.city,
+      'state': d.state,
+      'zip': d.zip,
+      'npi_number': d.npiNumber,
+      'notes': d.notes,
+    });
+  }
+
+  static Future<void> updateDoctor(Doctor d) async {
+    await _db.from('doctors').update({
+      'first_name': d.firstName,
+      'last_name': d.lastName,
+      'credential': d.credential,
+      'specialty': d.specialty,
+      'phone': d.phone,
+      'address': d.address,
+      'city': d.city,
+      'state': d.state,
+      'zip': d.zip,
+      'npi_number': d.npiNumber,
+      'notes': d.notes,
+    }).eq('id', d.id).eq('user_id', _uid);
+  }
+
+  static Future<void> deleteDoctor(String id) async {
+    await _db.from('doctors').delete().eq('id', id).eq('user_id', _uid);
+  }
 }

@@ -9,7 +9,7 @@
         android:maxSdkVersion="32"/>
 
     <application
-        android:label="Medical Wallet"
+        android:label="My Medical Wallet"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"

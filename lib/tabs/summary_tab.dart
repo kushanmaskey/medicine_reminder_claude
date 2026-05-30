@@ -5,16 +5,18 @@ import '../models/prescription.dart';
 import '../models/appointment.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
+import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../screens/add_prescription_screen.dart';
 import '../screens/add_appointment_screen.dart';
 import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
+import '../screens/add_doctor_screen.dart';
 
 const _defaultAvatarBgs = [
-  Color(0xFFE8607C), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
-  Color(0xFFEC4899), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
+  Color(0xFF501513), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
+  Color(0xFF7A2420), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
   Color(0xFFF97316), Color(0xFF6366F1), Color(0xFF84CC16), Color(0xFF0EA5E9),
 ];
 
@@ -25,13 +27,13 @@ const _defaultAvatarIcons = [
 ];
 
 const _tealGradient = LinearGradient(
-  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
+  colors: [Color(0xFF501513), Color(0xFF7A2420)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
 
 const _pinkGradient = LinearGradient(
-  colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+  colors: [Color(0xFF7A2420), Color(0xFF9333EA)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -49,6 +51,7 @@ class SummaryTabState extends State<SummaryTab> {
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
+  List<Doctor> _doctors = [];
   String? _name;
   String? _sex;
   String? _avatarType;
@@ -65,34 +68,46 @@ class SummaryTabState extends State<SummaryTab> {
   void reload() => _load();
 
   Future<void> _load() async {
-    final results = await Future.wait([
-      StorageService.getPrescriptions(),
-      StorageService.getAppointments(),
-      StorageService.getVitals(),
-      StorageService.getActivities(),
-      AuthService.getName(),
-      AuthService.getSex(),
-      AuthService.getAvatarData(),
+    // Load each section independently so a failure in one doesn't blank the others.
+    List<Prescription> prescriptions = [];
+    List<Appointment> appointments = [];
+    List<Vital> vitals = [];
+    List<Activity> activities = [];
+    List<Doctor> doctors = [];
+    String? name;
+    String? sex;
+    Map<String, dynamic> avatarData = {};
+
+    await Future.wait([
+      StorageService.getPrescriptions().then((v) { prescriptions = v; }).catchError((_) {}),
+      StorageService.getAppointments().then((v) { appointments = v; }).catchError((_) {}),
+      StorageService.getVitals().then((v) { vitals = v; }).catchError((_) {}),
+      StorageService.getActivities().then((v) { activities = v; }).catchError((_) {}),
+      StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
+      AuthService.getName().then((v) { name = v; }).catchError((_) {}),
+      AuthService.getSex().then((v) { sex = v; }).catchError((_) {}),
+      AuthService.getAvatarData().then((v) { avatarData = v; }).catchError((_) {}),
     ]);
+
     if (!mounted) return;
-    final appts = (results[1] as List<Appointment>)
-      ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
-    final vitals = (results[2] as List<Vital>)
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final activities = (results[3] as List<Activity>)
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-    final avatarData = results[6] as Map<String, dynamic>;
+
+    appointments.sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
+    vitals.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    activities.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+
     Uint8List? imageBytes;
     if (avatarData['type'] == 'custom' && avatarData['image'] != null) {
-      imageBytes = base64Decode(avatarData['image'] as String);
+      try { imageBytes = base64Decode(avatarData['image'] as String); } catch (_) {}
     }
+
     setState(() {
-      _prescriptions = results[0] as List<Prescription>;
-      _appointments = appts;
+      _prescriptions = prescriptions;
+      _appointments = appointments;
       _vitals = vitals;
       _activities = activities;
-      _name = results[4] as String?;
-      _sex = results[5] as String?;
+      _doctors = doctors;
+      _name = name;
+      _sex = sex;
       _avatarType = avatarData['type'] as String?;
       _avatarIndex = avatarData['index'] as int?;
       _avatarImageBytes = imageBytes;
@@ -107,9 +122,15 @@ class SummaryTabState extends State<SummaryTab> {
     return 'Good Evening';
   }
 
-  List<Appointment> get _upcomingAppointments => _appointments
-      .where((a) => a.appointmentDateTime.isAfter(DateTime.now()))
-      .toList();
+  List<Appointment> get _upcomingAppointments {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _appointments.where((a) {
+      final apptDay = DateTime(a.appointmentDateTime.year,
+          a.appointmentDateTime.month, a.appointmentDateTime.day);
+      return !apptDay.isBefore(today);
+    }).toList();
+  }
 
   List<Vital> get _latestVitals => _vitals.take(3).toList();
 
@@ -117,12 +138,12 @@ class SummaryTabState extends State<SummaryTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFFE8607C)));
+          child: CircularProgressIndicator(color: Color(0xFF501513)));
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: const Color(0xFFE8607C),
+      color: const Color(0xFF501513),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
@@ -167,6 +188,15 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Activities tab to log one')
           else
             ..._activities.take(3).map((a) => _buildActivityRow(a)),
+          const SizedBox(height: 24),
+          _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
+              onViewAll: () => widget.onTabChange(5)),
+          const SizedBox(height: 10),
+          if (_doctors.isEmpty)
+            _buildEmptyState('No doctors added',
+                'Tap + on the Doctors tab to add one')
+          else
+            ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
         ],
       ),
     );
@@ -207,7 +237,7 @@ class SummaryTabState extends State<SummaryTab> {
       _sex == 'Female' ? _pinkGradient : _tealGradient;
 
   Color get _greetingShadowColor =>
-      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFFE8607C);
+      _sex == 'Female' ? const Color(0xFF7A2420) : const Color(0xFF501513);
 
   Widget _buildGreetingCard() {
     final displayName = (_name != null && _name!.isNotEmpty) ? _name! : 'User';
@@ -289,7 +319,7 @@ class SummaryTabState extends State<SummaryTab> {
           label: 'Vitals',
           count: _vitals.length,
           icon: Icons.monitor_heart_outlined,
-          color: const Color(0xFFE8607C),
+          color: const Color(0xFF501513),
           onTap: () => widget.onTabChange(3),
         ),
         const SizedBox(width: 8),
@@ -299,6 +329,14 @@ class SummaryTabState extends State<SummaryTab> {
           icon: Icons.directions_walk_outlined,
           color: const Color(0xFF22C55E),
           onTap: () => widget.onTabChange(4),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
+          label: 'Doctors',
+          count: _doctors.length,
+          icon: Icons.medical_services_outlined,
+          color: const Color(0xFF0EA5E9),
+          onTap: () => widget.onTabChange(5),
         ),
       ],
     );
@@ -409,7 +447,7 @@ class SummaryTabState extends State<SummaryTab> {
                 ),
                 const SizedBox(width: 8),
                 const Icon(Icons.edit_outlined,
-                    size: 16, color: Color(0xFFE8607C)),
+                    size: 16, color: Color(0xFF501513)),
               ],
             ),
             const SizedBox(height: 14),
@@ -689,7 +727,7 @@ class SummaryTabState extends State<SummaryTab> {
     'Run':        Color(0xFFF97316),
     'Exercise':   Color(0xFF3B82F6),
     'Yoga':       Color(0xFF8B5CF6),
-    'Meditation': Color(0xFFE8607C),
+    'Meditation': Color(0xFF501513),
   };
 
   static const _activityIcons = {
@@ -798,6 +836,86 @@ class SummaryTabState extends State<SummaryTab> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Doctor row ─────────────────────────────────────────────────────────────
+
+  Widget _buildDoctorRow(Doctor d) {
+    const accent = Color(0xFF0EA5E9);
+    final subtitle = <String>[];
+    if (d.phone.isNotEmpty) subtitle.add(d.phone);
+    final loc = [d.city, d.state].where((s) => s.isNotEmpty).join(', ');
+    if (loc.isNotEmpty) subtitle.add(loc);
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(builder: (_) => AddDoctorScreen(existing: d)),
+        );
+        if (result == true || result == 'deleted') _load();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.medical_services_outlined,
+                  color: accent, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    d.fullName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF635A5A)),
+                  ),
+                  if (d.specialty.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(d.specialty,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: accent,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle.join(' · '),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                color: Color(0xFFCBD5E1), size: 18),
+          ],
         ),
       ),
     );
