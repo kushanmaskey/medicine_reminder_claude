@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/vital.dart';
 import '../services/storage_service.dart';
 
@@ -926,7 +927,7 @@ class _UnitToggle extends StatelessWidget {
 
 // ── Recommendations data & card ───────────────────────────────────────────────
 
-typedef _Tip = ({String icon, String title, String body, Color color});
+typedef _Tip = ({String icon, String title, String body, Color color, String? url});
 
 const _dailyTips = <_Tip>[
   (
@@ -934,24 +935,28 @@ const _dailyTips = <_Tip>[
     body: 'Normal: < 120/80 mmHg. Elevated: 120-129 systolic. High: ≥ 130/80. '
         'Reduce sodium, exercise 30 min/day, limit alcohol, manage stress.',
     color: Color(0xFFEF4444),
+    url: 'https://medlineplus.gov/bloodpressure.html',
   ),
   (
     icon: '🩸', title: 'Blood Sugar',
     body: 'Fasting normal: < 100 mg/dL. Pre-diabetic: 100-125. Diabetic: ≥ 126. '
         'Post-meal (2 hrs): < 140 ideal. Limit refined carbs and sugary drinks.',
     color: Color(0xFFF97316),
+    url: null,
   ),
   (
     icon: '⚖️', title: 'Body Weight',
     body: 'Healthy BMI: 18.5–24.9. Overweight: 25–29.9. Obese: ≥ 30. '
         'Aim for gradual loss of 0.5–1 lb/week through diet and regular exercise.',
     color: Color(0xFF3B82F6),
+    url: null,
   ),
   (
     icon: '🧪', title: 'Cholesterol',
     body: 'Total: < 200 mg/dL ideal. LDL: < 100. HDL: > 60 is protective. '
         'Increase dietary fiber, reduce saturated fats, exercise regularly.',
     color: Color(0xFF8B5CF6),
+    url: null,
   ),
 ];
 
@@ -961,18 +966,21 @@ const _monthlyTips = <_Tip>[
     body: 'A normal cycle is 21–35 days. Track duration and flow each month. '
         'See a doctor for cycles outside that range, heavy bleeding, or severe pain.',
     color: Color(0xFF7A2420),
+    url: null,
   ),
   (
     icon: '🩺', title: 'Mammogram',
     body: 'Annual mammogram recommended for women 40+. '
         'Start earlier with family history of breast cancer or BRCA1/2 gene mutation.',
     color: Color(0xFF8B5CF6),
+    url: null,
   ),
   (
     icon: '💊', title: 'Hormonal Health',
     body: 'Log symptoms like bloating, mood changes, or cramps alongside dates. '
         'Persistent irregularities may signal thyroid issues, PCOS, or hormonal imbalances.',
     color: Color(0xFF0EA5E9),
+    url: null,
   ),
 ];
 
@@ -982,24 +990,28 @@ const _miscTips = <_Tip>[
     body: 'Every 10 years from age 45 (average risk). Every 5 years if polyps found. '
         'Every 3–5 years with family history of colorectal cancer.',
     color: Color(0xFF22C55E),
+    url: null,
   ),
   (
     icon: '💉', title: 'Vaccinations',
     body: 'Annual flu shot for everyone 6 months+. Shingles vaccine at 50+. '
         'Pneumonia vaccine at 65+. Keep a record of all vaccine dates and boosters.',
     color: Color(0xFF0EA5E9),
+    url: null,
   ),
   (
     icon: '👁️', title: 'Eye & Dental Exams',
     body: 'Eye exam every 1–2 years (annually if diabetic). '
         'Dental cleaning and exam every 6 months.',
     color: Color(0xFFF97316),
+    url: null,
   ),
   (
     icon: '🩻', title: 'Bone Density (DEXA)',
     body: 'Recommended for women 65+ and men 70+. Earlier if low body weight, '
         'smoking, steroid use, or prior fracture. Repeat every 1–2 years if osteopenia found.',
     color: Color(0xFF8B5CF6),
+    url: null,
   ),
 ];
 
@@ -1035,6 +1047,25 @@ class _TipCard extends StatelessWidget {
                 Text(tip.body,
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey[600], height: 1.45)),
+                if (tip.url != null) ...[
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: () => launchUrl(
+                      Uri.parse(tip.url!),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: Text(
+                      'Learn more →',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: tip.color,
+                        decoration: TextDecoration.underline,
+                        decorationColor: tip.color,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
