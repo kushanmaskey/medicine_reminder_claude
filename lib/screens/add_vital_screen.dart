@@ -351,7 +351,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           children: [
             _buildDateSection(),
             const SizedBox(height: 16),
-            if (_category == 'daily') ..._buildDailyFields(),
+            if (_category == 'daily') ..._buildDailyFields(context),
             if (_category == 'monthly') ..._buildMonthlyFields(),
             if (_category == 'open') ..._buildOpenFields(),
             const SizedBox(height: 16),
@@ -404,11 +404,187 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Daily fields ──────────────────────────────────────────────────────────
 
-  List<Widget> _buildDailyFields() => [
+  // ── Blood pressure classification ─────────────────────────────────────────
+
+  _BpCategory _classifyBp() {
+    final sys = int.tryParse(_systolicController.text.trim());
+    final dia = int.tryParse(_diastolicController.text.trim());
+    if (sys == null && dia == null) return _BpCategory.unknown;
+    if ((sys != null && sys > 180) || (dia != null && dia > 120)) return _BpCategory.crisis;
+    if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) return _BpCategory.stage2;
+    if ((sys != null && sys >= 130) || (dia != null && dia >= 80)) return _BpCategory.stage1;
+    if (sys != null && sys >= 120 && (dia == null || dia < 80)) return _BpCategory.elevated;
+    if ((sys != null && sys < 90) || (dia != null && dia < 60)) return _BpCategory.low;
+    return _BpCategory.normal;
+  }
+
+  void _showBpRecommendation(BuildContext context) {
+    final cat = _classifyBp();
+    final sys = _systolicController.text.trim();
+    final dia = _diastolicController.text.trim();
+    final hasValues = sys.isNotEmpty || dia.isNotEmpty;
+
+    final (Color color, IconData icon, String label, String detail) = switch (cat) {
+      _BpCategory.crisis => (
+          const Color(0xFF7F1D1D),
+          Icons.emergency,
+          'Hypertensive Crisis',
+          'Your reading is critically high. Seek emergency medical care immediately. '
+              'Do not wait — call 911 or go to the nearest emergency room.',
+        ),
+      _BpCategory.stage2 => (
+          const Color(0xFFEF4444),
+          Icons.warning_rounded,
+          'High Blood Pressure — Stage 2',
+          'Systolic ≥ 140 or Diastolic ≥ 90 mmHg. Consult your doctor as soon as '
+              'possible. Medication and significant lifestyle changes are typically required.',
+        ),
+      _BpCategory.stage1 => (
+          const Color(0xFFF97316),
+          Icons.warning_amber_rounded,
+          'High Blood Pressure — Stage 1',
+          'Systolic 130–139 or Diastolic 80–89 mmHg. Discuss with your doctor. '
+              'Reduce sodium, exercise regularly, limit alcohol, and manage stress.',
+        ),
+      _BpCategory.elevated => (
+          const Color(0xFFEAB308),
+          Icons.trending_up,
+          'Elevated Blood Pressure',
+          'Systolic 120–129 and Diastolic < 80 mmHg. No medication needed yet, but '
+              'adopt heart-healthy habits: reduce salt, increase physical activity, and '
+              'maintain a healthy weight.',
+        ),
+      _BpCategory.normal => (
+          const Color(0xFF22C55E),
+          Icons.check_circle_outline,
+          'Normal Blood Pressure',
+          'Systolic < 120 and Diastolic < 80 mmHg. Great work! Keep up healthy habits — '
+              'regular exercise, balanced diet, and stress management.',
+        ),
+      _BpCategory.low => (
+          const Color(0xFF3B82F6),
+          Icons.arrow_downward,
+          'Low Blood Pressure',
+          'Systolic < 90 or Diastolic < 60 mmHg. Consult your doctor if you experience '
+              'dizziness, fainting, or fatigue. Stay hydrated and rise slowly from sitting '
+              'or lying positions.',
+        ),
+      _BpCategory.unknown => (
+          const Color(0xFF6B7280),
+          Icons.info_outline,
+          'Blood Pressure Guide',
+          'Normal: < 120/80. Elevated: 120–129 systolic. High Stage 1: 130–139/80–89. '
+              'High Stage 2: ≥ 140/90. Low: < 90/60. Enter your reading above for a '
+              'personalised assessment.',
+        ),
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: color)),
+                      if (hasValues)
+                        Text(
+                          '${sys.isEmpty ? '?' : sys} / ${dia.isEmpty ? '?' : dia} mmHg',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(detail,
+                style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () => launchUrl(
+                Uri.parse('https://medlineplus.gov/bloodpressure.html'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.open_in_new, size: 16, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Learn more about blood pressure — MedlinePlus',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildDailyFields(BuildContext context) => [
     _SectionCard(
       title: 'Blood Pressure',
       icon: Icons.favorite_outlined,
       iconColor: const Color(0xFFEF4444),
+      trailing: IconButton(
+        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        tooltip: 'Blood pressure guide',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => _showBpRecommendation(context),
+      ),
       children: [
         Row(
           children: [
@@ -827,6 +1003,10 @@ class _DatePickerTile extends StatelessWidget {
   }
 }
 
+// ── BP category enum ──────────────────────────────────────────────────────────
+
+enum _BpCategory { unknown, low, normal, elevated, stage1, stage2, crisis }
+
 // ── Section card ─────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
@@ -834,12 +1014,14 @@ class _SectionCard extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final List<Widget> children;
+  final Widget? trailing;
 
   const _SectionCard({
     required this.title,
     required this.icon,
     this.iconColor = const Color(0xFF501513),
     required this.children,
+    this.trailing,
   });
 
   @override
@@ -866,6 +1048,10 @@ class _SectionCard extends StatelessWidget {
                     color: Colors.grey[500],
                     letterSpacing: 0.6),
               ),
+              if (trailing != null) ...[
+                const Spacer(),
+                trailing!,
+              ],
             ],
           ),
           const SizedBox(height: 12),
