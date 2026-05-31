@@ -365,6 +365,41 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     _WeightCategory.unknown => _bulbAmber,
   };
 
+  // ── Bulb tooltips (live) ──────────────────────────────────────────────────
+
+  String get _bpTooltip => switch (_classifyBp()) {
+    _BpCategory.crisis   => 'Hypertensive Crisis',
+    _BpCategory.stage2   => 'High BP — Stage 2',
+    _BpCategory.stage1   => 'High BP — Stage 1',
+    _BpCategory.elevated => 'Elevated BP',
+    _BpCategory.normal   => 'Normal BP',
+    _BpCategory.low      => 'Low BP',
+    _BpCategory.unknown  => 'Blood pressure guide',
+  };
+
+  String get _sugarTooltip => switch (_classifySugar()) {
+    _SugarCategory.low         => 'Low Blood Sugar',
+    _SugarCategory.normal      => 'Normal Blood Sugar',
+    _SugarCategory.preDiabetes => 'Pre-Diabetes Range',
+    _SugarCategory.diabetic    => 'Diabetic Range',
+    _SugarCategory.unknown     => 'Blood sugar guide',
+  };
+
+  String get _cholesterolTooltip => switch (_classifyCholesterol()) {
+    _CholesterolCategory.optimal    => 'Optimal Cholesterol',
+    _CholesterolCategory.borderline => 'Borderline High Cholesterol',
+    _CholesterolCategory.high       => 'High Cholesterol',
+    _CholesterolCategory.unknown    => 'Cholesterol guide',
+  };
+
+  String get _weightTooltip => switch (_classifyWeight()) {
+    _WeightCategory.low      => 'Low Weight',
+    _WeightCategory.normal   => 'Healthy Weight Range',
+    _WeightCategory.high     => 'Above Average Weight',
+    _WeightCategory.veryHigh => 'High Weight',
+    _WeightCategory.unknown  => 'Weight guide',
+  };
+
   // ── Blood pressure classification ─────────────────────────────────────────
 
   _BpCategory _classifyBp() {
@@ -626,7 +661,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFFEF4444),
       trailing: IconButton(
         icon: Icon(Icons.lightbulb, size: 18, color: _bpBulbColor),
-        tooltip: 'Blood pressure guide',
+        tooltip: _bpTooltip,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         onPressed: () => _showBpRecommendation(context),
@@ -681,7 +716,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFFF97316),
       trailing: IconButton(
         icon: Icon(Icons.lightbulb, size: 18, color: _sugarBulbColor),
-        tooltip: 'Blood sugar guide',
+        tooltip: _sugarTooltip,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         onPressed: () => _showSugarRecommendation(context),
@@ -722,7 +757,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFF8B5CF6),
       trailing: IconButton(
         icon: Icon(Icons.lightbulb, size: 18, color: _cholesterolBulbColor),
-        tooltip: 'Cholesterol guide',
+        tooltip: _cholesterolTooltip,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         onPressed: () => _showCholesterolRecommendation(context),
@@ -765,7 +800,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFF3B82F6),
       trailing: IconButton(
         icon: Icon(Icons.lightbulb, size: 18, color: _weightBulbColor),
-        tooltip: 'Healthy weight guide',
+        tooltip: _weightTooltip,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
         onPressed: () => _showWeightRecommendation(context),
