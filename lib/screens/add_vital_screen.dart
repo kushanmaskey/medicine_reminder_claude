@@ -486,6 +486,20 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _BpCategory.unknown => (const Color(0xFF6B7280), Icons.info_outline,         'Blood Pressure Guide',         'Normal: < 120/80. Elevated: 120–129 systolic. High Stage 1: 130–139/80–89. High Stage 2: ≥ 140/90. Low: < 90/60. Enter your reading above for a personalised assessment.'),
     };
 
+    final learnMoreUrl = switch (cat) {
+      _BpCategory.low                          => 'https://medlineplus.gov/lowbloodpressure.html',
+      _BpCategory.crisis || _BpCategory.stage2 ||
+      _BpCategory.stage1 || _BpCategory.elevated => 'https://medlineplus.gov/highbloodpressure.html',
+      _                                        => 'https://medlineplus.gov/bloodpressure.html',
+    };
+
+    final learnMoreLabel = switch (cat) {
+      _BpCategory.low                          => 'Learn more about low blood pressure — MedlinePlus',
+      _BpCategory.crisis || _BpCategory.stage2 ||
+      _BpCategory.stage1 || _BpCategory.elevated => 'Learn more about high blood pressure — MedlinePlus',
+      _                                        => 'Learn more about blood pressure — MedlinePlus',
+    };
+
     _showVitalInfoSheet(
       context,
       color: color,
@@ -493,8 +507,8 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       label: label,
       reading: (sys.isNotEmpty || dia.isNotEmpty) ? '${sys.isEmpty ? '?' : sys} / ${dia.isEmpty ? '?' : dia} mmHg' : null,
       detail: detail,
-      learnMoreUrl: 'https://medlineplus.gov/bloodpressure.html',
-      learnMoreLabel: 'Learn more about blood pressure — MedlinePlus',
+      learnMoreUrl: learnMoreUrl,
+      learnMoreLabel: learnMoreLabel,
     );
   }
 
@@ -1177,7 +1191,7 @@ const _dailyTips = <_Tip>[
     body: 'Normal: < 120/80 mmHg. Elevated: 120-129 systolic. High: ≥ 130/80. '
         'Reduce sodium, exercise 30 min/day, limit alcohol, manage stress.',
     color: Color(0xFFEF4444),
-    url: 'https://medlineplus.gov/bloodpressure.html',
+    url: 'https://medlineplus.gov/highbloodpressure.html',
   ),
   (
     icon: '🩸', title: 'Blood Sugar',
