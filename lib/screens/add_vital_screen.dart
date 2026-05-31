@@ -522,17 +522,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     };
 
     final learnMoreUrl = switch (cat) {
-      _BpCategory.low                          => 'https://medlineplus.gov/lowbloodpressure.html',
+      _BpCategory.low                             => 'https://medlineplus.gov/lowbloodpressure.html',
+      _BpCategory.normal                          => 'https://medlineplus.gov/vitalsigns.html',
       _BpCategory.crisis || _BpCategory.stage2 ||
-      _BpCategory.stage1 || _BpCategory.elevated => 'https://medlineplus.gov/highbloodpressure.html',
-      _                                        => 'https://medlineplus.gov/bloodpressure.html',
+      _BpCategory.stage1 || _BpCategory.elevated  => 'https://medlineplus.gov/highbloodpressure.html',
+      _                                           => 'https://medlineplus.gov/bloodpressure.html',
     };
 
     final learnMoreLabel = switch (cat) {
-      _BpCategory.low                          => 'Learn more about low blood pressure — MedlinePlus',
+      _BpCategory.low                             => 'Learn more about low blood pressure — MedlinePlus',
+      _BpCategory.normal                          => 'Learn more about vital signs — MedlinePlus',
       _BpCategory.crisis || _BpCategory.stage2 ||
-      _BpCategory.stage1 || _BpCategory.elevated => 'Learn more about high blood pressure — MedlinePlus',
-      _                                        => 'Learn more about blood pressure — MedlinePlus',
+      _BpCategory.stage1 || _BpCategory.elevated  => 'Learn more about high blood pressure — MedlinePlus',
+      _                                           => 'Learn more about blood pressure — MedlinePlus',
     };
 
     _showVitalInfoSheet(
