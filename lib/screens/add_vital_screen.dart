@@ -76,9 +76,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     }
   }
 
+  void _onVitalChanged() => setState(() {});
+
   @override
   void initState() {
     super.initState();
+    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController]) {
+      c.addListener(_onVitalChanged);
+    }
     if (_isEditing) {
       final e = widget.existing!;
       _systolicController.text    = e.bpSystolic?.toString() ?? '';
@@ -100,6 +105,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   @override
   void dispose() {
+    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController]) {
+      c.removeListener(_onVitalChanged);
+    }
     _systolicController.dispose();
     _diastolicController.dispose();
     _weightController.dispose();
@@ -319,6 +327,35 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   }
 
   // ── Daily fields ──────────────────────────────────────────────────────────
+
+  // ── Bulb colors (live — recomputed on every setState) ────────────────────
+
+  static const _bulbAmber = Color(0xFFF59E0B);
+
+  Color get _bpBulbColor => switch (_classifyBp()) {
+    _BpCategory.crisis   => const Color(0xFF7F1D1D),
+    _BpCategory.stage2   => const Color(0xFFEF4444),
+    _BpCategory.stage1   => const Color(0xFFF97316),
+    _BpCategory.elevated => const Color(0xFFEAB308),
+    _BpCategory.normal   => const Color(0xFF22C55E),
+    _BpCategory.low      => const Color(0xFF3B82F6),
+    _BpCategory.unknown  => _bulbAmber,
+  };
+
+  Color get _sugarBulbColor => switch (_classifySugar()) {
+    _SugarCategory.low         => const Color(0xFF3B82F6),
+    _SugarCategory.normal      => const Color(0xFF22C55E),
+    _SugarCategory.preDiabetes => const Color(0xFFEAB308),
+    _SugarCategory.diabetic    => const Color(0xFFEF4444),
+    _SugarCategory.unknown     => _bulbAmber,
+  };
+
+  Color get _cholesterolBulbColor => switch (_classifyCholesterol()) {
+    _CholesterolCategory.optimal    => const Color(0xFF22C55E),
+    _CholesterolCategory.borderline => const Color(0xFFEAB308),
+    _CholesterolCategory.high       => const Color(0xFFEF4444),
+    _CholesterolCategory.unknown    => _bulbAmber,
+  };
 
   // ── Blood pressure classification ─────────────────────────────────────────
 
@@ -550,7 +587,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.favorite_outlined,
       iconColor: const Color(0xFFEF4444),
       trailing: IconButton(
-        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        icon: Icon(Icons.lightbulb, size: 18, color: _bpBulbColor),
         tooltip: 'Blood pressure guide',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
@@ -605,7 +642,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.water_drop_outlined,
       iconColor: const Color(0xFFF97316),
       trailing: IconButton(
-        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        icon: Icon(Icons.lightbulb, size: 18, color: _sugarBulbColor),
         tooltip: 'Blood sugar guide',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
@@ -646,7 +683,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.biotech_outlined,
       iconColor: const Color(0xFF8B5CF6),
       trailing: IconButton(
-        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        icon: Icon(Icons.lightbulb, size: 18, color: _cholesterolBulbColor),
         tooltip: 'Cholesterol guide',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
