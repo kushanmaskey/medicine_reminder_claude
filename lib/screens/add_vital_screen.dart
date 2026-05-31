@@ -912,11 +912,27 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Risk section (daily only) ─────────────────────────────────────────────
 
+  Color get _riskBulbColor => switch (_riskLevel) {
+    'High'   => const Color(0xFFEF4444),
+    'Medium' => const Color(0xFFF97316),
+    _        => const Color(0xFF22C55E),
+  };
+
   Widget _buildRiskSection() {
     return _SectionCard(
       title: 'Overall Risk Level',
       icon: Icons.shield_outlined,
       iconColor: const Color(0xFF8B5CF6),
+      trailing: IconButton(
+        icon: Icon(Icons.lightbulb, size: 18, color: _riskBulbColor),
+        tooltip: '$_riskLevel Risk — learn more',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => launchUrl(
+          Uri.parse('https://medlineplus.gov'),
+          mode: LaunchMode.externalApplication,
+        ),
+      ),
       children: [
         ...[
           ('Low',    const Color(0xFF22C55E), Icons.sentiment_satisfied_outlined),
