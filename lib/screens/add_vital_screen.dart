@@ -498,6 +498,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 12, color: Colors.grey[400]),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'For informational purposes only. Not a substitute for professional medical advice.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400], fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
