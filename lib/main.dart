@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'config/supabase_config.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
+import 'onboarding/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,8 +15,9 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
-  await NotificationService.initialize();
   runApp(const MedicalWalletApp());
+  // Initialise notifications after the app renders so it never blocks the UI.
+  NotificationService.initialize();
 }
 
 class MedicalWalletApp extends StatelessWidget {
@@ -27,7 +30,7 @@ class MedicalWalletApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE8607C),
+          seedColor: const Color(0xFF501513),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -47,30 +50,52 @@ class MedicalWalletApp extends StatelessWidget {
 class _SplashRouter extends StatelessWidget {
   const _SplashRouter();
 
+  Future<_StartupState> _resolve() async {
+    final results = await Future.wait([
+      AuthService.isLoggedIn(),
+      AuthService.hasAccount(),
+    ]);
+    final isLoggedIn = results[0];
+    final hasAccount = results[1];
+
+    if (!isLoggedIn) {
+      return hasAccount ? _StartupState.login : _StartupState.register;
+    }
+
+    // Logged in — show onboarding only on first login ever
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+    if (!onboardingDone) return _StartupState.onboarding;
+
+    return _StartupState.home;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<bool>>(
-      future: Future.wait([
-        AuthService.isLoggedIn(),
-        AuthService.hasAccount(),
-      ]),
+    return FutureBuilder<_StartupState>(
+      future: _resolve(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(
             backgroundColor: Colors.white,
             body: Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFFE8607C),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF501513)),
             ),
           );
         }
-        final isLoggedIn = snapshot.data![0];
-        final hasAccount = snapshot.data![1];
-        if (isLoggedIn) return const HomeScreen();
-        if (hasAccount) return const LoginScreen();
-        return const RegisterScreen();
+        return switch (snapshot.data!) {
+          _StartupState.onboarding => OnboardingScreen(
+              onDone: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const _SplashRouter()),
+              ),
+            ),
+          _StartupState.home     => const HomeScreen(),
+          _StartupState.login    => const LoginScreen(),
+          _StartupState.register => const RegisterScreen(),
+        };
       },
     );
   }
 }
+
+enum _StartupState { onboarding, home, login, register }
