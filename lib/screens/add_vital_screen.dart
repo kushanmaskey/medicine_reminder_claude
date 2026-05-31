@@ -81,7 +81,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   @override
   void initState() {
     super.initState();
-    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController]) {
+    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController, _weightController]) {
       c.addListener(_onVitalChanged);
     }
     if (_isEditing) {
@@ -105,7 +105,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   @override
   void dispose() {
-    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController]) {
+    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController, _weightController]) {
       c.removeListener(_onVitalChanged);
     }
     _systolicController.dispose();
@@ -357,6 +357,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     _CholesterolCategory.unknown    => _bulbAmber,
   };
 
+  Color get _weightBulbColor => switch (_classifyWeight()) {
+    _WeightCategory.low     => const Color(0xFF3B82F6),
+    _WeightCategory.normal  => const Color(0xFF22C55E),
+    _WeightCategory.high    => const Color(0xFFEAB308),
+    _WeightCategory.veryHigh=> const Color(0xFFEF4444),
+    _WeightCategory.unknown => _bulbAmber,
+  };
+
   // ── Blood pressure classification ─────────────────────────────────────────
 
   _BpCategory _classifyBp() {
@@ -562,20 +570,36 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Weight recommendation ─────────────────────────────────────────────────
 
+  _WeightCategory _classifyWeight() {
+    final raw = double.tryParse(_weightController.text.trim());
+    if (raw == null) return _WeightCategory.unknown;
+    // Normalise to lbs for thresholds
+    final lbs = _weightUnit == 'kg' ? raw * 2.20462 : raw;
+    if (lbs < 110) return _WeightCategory.low;
+    if (lbs <= 174) return _WeightCategory.normal;
+    if (lbs <= 239) return _WeightCategory.high;
+    return _WeightCategory.veryHigh;
+  }
+
   void _showWeightRecommendation(BuildContext context) {
+    final cat = _classifyWeight();
     final val = _weightController.text.trim();
+
+    final (Color color, IconData icon, String label, String detail) = switch (cat) {
+      _WeightCategory.low      => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Weight',           'Your weight appears below average. If unintentional, consult your doctor to rule out nutritional deficiency or an underlying condition. Eat nutrient-dense foods and strength-train.'),
+      _WeightCategory.normal   => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Healthy Weight Range', 'Your weight is within a typical healthy range. Maintain it with regular exercise, a balanced diet, and consistent sleep. Track trends rather than daily fluctuations.'),
+      _WeightCategory.high     => (const Color(0xFFEAB308), Icons.trending_up,          'Above Average Weight', 'Your weight is above the average healthy range. Aim for 30 min of moderate exercise 5 days a week, reduce processed food and sugary drinks, and track portion sizes.'),
+      _WeightCategory.veryHigh => (const Color(0xFFEF4444), Icons.warning_rounded,      'High Weight',          'Your weight may increase health risks such as diabetes, high BP, and joint problems. Consult your doctor for a personalised plan. Small sustainable changes make a big difference.'),
+      _WeightCategory.unknown  => (const Color(0xFF3B82F6), Icons.scale_outlined,       'Healthy Weight Tips',  'BMI = weight (kg) ÷ height (m)². Healthy BMI: 18.5–24.9. Overweight: 25–29.9. Obese: ≥ 30.\n\nWeigh yourself at the same time each day (morning, after bathroom). Aim for gradual change of 0.5–1 lb/week.'),
+    };
 
     _showVitalInfoSheet(
       context,
-      color: const Color(0xFF3B82F6),
-      icon: Icons.scale_outlined,
-      label: 'Healthy Weight Tips',
+      color: color,
+      icon: icon,
+      label: label,
       reading: val.isNotEmpty ? '$val $_weightUnit' : null,
-      detail: 'BMI (Body Mass Index) = weight (kg) ÷ height (m)². '
-          'Healthy BMI: 18.5–24.9. Overweight: 25–29.9. Obese: ≥ 30. Underweight: < 18.5.\n\n'
-          'Track your weight at the same time each day (morning, after using the bathroom). '
-          'Aim for gradual loss of 0.5–1 lb (0.25–0.5 kg) per week if needed. '
-          'Combine regular exercise with a balanced diet for sustainable results.',
+      detail: '${detail}\n\nNote: These ranges are based on average adult weight. For a precise assessment, calculate your BMI using your height.',
       learnMoreUrl: 'https://medlineplus.gov/weightcontrol.html',
       learnMoreLabel: 'Learn more about healthy weight — MedlinePlus',
     );
@@ -726,7 +750,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.scale_outlined,
       iconColor: const Color(0xFF3B82F6),
       trailing: IconButton(
-        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        icon: Icon(Icons.lightbulb, size: 18, color: _weightBulbColor),
         tooltip: 'Healthy weight guide',
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
@@ -1037,6 +1061,7 @@ class _DatePickerTile extends StatelessWidget {
 enum _BpCategory { unknown, low, normal, elevated, stage1, stage2, crisis }
 enum _SugarCategory { unknown, low, normal, preDiabetes, diabetic }
 enum _CholesterolCategory { unknown, optimal, borderline, high }
+enum _WeightCategory { unknown, low, normal, high, veryHigh }
 
 // ── Section card ─────────────────────────────────────────────────────────────
 
