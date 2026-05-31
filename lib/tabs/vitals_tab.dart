@@ -250,6 +250,35 @@ class _VitalsListView extends StatelessWidget {
   }
 }
 
+// ── Vital classification helpers ──────────────────────────────────────────────
+
+Color? _bpBulbColor(int? sys, int? dia) {
+  if (sys == null && dia == null) return null;
+  if ((sys != null && sys > 180) || (dia != null && dia > 120)) return const Color(0xFF7F1D1D);
+  if ((sys != null && sys >= 140) || (dia != null && dia >= 90))  return const Color(0xFFEF4444);
+  if ((sys != null && sys >= 130) || (dia != null && dia >= 80))  return const Color(0xFFF97316);
+  if (sys != null && sys >= 120 && (dia == null || dia < 80))     return const Color(0xFFEAB308);
+  if ((sys != null && sys < 90)  || (dia != null && dia < 60))    return const Color(0xFF3B82F6);
+  return const Color(0xFF22C55E);
+}
+
+Color? _sugarBulbColor(double? sugar, String unit) {
+  if (sugar == null) return null;
+  final mg = unit == 'mmol/L' ? sugar * 18.0182 : sugar;
+  if (mg < 70)  return const Color(0xFF3B82F6);
+  if (mg < 100) return const Color(0xFF22C55E);
+  if (mg < 126) return const Color(0xFFEAB308);
+  return const Color(0xFFEF4444);
+}
+
+Color? _cholesterolBulbColor(double? chol, String unit) {
+  if (chol == null) return null;
+  final mg = unit == 'mmol/L' ? chol * 38.67 : chol;
+  if (mg < 200) return const Color(0xFF22C55E);
+  if (mg < 240) return const Color(0xFFEAB308);
+  return const Color(0xFFEF4444);
+}
+
 // ── Daily card (BP / Sugar / Weight / Cholesterol) ───────────────────────────
 
 class _DailyCard extends StatelessWidget {
@@ -334,13 +363,13 @@ class _DailyCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _MiniVital(icon: Icons.favorite_outlined,  value: vital.bpDisplay,          color: const Color(0xFFEF4444)),
+              _MiniVital(icon: Icons.favorite_outlined,   value: vital.bpDisplay,          color: const Color(0xFFEF4444), bulbColor: _bpBulbColor(vital.bpSystolic, vital.bpDiastolic)),
               const SizedBox(width: 8),
-              _MiniVital(icon: Icons.water_drop_outlined, value: vital.sugarDisplay,       color: const Color(0xFFF97316)),
+              _MiniVital(icon: Icons.water_drop_outlined, value: vital.sugarDisplay,       color: const Color(0xFFF97316), bulbColor: _sugarBulbColor(vital.sugarLevel, vital.sugarUnit)),
               const SizedBox(width: 8),
               _MiniVital(icon: Icons.scale_outlined,      value: vital.weightDisplay,      color: const Color(0xFF3B82F6)),
               const SizedBox(width: 8),
-              _MiniVital(icon: Icons.biotech_outlined,    value: vital.cholesterolDisplay, color: const Color(0xFF8B5CF6)),
+              _MiniVital(icon: Icons.biotech_outlined,    value: vital.cholesterolDisplay, color: const Color(0xFF8B5CF6), bulbColor: _cholesterolBulbColor(vital.cholesterol, vital.cholesterolUnit)),
             ],
           ),
           if (vital.notes.isNotEmpty) ...[
@@ -541,10 +570,13 @@ class _MiniVital extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-  const _MiniVital({required this.icon, required this.value, required this.color});
+  final Color? bulbColor;
+  const _MiniVital({required this.icon, required this.value, required this.color, this.bulbColor});
 
   @override
   Widget build(BuildContext context) {
+    final hasValue = value != '—';
+    final showBulb = bulbColor != null && hasValue;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -564,11 +596,15 @@ class _MiniVital extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: value == '—' ? Colors.grey[400] : color,
+                  color: hasValue ? color : Colors.grey[400],
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (showBulb) ...[
+              const SizedBox(width: 3),
+              Icon(Icons.lightbulb, size: 10, color: bulbColor),
+            ],
           ],
         ),
       ),
