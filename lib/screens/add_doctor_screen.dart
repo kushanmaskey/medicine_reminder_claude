@@ -182,10 +182,33 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
       _dismissFocus();
       setState(() => _saving = true);
 
+      final firstName = _firstNameController.text.trim();
+      final lastName  = _lastNameController.text.trim();
+
+      // Duplicate check: same first+last name (case-insensitive), excluding self when editing
+      final existing = await StorageService.getDoctors();
+      final isDuplicate = existing.any((d) {
+        if (_isEditing && d.id == widget.existing!.id) return false;
+        return d.firstName.toLowerCase() == firstName.toLowerCase() &&
+               d.lastName.toLowerCase()  == lastName.toLowerCase();
+      });
+
+      if (isDuplicate) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$firstName $lastName is already in your doctors list.'),
+            backgroundColor: const Color(0xFFF97316),
+          ),
+        );
+        return;
+      }
+
       final doctor = Doctor(
         id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        firstName:  _firstNameController.text.trim(),
-        lastName:   _lastNameController.text.trim(),
+        firstName:  firstName,
+        lastName:   lastName,
         credential: _credentialController.text.trim(),
         specialty:  _specialtyController.text.trim(),
         phone:      _phoneController.text.trim(),

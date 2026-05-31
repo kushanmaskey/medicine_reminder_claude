@@ -4,6 +4,8 @@ import 'prescription_alert.dart';
 class Prescription {
   final String id;
   final String name;
+  final String type; // 'prescribed' | 'otc'
+  final String? doctorId;
   final DateTime? refillDate;
   final String instructions;
   final int? notificationHour;
@@ -16,6 +18,8 @@ class Prescription {
   Prescription({
     required this.id,
     required this.name,
+    this.type = 'prescribed',
+    this.doctorId,
     this.refillDate,
     required this.instructions,
     this.notificationHour,
@@ -25,6 +29,8 @@ class Prescription {
     this.lastDecrementDate,
     this.alerts = const [],
   });
+
+  bool get isOtc => type == 'otc';
 
   TimeOfDay? get notificationTime {
     if (notificationHour == null || notificationMinute == null) return null;
@@ -39,6 +45,8 @@ class Prescription {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
+        'type': type,
+        'doctorId': doctorId,
         'refillDate': refillDate?.toIso8601String(),
         'instructions': instructions,
         'notificationHour': notificationHour,
@@ -56,6 +64,8 @@ class Prescription {
   factory Prescription.fromJson(Map<String, dynamic> json) => Prescription(
         id: json['id'],
         name: json['name'],
+        type: json['type'] as String? ?? 'prescribed',
+        doctorId: json['doctorId'] as String?,
         refillDate: _tryParse(json['refillDate']),
         instructions: json['instructions'],
         notificationHour: json['notificationHour'],

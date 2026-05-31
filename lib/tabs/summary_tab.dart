@@ -153,7 +153,7 @@ class SummaryTabState extends State<SummaryTab> {
           const SizedBox(height: 24),
           if (_latestVitals.isNotEmpty) ...[
             _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
-                onViewAll: () => widget.onTabChange(3)),
+                onViewAll: () => widget.onTabChange(4)),
             const SizedBox(height: 10),
             ..._latestVitals.map((v) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -163,7 +163,7 @@ class SummaryTabState extends State<SummaryTab> {
           ],
           _buildSectionHeader('Upcoming Appointments',
               Icons.calendar_today_outlined,
-              onViewAll: () => widget.onTabChange(2)),
+              onViewAll: () => widget.onTabChange(3)),
           const SizedBox(height: 10),
           if (_upcomingAppointments.isEmpty)
             _buildEmptyState('No upcoming appointments',
@@ -172,7 +172,7 @@ class SummaryTabState extends State<SummaryTab> {
             ..._upcomingAppointments.take(3).map((a) => _buildAppointmentRow(a)),
           const SizedBox(height: 24),
           _buildSectionHeader('Prescriptions', Icons.description_outlined,
-              onViewAll: () => widget.onTabChange(1)),
+              onViewAll: () => widget.onTabChange(2)),
           const SizedBox(height: 10),
           if (_prescriptions.isEmpty)
             _buildEmptyState('No prescriptions',
@@ -181,7 +181,7 @@ class SummaryTabState extends State<SummaryTab> {
             ..._prescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
-              onViewAll: () => widget.onTabChange(4)),
+              onViewAll: () => widget.onTabChange(5)),
           const SizedBox(height: 10),
           if (_activities.isEmpty)
             _buildEmptyState('No activities logged',
@@ -190,7 +190,7 @@ class SummaryTabState extends State<SummaryTab> {
             ..._activities.take(3).map((a) => _buildActivityRow(a)),
           const SizedBox(height: 24),
           _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
-              onViewAll: () => widget.onTabChange(5)),
+              onViewAll: () => widget.onTabChange(1)),
           const SizedBox(height: 10),
           if (_doctors.isEmpty)
             _buildEmptyState('No doctors added',
@@ -304,7 +304,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _prescriptions.length,
           icon: Icons.description_outlined,
           color: const Color(0xFF3B82F6),
-          onTap: () => widget.onTabChange(1),
+          onTap: () => widget.onTabChange(2),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -312,7 +312,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _upcomingAppointments.length,
           icon: Icons.calendar_today_outlined,
           color: const Color(0xFF8B5CF6),
-          onTap: () => widget.onTabChange(2),
+          onTap: () => widget.onTabChange(3),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -320,7 +320,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _vitals.length,
           icon: Icons.monitor_heart_outlined,
           color: const Color(0xFF501513),
-          onTap: () => widget.onTabChange(3),
+          onTap: () => widget.onTabChange(4),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -328,7 +328,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _activities.length,
           icon: Icons.directions_walk_outlined,
           color: const Color(0xFF22C55E),
-          onTap: () => widget.onTabChange(4),
+          onTap: () => widget.onTabChange(5),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -336,7 +336,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _doctors.length,
           icon: Icons.medical_services_outlined,
           color: const Color(0xFF0EA5E9),
-          onTap: () => widget.onTabChange(5),
+          onTap: () => widget.onTabChange(1),
         ),
       ],
     );

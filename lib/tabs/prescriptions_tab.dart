@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/prescription.dart';
+import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../screens/add_prescription_screen.dart';
 
@@ -10,22 +11,54 @@ class PrescriptionsTab extends StatefulWidget {
   State<PrescriptionsTab> createState() => PrescriptionsTabState();
 }
 
-class PrescriptionsTabState extends State<PrescriptionsTab> {
+class PrescriptionsTabState extends State<PrescriptionsTab>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   List<Prescription> _prescriptions = [];
+  Map<String, Doctor> _doctorMap = {};
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _load();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final list = await StorageService.getPrescriptions();
-    if (mounted) setState(() { _prescriptions = list; _loading = false; });
+    final results = await Future.wait([
+      StorageService.getPrescriptions(),
+      StorageService.getDoctors(),
+    ]);
+    final prescriptions = results[0] as List<Prescription>;
+    final doctors = results[1] as List<Doctor>;
+    if (mounted) {
+      setState(() {
+        _prescriptions = prescriptions;
+        _doctorMap = {for (final d in doctors) d.id: d};
+        _loading = false;
+      });
+    }
   }
 
   void reload() => _load();
+
+  Future<void> openAdd() async {
+    final type = _tabController.index == 0 ? 'prescribed' : 'otc';
+    final result = await Navigator.push<dynamic>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPrescriptionScreen(type: type),
+      ),
+    );
+    if (result == true || result == 'deleted') _load();
+  }
 
   Future<void> _open(Prescription p) async {
     final result = await Navigator.push<dynamic>(
@@ -35,26 +68,93 @@ class PrescriptionsTabState extends State<PrescriptionsTab> {
     if (result == true || result == 'deleted') _load();
   }
 
+  List<Prescription> get _prescribed =>
+      _prescriptions.where((p) => p.type == 'prescribed').toList();
+
+  List<Prescription> get _otc =>
+      _prescriptions.where((p) => p.type == 'otc').toList();
+
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return Column(
+      children: [
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: const Color(0xFF3B82F6),
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: const Color(0xFF3B82F6),
+            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(text: 'Prescribed'),
+              Tab(text: 'Over the Counter'),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _PrescriptionList(
+                      items: _prescribed,
+                      doctorMap: _doctorMap,
+                      emptyMessage: 'No prescribed medications yet',
+                      emptyHint: 'Tap + to add a prescription',
+                      onTap: _open,
+                      onRefresh: _load,
+                    ),
+                    _PrescriptionList(
+                      items: _otc,
+                      doctorMap: _doctorMap,
+                      emptyMessage: 'No OTC medications yet',
+                      emptyHint: 'Tap + to add an over-the-counter medication',
+                      onTap: _open,
+                      onRefresh: _load,
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
 
-    if (_prescriptions.isEmpty) {
+class _PrescriptionList extends StatelessWidget {
+  final List<Prescription> items;
+  final Map<String, Doctor> doctorMap;
+  final String emptyMessage;
+  final String emptyHint;
+  final void Function(Prescription) onTap;
+  final Future<void> Function() onRefresh;
+
+  const _PrescriptionList({
+    required this.items,
+    required this.doctorMap,
+    required this.emptyMessage,
+    required this.emptyHint,
+    required this.onTap,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.description_outlined, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text('No Prescriptions Yet',
+            Text(emptyMessage,
                 style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text('Tap + to add your first prescription',
+            Text(emptyHint,
                 style: TextStyle(color: Colors.grey[400], fontSize: 13)),
           ],
         ),
@@ -62,13 +162,14 @@ class PrescriptionsTabState extends State<PrescriptionsTab> {
     }
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: onRefresh,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _prescriptions.length,
+        itemCount: items.length,
         itemBuilder: (ctx, i) => _PrescriptionCard(
-          prescription: _prescriptions[i],
-          onTap: () => _open(_prescriptions[i]),
+          prescription: items[i],
+          doctor: items[i].doctorId != null ? doctorMap[items[i].doctorId] : null,
+          onTap: () => onTap(items[i]),
         ),
       ),
     );
@@ -77,9 +178,10 @@ class PrescriptionsTabState extends State<PrescriptionsTab> {
 
 class _PrescriptionCard extends StatelessWidget {
   final Prescription prescription;
+  final Doctor? doctor;
   final VoidCallback onTap;
 
-  const _PrescriptionCard({required this.prescription, required this.onTap});
+  const _PrescriptionCard({required this.prescription, this.doctor, required this.onTap});
 
   String _refillLabel(DateTime? refill) {
     if (refill == null) return 'No refill date set';
@@ -164,19 +266,45 @@ class _PrescriptionCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        _refillLabel(refill),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isRefillUrgent
-                              ? const Color(0xFFF97316)
-                              : Colors.grey[500],
+                      if (prescription.isOtc)
+                        Text(
+                          prescription.instructions.isNotEmpty
+                              ? prescription.instructions
+                              : 'Over the counter',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        )
+                      else ...[
+                        Text(
+                          _refillLabel(refill),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isRefillUrgent
+                                ? const Color(0xFFF97316)
+                                : Colors.grey[500],
+                          ),
                         ),
-                      ),
+                        if (doctor != null) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline,
+                                  size: 11, color: Colors.grey[400]),
+                              const SizedBox(width: 3),
+                              Text(
+                                doctor!.fullName,
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[400]),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
-                if (badge != null) ...[
+                if (badge != null && !prescription.isOtc) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(

@@ -13,7 +13,6 @@ import '../tabs/doctors_tab.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-import 'add_prescription_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_activity_screen.dart';
 
@@ -58,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _activitiesKey = GlobalKey<ActivitiesTabState>();
   final _doctorsKey = GlobalKey<DoctorsTabState>();
 
-  final List<String> _titles = ['Summary', 'Prescriptions', 'Appointments', 'Vitals', 'Activities', 'Doctors'];
+  final List<String> _titles = ['Summary', 'Doctors', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
 
   @override
   void initState() {
@@ -87,8 +86,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openAddScreen() async {
-    if (_currentIndex == 3) {
-      // VitalsTab knows which sub-tab (Daily/Monthly/Misc) is active
+    // index 1 = Doctors
+    if (_currentIndex == 1) {
+      await _doctorsKey.currentState?.openAdd();
+      setState(() {});
+      return;
+    }
+
+    // index 2 = Prescriptions
+    if (_currentIndex == 2) {
+      await _prescriptionsKey.currentState?.openAdd();
+      _summaryKey.currentState?.reload();
+      setState(() {});
+      return;
+    }
+
+    // index 4 = Vitals
+    if (_currentIndex == 4) {
       final changed = await _vitalsKey.currentState?.openAdd() ?? false;
       if (changed) {
         _summaryKey.currentState?.reload();
@@ -97,28 +111,19 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (_currentIndex == 5) {
-      await _doctorsKey.currentState?.openAdd();
-      setState(() {});
-      return;
-    }
-
     final Widget screen;
-    if (_currentIndex == 1) {
-      screen = const AddPrescriptionScreen();
-    } else if (_currentIndex == 2) {
+    if (_currentIndex == 3) {
       screen = const AddAppointmentScreen();
     } else {
-      screen = const AddActivityScreen();
+      screen = const AddActivityScreen(); // index 5 = Activities
     }
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => screen),
     );
     if (result == true) {
-      if (_currentIndex == 1) _prescriptionsKey.currentState?.reload();
-      if (_currentIndex == 2) _appointmentsKey.currentState?.reload();
-      if (_currentIndex == 4) _activitiesKey.currentState?.reload();
+      if (_currentIndex == 3) _appointmentsKey.currentState?.reload();
+      if (_currentIndex == 5) _activitiesKey.currentState?.reload();
       _summaryKey.currentState?.reload();
       setState(() {});
     }
@@ -260,11 +265,11 @@ class _HomeScreenState extends State<HomeScreen> {
             key: _summaryKey,
             onTabChange: (i) => setState(() => _currentIndex = i),
           ),
+          DoctorsTab(key: _doctorsKey),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey),
           ActivitiesTab(key: _activitiesKey),
-          DoctorsTab(key: _doctorsKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -278,6 +283,12 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Color(0xFF501513)),
             label: 'Summary',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.medical_services_outlined),
+            selectedIcon:
+                Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
+            label: 'Doctors',
           ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
@@ -301,12 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon:
                 Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
             label: 'Activities',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.medical_services_outlined),
-            selectedIcon:
-                Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
-            label: 'Doctors',
           ),
         ],
       ),

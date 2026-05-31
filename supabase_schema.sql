@@ -250,3 +250,11 @@ CREATE POLICY "doctors_all" ON doctors FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- Migration: prescription type (prescribed | otc)
+ALTER TABLE prescriptions
+  ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'prescribed';
+
+-- Migration: prescribed by doctor
+ALTER TABLE prescriptions
+  ADD COLUMN IF NOT EXISTS doctor_id text REFERENCES doctors(id) ON DELETE SET NULL;
+

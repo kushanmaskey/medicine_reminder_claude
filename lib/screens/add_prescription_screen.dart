@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/prescription.dart';
 import '../models/prescription_alert.dart';
+import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import 'add_doctor_screen.dart';
 
 class AddPrescriptionScreen extends StatefulWidget {
   final Prescription? existing;
-  const AddPrescriptionScreen({super.key, this.existing});
+  final String type; // 'prescribed' | 'otc'
+  const AddPrescriptionScreen({super.key, this.existing, this.type = 'prescribed'});
 
   @override
   State<AddPrescriptionScreen> createState() => _AddPrescriptionScreenState();
@@ -25,9 +28,17 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   final Set<String> _acknowledgedAlertIds = {};
   bool _saving = false;
 
+  // Doctor picker state
+  List<Doctor> _doctors = [];
+  Doctor? _selectedDoctor;
+  bool _doctorsLoaded = false;
+  bool _doctorError = false; // turns red after failed save attempt
+
   static const _blue = Color(0xFF3B82F6);
 
   bool get _isEditing => widget.existing != null;
+  String get _type => widget.existing?.type ?? widget.type;
+  bool get _isOtc => _type == 'otc';
 
   @override
   void initState() {
@@ -42,6 +53,89 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
       if (p.totalPills != null) _totalPillsController.text = p.totalPills.toString();
       if (p.pillsPerDay != null) _pillsPerDayController.text = p.pillsPerDay.toString();
     }
+    if (!_isOtc) _loadDoctors();
+  }
+
+  Future<void> _loadDoctors() async {
+    final list = await StorageService.getDoctors();
+    if (!mounted) return;
+    setState(() {
+      _doctors = list;
+      _doctorsLoaded = true;
+      if (_isEditing && widget.existing!.doctorId != null) {
+        try {
+          _selectedDoctor = list.firstWhere((d) => d.id == widget.existing!.doctorId);
+        } catch (_) {}
+      }
+    });
+  }
+
+  Future<void> _pickDoctor() async {
+    _dismissFocus();
+    // Reload in case doctors were added from this screen
+    await _loadDoctors();
+    if (!mounted) return;
+
+    if (_doctors.isEmpty) {
+      _showAddDoctorPrompt();
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DoctorPickerSheet(
+        doctors: _doctors,
+        selected: _selectedDoctor,
+        onSelect: (d) {
+          setState(() { _selectedDoctor = d; _doctorError = false; });
+          Navigator.pop(context);
+        },
+        onAddNew: () {
+          Navigator.pop(context);
+          _navigateToAddDoctor();
+        },
+      ),
+    );
+  }
+
+  Future<void> _navigateToAddDoctor() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddDoctorScreen()),
+    );
+    await _loadDoctors();
+  }
+
+  void _showAddDoctorPrompt() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('No Doctors Added Yet'),
+        content: const Text(
+          'Please add the prescribing doctor to your Doctors list first, then come back to link them to this prescription.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _navigateToAddDoctor();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Add Doctor'),
+          ),
+        ],
+      ),
+    );
   }
 
   DateTime? get _calculatedRefillDate {
@@ -67,7 +161,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     super.dispose();
   }
 
-  void _dismissFocus() => FocusScope.of(context).requestFocus(FocusNode());
+  void _dismissFocus() => FocusScope.of(context).unfocus();
 
   Future<void> _pickNotificationTime() async {
     _dismissFocus();
@@ -174,11 +268,23 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   }
 
   Future<void> _save() async {
-    _dismissFocus();
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
-
     try {
+      _dismissFocus();
+      if (_formKey.currentState?.validate() != true) return;
+
+      // Doctor is mandatory for prescribed medications
+      if (!_isOtc && _selectedDoctor == null) {
+        setState(() => _doctorError = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select the prescribing doctor.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+        return;
+      }
+
+      setState(() => _saving = true);
       final totalPills = int.tryParse(_totalPillsController.text.trim());
       final pillsPerDay = int.tryParse(_pillsPerDayController.text.trim());
 
@@ -186,13 +292,15 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         id: widget.existing?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
-        refillDate: _calculatedRefillDate,
+        type: _type,
+        doctorId: _isOtc ? null : _selectedDoctor?.id,
+        refillDate: _isOtc ? null : _calculatedRefillDate,
         instructions: _instructionsController.text.trim(),
-        notificationHour: _notificationTime?.hour,
-        notificationMinute: _notificationTime?.minute,
-        totalPills: _isEditing ? widget.existing!.totalPills : totalPills,
-        pillsPerDay: _isEditing ? widget.existing!.pillsPerDay : pillsPerDay,
-        lastDecrementDate: _isEditing ? widget.existing!.lastDecrementDate : null,
+        notificationHour: _isOtc ? null : _notificationTime?.hour,
+        notificationMinute: _isOtc ? null : _notificationTime?.minute,
+        totalPills: _isOtc ? null : (_isEditing ? widget.existing!.totalPills : totalPills),
+        pillsPerDay: _isOtc ? null : (_isEditing ? widget.existing!.pillsPerDay : pillsPerDay),
+        lastDecrementDate: _isOtc ? null : (_isEditing ? widget.existing!.lastDecrementDate : null),
       );
 
       if (_isEditing) {
@@ -271,7 +379,9 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          _isEditing ? 'Edit Prescription' : 'Add Prescription',
+          _isEditing
+              ? (_isOtc ? 'Edit OTC Medication' : 'Edit Prescription')
+              : (_isOtc ? 'Add OTC Medication' : 'Add Prescription'),
           style: const TextStyle(
             color: Color(0xFF484141),
             fontWeight: FontWeight.bold,
@@ -294,7 +404,11 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.fromLTRB(
+            20, 20, 20,
+            20 + MediaQuery.of(context).padding.bottom,
+          ),
           children: [
             _SectionCard(
               children: [
@@ -315,6 +429,157 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   decoration: _inputDecoration(
                       'Instructions (optional)', Icons.notes_outlined),
                 ),
+              ],
+            ),
+            if (!_isOtc) ...[
+            const SizedBox(height: 16),
+
+            // Prescribed By section
+            _SectionCard(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.person_outlined,
+                        size: 16,
+                        color: _doctorError ? const Color(0xFFEF4444) : _blue),
+                    const SizedBox(width: 8),
+                    Text(
+                      'PRESCRIBED BY',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _doctorError
+                            ? const Color(0xFFEF4444)
+                            : Colors.grey[500],
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '*',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _doctorError
+                            ? const Color(0xFFEF4444)
+                            : Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (!_doctorsLoaded)
+                  const Center(
+                    child: SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_doctors.isEmpty)
+                  InkWell(
+                    onTap: _showAddDoctorPrompt,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFED7AA)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline,
+                              size: 16, color: Color(0xFFF97316)),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'No doctors added yet. Tap to add a doctor first.',
+                              style: TextStyle(
+                                  fontSize: 13, color: Color(0xFFC2410C)),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right,
+                              size: 18, color: Color(0xFFF97316)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  InkWell(
+                    onTap: _pickDoctor,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedDoctor != null
+                            ? const Color(0xFFEFF6FF)
+                            : _doctorError
+                                ? const Color(0xFFFEF2F2)
+                                : const Color(0xFFF8FFFE),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _selectedDoctor != null
+                              ? const Color(0xFF93C5FD)
+                              : _doctorError
+                                  ? const Color(0xFFEF4444)
+                                  : Colors.grey.shade200,
+                          width: _doctorError ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person,
+                              size: 18,
+                              color: _selectedDoctor != null
+                                  ? _blue
+                                  : Colors.grey[400]),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _selectedDoctor?.fullName ??
+                                  'Select prescribing doctor',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: _selectedDoctor != null
+                                    ? FontWeight.w500
+                                    : FontWeight.normal,
+                                color: _selectedDoctor != null
+                                    ? const Color(0xFF1E40AF)
+                                    : Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                          if (_selectedDoctor != null)
+                            GestureDetector(
+                              onTap: () =>
+                                  setState(() => _selectedDoctor = null),
+                              child: const Icon(Icons.close,
+                                  size: 16, color: Colors.grey),
+                            )
+                          else
+                            const Icon(Icons.expand_more,
+                                color: Colors.grey, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (_doctorError) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 13, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Prescribing doctor is required',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.red[600]),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -443,7 +708,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                               color: _calculatedRefillDate != null
-                                  ? const Color(0xFFE8607C)
+                                  ? const Color(0xFF501513)
                                   : Colors.grey[400],
                             ),
                           ),
@@ -573,6 +838,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                         )),
               ],
             ),
+            ], // end if (!_isOtc)
 
             const SizedBox(height: 32),
             SizedBox(
@@ -595,7 +861,9 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                             strokeWidth: 2, color: Colors.white),
                       )
                     : Text(
-                        _isEditing ? 'Update Prescription' : 'Save Prescription',
+                        _isEditing
+                            ? (_isOtc ? 'Update OTC Medication' : 'Update Prescription')
+                            : (_isOtc ? 'Save OTC Medication' : 'Save Prescription'),
                         style: const TextStyle(fontSize: 16),
                       ),
               ),
@@ -682,7 +950,7 @@ class _AlertRow extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: acknowledged
                         ? Colors.grey[400]
-                        : const Color(0xFFE8607C),
+                        : const Color(0xFF501513),
                     decoration:
                         acknowledged ? TextDecoration.lineThrough : null,
                   ),
@@ -797,7 +1065,7 @@ class _PickerTile extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: hasValue
-                          ? const Color(0xFFE8607C)
+                          ? const Color(0xFF501513)
                           : Colors.grey[400],
                     ),
                   ),
@@ -808,6 +1076,108 @@ class _PickerTile extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+class _DoctorPickerSheet extends StatelessWidget {
+  final List<Doctor> doctors;
+  final Doctor? selected;
+  final void Function(Doctor) onSelect;
+  final VoidCallback onAddNew;
+
+  const _DoctorPickerSheet({
+    required this.doctors,
+    required this.selected,
+    required this.onSelect,
+    required this.onAddNew,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Select Prescribing Doctor',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF484141)),
+          ),
+          const SizedBox(height: 12),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.45,
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: doctors.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 48),
+              itemBuilder: (_, i) {
+                final d = doctors[i];
+                final isSelected = selected?.id == d.id;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    child: Text(
+                      d.lastName.isNotEmpty ? d.lastName[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                          color: Color(0xFF3B82F6),
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  title: Text(d.fullName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF484141))),
+                  subtitle: d.specialty.isNotEmpty
+                      ? Text(d.specialty,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[500]))
+                      : null,
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle,
+                          color: Color(0xFF3B82F6))
+                      : null,
+                  onTap: () => onSelect(d),
+                );
+              },
+            ),
+          ),
+          const Divider(height: 20),
+          ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFEFF6FF),
+              child: Icon(Icons.add, color: Color(0xFF3B82F6)),
+            ),
+            title: const Text('Add New Doctor',
+                style: TextStyle(
+                    color: Color(0xFF3B82F6), fontWeight: FontWeight.w600)),
+            onTap: onAddNew,
+          ),
+        ],
       ),
     );
   }

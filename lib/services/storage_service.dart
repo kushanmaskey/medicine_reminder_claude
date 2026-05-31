@@ -50,6 +50,8 @@ class StorageService {
       return Prescription(
         id: p.id,
         name: p.name,
+        type: p.type,
+        doctorId: p.doctorId,
         refillDate: p.refillDate,
         instructions: p.instructions,
         notificationHour: p.notificationHour,
@@ -67,6 +69,8 @@ class StorageService {
       'id': p.id,
       'user_id': _uid,
       'name': p.name,
+      'type': p.type,
+      'doctor_id': p.doctorId,
       'refill_date': p.refillDate?.toIso8601String(),
       'instructions': p.instructions,
       'notification_hour': p.notificationHour,
@@ -80,6 +84,8 @@ class StorageService {
   static Future<void> updatePrescription(Prescription p) async {
     await _db.from('prescriptions').update({
       'name': p.name,
+      'type': p.type,
+      'doctor_id': p.doctorId,
       'refill_date': p.refillDate?.toIso8601String(),
       'instructions': p.instructions,
       'notification_hour': p.notificationHour,
@@ -159,6 +165,8 @@ class StorageService {
   static Map<String, dynamic> _prescriptionFromRow(Map<String, dynamic> r) => {
     'id': r['id'],
     'name': r['name'],
+    'type': r['type'] ?? 'prescribed',
+    'doctorId': r['doctor_id'],
     'refillDate': r['refill_date'],
     'instructions': r['instructions'] ?? '',
     'notificationHour': r['notification_hour'],
