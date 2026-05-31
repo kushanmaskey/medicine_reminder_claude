@@ -112,43 +112,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   void _dismissFocus() => FocusScope.of(context).unfocus();
 
-  Future<void> _pickDateTime() async {
-    _dismissFocus();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _recordedAt,
-      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-      lastDate: DateTime.now(),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-            colorScheme: ColorScheme.light(primary: _accentColor)),
-        child: child!,
-      ),
-    );
-    _dismissFocus();
-    if (date == null || !mounted) return;
-    // Daily vitals also pick a time; Monthly/Open just use midnight
-    if (_category == 'daily') {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(_recordedAt),
-        builder: (ctx, child) => Theme(
-          data: Theme.of(ctx).copyWith(
-              colorScheme: ColorScheme.light(primary: _accentColor)),
-          child: child!,
-        ),
-      );
-      _dismissFocus();
-      if (!mounted) return;
-      setState(() {
-        _recordedAt = DateTime(date.year, date.month, date.day,
-            time?.hour ?? 0, time?.minute ?? 0);
-      });
-    } else {
-      setState(() => _recordedAt = DateTime(date.year, date.month, date.day));
-    }
-  }
-
   Future<DateTime?> _pickPastDate(DateTime? initial, String label) async {
     _dismissFocus();
     return showDatePicker(
@@ -231,14 +194,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         SnackBar(content: Text('Could not save: ${e.toString()}')),
       );
     }
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    final hour   = dt.hour == 0 ? 12 : dt.hour > 12 ? dt.hour - 12 : dt.hour;
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour < 12 ? 'AM' : 'PM';
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}  •  $hour:$minute $period';
   }
 
   String _formatDate(DateTime dt) {
@@ -330,11 +285,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         ),
         iconTheme: const IconThemeData(color: Color(0xFF484141)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.lightbulb_outline, color: Color(0xFFF59E0B)),
-            tooltip: 'Health Recommendations',
-            onPressed: _showRecommendations,
-          ),
+          if (_category != 'daily')
+            IconButton(
+              icon: const Icon(Icons.lightbulb_outline, color: Color(0xFFF59E0B)),
+              tooltip: 'Health Recommendations',
+              onPressed: _showRecommendations,
+            ),
           if (_isEditing)
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -349,8 +305,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).padding.bottom),
           children: [
-            _buildDateSection(),
-            const SizedBox(height: 16),
             if (_category == 'daily') ..._buildDailyFields(context),
             if (_category == 'monthly') ..._buildMonthlyFields(),
             if (_category == 'open') ..._buildOpenFields(),
@@ -361,44 +315,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  // ── Date section ─────────────────────────────────────────────────────────
-
-  Widget _buildDateSection() {
-    final label = _category == 'daily' ? 'Date & Time' : 'Date';
-    final value = _category == 'daily'
-        ? _formatDateTime(_recordedAt)
-        : _formatDate(_recordedAt);
-
-    return _SectionCard(
-      title: label,
-      icon: Icons.access_time_outlined,
-      iconColor: _accentColor,
-      children: [
-        InkWell(
-          onTap: _pickDateTime,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today_outlined, color: _accentColor, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(value,
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: _accentColor)),
-                ),
-                const Icon(Icons.chevron_right, color: Colors.grey),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -418,67 +334,18 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     return _BpCategory.normal;
   }
 
-  void _showBpRecommendation(BuildContext context) {
-    final cat = _classifyBp();
-    final sys = _systolicController.text.trim();
-    final dia = _diastolicController.text.trim();
-    final hasValues = sys.isNotEmpty || dia.isNotEmpty;
+  // ── Shared vital recommendation sheet ────────────────────────────────────────
 
-    final (Color color, IconData icon, String label, String detail) = switch (cat) {
-      _BpCategory.crisis => (
-          const Color(0xFF7F1D1D),
-          Icons.emergency,
-          'Hypertensive Crisis',
-          'Your reading is critically high. Seek emergency medical care immediately. '
-              'Do not wait — call 911 or go to the nearest emergency room.',
-        ),
-      _BpCategory.stage2 => (
-          const Color(0xFFEF4444),
-          Icons.warning_rounded,
-          'High Blood Pressure — Stage 2',
-          'Systolic ≥ 140 or Diastolic ≥ 90 mmHg. Consult your doctor as soon as '
-              'possible. Medication and significant lifestyle changes are typically required.',
-        ),
-      _BpCategory.stage1 => (
-          const Color(0xFFF97316),
-          Icons.warning_amber_rounded,
-          'High Blood Pressure — Stage 1',
-          'Systolic 130–139 or Diastolic 80–89 mmHg. Discuss with your doctor. '
-              'Reduce sodium, exercise regularly, limit alcohol, and manage stress.',
-        ),
-      _BpCategory.elevated => (
-          const Color(0xFFEAB308),
-          Icons.trending_up,
-          'Elevated Blood Pressure',
-          'Systolic 120–129 and Diastolic < 80 mmHg. No medication needed yet, but '
-              'adopt heart-healthy habits: reduce salt, increase physical activity, and '
-              'maintain a healthy weight.',
-        ),
-      _BpCategory.normal => (
-          const Color(0xFF22C55E),
-          Icons.check_circle_outline,
-          'Normal Blood Pressure',
-          'Systolic < 120 and Diastolic < 80 mmHg. Great work! Keep up healthy habits — '
-              'regular exercise, balanced diet, and stress management.',
-        ),
-      _BpCategory.low => (
-          const Color(0xFF3B82F6),
-          Icons.arrow_downward,
-          'Low Blood Pressure',
-          'Systolic < 90 or Diastolic < 60 mmHg. Consult your doctor if you experience '
-              'dizziness, fainting, or fatigue. Stay hydrated and rise slowly from sitting '
-              'or lying positions.',
-        ),
-      _BpCategory.unknown => (
-          const Color(0xFF6B7280),
-          Icons.info_outline,
-          'Blood Pressure Guide',
-          'Normal: < 120/80. Elevated: 120–129 systolic. High Stage 1: 130–139/80–89. '
-              'High Stage 2: ≥ 140/90. Low: < 90/60. Enter your reading above for a '
-              'personalised assessment.',
-        ),
-    };
-
+  void _showVitalInfoSheet(
+    BuildContext context, {
+    required Color color,
+    required IconData icon,
+    required String label,
+    String? reading,
+    required String detail,
+    String? learnMoreUrl,
+    String? learnMoreLabel,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -496,10 +363,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             Center(
               child: Container(
                 width: 36, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
@@ -518,58 +382,165 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: color)),
-                      if (hasValues)
-                        Text(
-                          '${sys.isEmpty ? '?' : sys} / ${dia.isEmpty ? '?' : dia} mmHg',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                        ),
+                      Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
+                      if (reading != null)
+                        Text(reading, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            Text(detail,
-                style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: () => launchUrl(
-                Uri.parse('https://medlineplus.gov/bloodpressure.html'),
-                mode: LaunchMode.externalApplication,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.25)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.open_in_new, size: 16, color: Color(0xFFEF4444)),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Learn more about blood pressure — MedlinePlus',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFEF4444),
+            Text(detail, style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+            if (learnMoreUrl != null) ...[
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () => launchUrl(Uri.parse(learnMoreUrl), mode: LaunchMode.externalApplication),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.open_in_new, size: 16, color: color),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          learnMoreLabel ?? 'Learn more',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  // ── Blood pressure recommendation ─────────────────────────────────────────
+
+  void _showBpRecommendation(BuildContext context) {
+    final cat = _classifyBp();
+    final sys = _systolicController.text.trim();
+    final dia = _diastolicController.text.trim();
+
+    final (Color color, IconData icon, String label, String detail) = switch (cat) {
+      _BpCategory.crisis  => (const Color(0xFF7F1D1D), Icons.emergency,          'Hypertensive Crisis',          'Your reading is critically high. Seek emergency medical care immediately. Do not wait — call 911 or go to the nearest emergency room.'),
+      _BpCategory.stage2  => (const Color(0xFFEF4444), Icons.warning_rounded,     'High Blood Pressure — Stage 2','Systolic ≥ 140 or Diastolic ≥ 90 mmHg. Consult your doctor as soon as possible. Medication and significant lifestyle changes are typically required.'),
+      _BpCategory.stage1  => (const Color(0xFFF97316), Icons.warning_amber_rounded,'High Blood Pressure — Stage 1','Systolic 130–139 or Diastolic 80–89 mmHg. Discuss with your doctor. Reduce sodium, exercise regularly, limit alcohol, and manage stress.'),
+      _BpCategory.elevated=> (const Color(0xFFEAB308), Icons.trending_up,          'Elevated Blood Pressure',      'Systolic 120–129 and Diastolic < 80 mmHg. No medication needed yet, but adopt heart-healthy habits: reduce salt, increase physical activity, and maintain a healthy weight.'),
+      _BpCategory.normal  => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Normal Blood Pressure',        'Systolic < 120 and Diastolic < 80 mmHg. Great work! Keep up healthy habits — regular exercise, balanced diet, and stress management.'),
+      _BpCategory.low     => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Blood Pressure',           'Systolic < 90 or Diastolic < 60 mmHg. Consult your doctor if you have dizziness, fainting, or fatigue. Stay hydrated and rise slowly from seated or lying positions.'),
+      _BpCategory.unknown => (const Color(0xFF6B7280), Icons.info_outline,         'Blood Pressure Guide',         'Normal: < 120/80. Elevated: 120–129 systolic. High Stage 1: 130–139/80–89. High Stage 2: ≥ 140/90. Low: < 90/60. Enter your reading above for a personalised assessment.'),
+    };
+
+    _showVitalInfoSheet(
+      context,
+      color: color,
+      icon: icon,
+      label: label,
+      reading: (sys.isNotEmpty || dia.isNotEmpty) ? '${sys.isEmpty ? '?' : sys} / ${dia.isEmpty ? '?' : dia} mmHg' : null,
+      detail: detail,
+      learnMoreUrl: 'https://medlineplus.gov/bloodpressure.html',
+      learnMoreLabel: 'Learn more about blood pressure — MedlinePlus',
+    );
+  }
+
+  // ── Sugar recommendation ──────────────────────────────────────────────────
+
+  _SugarCategory _classifySugar() {
+    final raw = double.tryParse(_sugarController.text.trim());
+    if (raw == null) return _SugarCategory.unknown;
+    final mgdl = _sugarUnit == 'mmol/L' ? raw * 18.0182 : raw;
+    if (mgdl < 70)  return _SugarCategory.low;
+    if (mgdl < 100) return _SugarCategory.normal;
+    if (mgdl < 126) return _SugarCategory.preDiabetes;
+    return _SugarCategory.diabetic;
+  }
+
+  void _showSugarRecommendation(BuildContext context) {
+    final cat = _classifySugar();
+    final val = _sugarController.text.trim();
+
+    final (Color color, IconData icon, String label, String detail) = switch (cat) {
+      _SugarCategory.low        => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Blood Sugar (Hypoglycemia)', 'Below 70 mg/dL. Eat 15–20 g of fast-acting carbs (fruit juice, glucose tablets). Recheck in 15 minutes. Seek care if it does not recover.'),
+      _SugarCategory.normal     => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Normal Fasting Glucose',         'Fasting glucose 70–99 mg/dL. Excellent! Maintain a balanced diet low in refined carbs, stay active, and keep a healthy weight.'),
+      _SugarCategory.preDiabetes=> (const Color(0xFFEAB308), Icons.trending_up,          'Pre-Diabetes Range',             'Fasting glucose 100–125 mg/dL. You are at risk. Losing 5–7% body weight, 150 min/week of moderate exercise, and cutting sugary drinks can often reverse this.'),
+      _SugarCategory.diabetic   => (const Color(0xFFEF4444), Icons.warning_rounded,       'Diabetic Range',                 'Fasting glucose ≥ 126 mg/dL. Consult your doctor. Medication, diet change, regular monitoring, and exercise are key to managing blood sugar.'),
+      _SugarCategory.unknown    => (const Color(0xFF6B7280), Icons.info_outline,          'Blood Sugar Guide',              'Fasting normal: 70–99 mg/dL. Pre-diabetes: 100–125. Diabetic: ≥ 126. Low (hypoglycemia): < 70. Enter your reading above for a personalised assessment.'),
+    };
+
+    _showVitalInfoSheet(
+      context,
+      color: color,
+      icon: icon,
+      label: label,
+      reading: val.isNotEmpty ? '$val $_sugarUnit (fasting)' : null,
+      detail: detail,
+      learnMoreUrl: 'https://medlineplus.gov/bloodsugar.html',
+      learnMoreLabel: 'Learn more about blood sugar — MedlinePlus',
+    );
+  }
+
+  // ── Cholesterol recommendation ────────────────────────────────────────────
+
+  _CholesterolCategory _classifyCholesterol() {
+    final raw = double.tryParse(_cholesterolController.text.trim());
+    if (raw == null) return _CholesterolCategory.unknown;
+    final mgdl = _cholesterolUnit == 'mmol/L' ? raw * 38.67 : raw;
+    if (mgdl < 200) return _CholesterolCategory.optimal;
+    if (mgdl < 240) return _CholesterolCategory.borderline;
+    return _CholesterolCategory.high;
+  }
+
+  void _showCholesterolRecommendation(BuildContext context) {
+    final cat = _classifyCholesterol();
+    final val = _cholesterolController.text.trim();
+
+    final (Color color, IconData icon, String label, String detail) = switch (cat) {
+      _CholesterolCategory.optimal   => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Optimal Cholesterol',          'Total cholesterol < 200 mg/dL. Well done! Eat more fibre, healthy fats (avocado, nuts, olive oil), and stay physically active to keep it this way.'),
+      _CholesterolCategory.borderline=> (const Color(0xFFEAB308), Icons.trending_up,          'Borderline High Cholesterol',  'Total cholesterol 200–239 mg/dL. Make dietary changes: reduce saturated and trans fats, increase soluble fibre, and exercise 30 min/day. Recheck in 6 months.'),
+      _CholesterolCategory.high      => (const Color(0xFFEF4444), Icons.warning_rounded,       'High Cholesterol',             'Total cholesterol ≥ 240 mg/dL. Consult your doctor. Statin therapy may be needed alongside diet change and exercise to lower cardiovascular risk.'),
+      _CholesterolCategory.unknown   => (const Color(0xFF6B7280), Icons.info_outline,          'Cholesterol Guide',            'Optimal total cholesterol: < 200 mg/dL. Borderline high: 200–239. High: ≥ 240. LDL goal: < 100. HDL: > 60 is protective. Enter your reading for a personalised assessment.'),
+    };
+
+    _showVitalInfoSheet(
+      context,
+      color: color,
+      icon: icon,
+      label: label,
+      reading: val.isNotEmpty ? '$val $_cholesterolUnit (total)' : null,
+      detail: detail,
+      learnMoreUrl: 'https://medlineplus.gov/cholesterol.html',
+      learnMoreLabel: 'Learn more about cholesterol — MedlinePlus',
+    );
+  }
+
+  // ── Weight recommendation ─────────────────────────────────────────────────
+
+  void _showWeightRecommendation(BuildContext context) {
+    final val = _weightController.text.trim();
+
+    _showVitalInfoSheet(
+      context,
+      color: const Color(0xFF3B82F6),
+      icon: Icons.scale_outlined,
+      label: 'Healthy Weight Tips',
+      reading: val.isNotEmpty ? '$val $_weightUnit' : null,
+      detail: 'BMI (Body Mass Index) = weight (kg) ÷ height (m)². '
+          'Healthy BMI: 18.5–24.9. Overweight: 25–29.9. Obese: ≥ 30. Underweight: < 18.5.\n\n'
+          'Track your weight at the same time each day (morning, after using the bathroom). '
+          'Aim for gradual loss of 0.5–1 lb (0.25–0.5 kg) per week if needed. '
+          'Combine regular exercise with a balanced diet for sustainable results.',
+      learnMoreUrl: 'https://medlineplus.gov/weightcontrol.html',
+      learnMoreLabel: 'Learn more about healthy weight — MedlinePlus',
     );
   }
 
@@ -633,6 +604,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Sugar Level',
       icon: Icons.water_drop_outlined,
       iconColor: const Color(0xFFF97316),
+      trailing: IconButton(
+        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        tooltip: 'Blood sugar guide',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => _showSugarRecommendation(context),
+      ),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,6 +645,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Cholesterol',
       icon: Icons.biotech_outlined,
       iconColor: const Color(0xFF8B5CF6),
+      trailing: IconButton(
+        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        tooltip: 'Cholesterol guide',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => _showCholesterolRecommendation(context),
+      ),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,6 +688,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Weight',
       icon: Icons.scale_outlined,
       iconColor: const Color(0xFF3B82F6),
+      trailing: IconButton(
+        icon: const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFFF59E0B)),
+        tooltip: 'Healthy weight guide',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () => _showWeightRecommendation(context),
+      ),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1006,6 +998,8 @@ class _DatePickerTile extends StatelessWidget {
 // ── BP category enum ──────────────────────────────────────────────────────────
 
 enum _BpCategory { unknown, low, normal, elevated, stage1, stage2, crisis }
+enum _SugarCategory { unknown, low, normal, preDiabetes, diabetic }
+enum _CholesterolCategory { unknown, optimal, borderline, high }
 
 // ── Section card ─────────────────────────────────────────────────────────────
 
