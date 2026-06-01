@@ -9,6 +9,17 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        // Clear stale flutter_local_notifications data that causes boot-receiver crashes
+        // when the app is updated (release vs debug build incompatibility).
+        try {
+            val prefs = getSharedPreferences("scheduled_notifications", android.content.Context.MODE_PRIVATE)
+            prefs.edit().clear().apply()
+        } catch (_: Exception) {}
+        super.onCreate(savedInstanceState)
+    }
+
     private val channel = "com.medreminder/ringtone"
     private val ringtoneRequest = 1001
     private var pendingResult: MethodChannel.Result? = null
