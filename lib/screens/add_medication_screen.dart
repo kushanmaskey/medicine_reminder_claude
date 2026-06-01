@@ -265,7 +265,7 @@ class _PickerTile extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: hasValue
-                          ? const Color(0xFFE8607C)
+                          ? const Color(0xFF501513)
                           : Colors.grey[400],
                     ),
                   ),

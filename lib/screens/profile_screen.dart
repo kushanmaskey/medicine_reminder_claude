@@ -6,11 +6,11 @@ import '../services/auth_service.dart';
 
 // Default avatar definitions: (icon, background color, foreground color)
 const _defaultAvatars = [
-  (icon: Icons.person,             bg: Color(0xFFE8607C), fg: Colors.white),
+  (icon: Icons.person,             bg: Color(0xFF501513), fg: Colors.white),
   (icon: Icons.face,               bg: Color(0xFF3B82F6), fg: Colors.white),
   (icon: Icons.sentiment_satisfied,bg: Color(0xFF8B5CF6), fg: Colors.white),
   (icon: Icons.local_hospital,     bg: Color(0xFFEF4444), fg: Colors.white),
-  (icon: Icons.favorite,           bg: Color(0xFFEC4899), fg: Colors.white),
+  (icon: Icons.favorite,           bg: Color(0xFF7A2420), fg: Colors.white),
   (icon: Icons.star,               bg: Color(0xFFF59E0B), fg: Colors.white),
   (icon: Icons.self_improvement,   bg: Color(0xFF22C55E), fg: Colors.white),
   (icon: Icons.emoji_nature,       bg: Color(0xFF14B8A6), fg: Colors.white),
@@ -79,16 +79,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Color get _accentColor =>
-      _sex == 'Female' ? const Color(0xFFEC4899) : const Color(0xFFE8607C);
+      _sex == 'Female' ? const Color(0xFF7A2420) : const Color(0xFF501513);
 
   LinearGradient get _headerGradient => _sex == 'Female'
       ? const LinearGradient(
-          colors: [Color(0xFFEC4899), Color(0xFF9333EA)],
+          colors: [Color(0xFF7A2420), Color(0xFF9333EA)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         )
       : const LinearGradient(
-          colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
+          colors: [Color(0xFF501513), Color(0xFF7A2420)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -334,8 +334,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSexSection() {
-    const teal = Color(0xFFE8607C);
-    const pink = Color(0xFFEC4899);
+    const teal = Color(0xFF501513);
+    const pink = Color(0xFF7A2420);
     final current = _sex ?? 'Male';
 
     return Container(
