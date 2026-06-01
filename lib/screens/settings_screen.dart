@@ -6,7 +6,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
+  colors: [Color(0xFF501513), Color(0xFF7A2420)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Notification sound updated to "${result['name'] ?? 'Custom'}"'),
-          backgroundColor: const Color(0xFFE8607C),
+          backgroundColor: const Color(0xFF501513),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -74,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Notification sound reset to system default'),
-          backgroundColor: const Color(0xFFE8607C),
+          backgroundColor: const Color(0xFF501513),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -182,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Color(0xFFE8607C)),
+                                  color: Color(0xFF501513)),
                             )
                           : const Icon(Icons.chevron_right,
                               color: Color(0xFF94A3B8)))

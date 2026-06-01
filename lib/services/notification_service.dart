@@ -15,9 +15,9 @@ class NotificationService {
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     await _plugin.initialize(
@@ -26,11 +26,24 @@ class NotificationService {
   }
 
   static Future<bool> requestPermission() async {
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    final granted = await android?.requestNotificationsPermission();
-    return granted ?? true;
+    try {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final granted = await ios.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? true;
+      }
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final granted = await android?.requestNotificationsPermission();
+      return granted ?? true;
+    } catch (_) {
+      return true;
+    }
   }
 
   static String _channelId(String? soundUri) {
@@ -56,47 +69,49 @@ class NotificationService {
     required String body,
     required TimeOfDay time,
   }) async {
-    final soundUri = await RingtoneService.getSoundUri();
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      time.hour,
-      time.minute,
-    );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
+    try {
+      final soundUri = await RingtoneService.getSoundUri();
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduled = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        time.hour,
+        time.minute,
+      );
+      if (scheduled.isBefore(now)) {
+        scheduled = scheduled.add(const Duration(days: 1));
+      }
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId(soundUri),
-          'Medication Reminders',
-          channelDescription: 'Daily medication and prescription reminders',
-          importance: Importance.high,
-          priority: Priority.high,
-          playSound: true,
-          sound: _androidSound(soundUri),
-          visibility: NotificationVisibility.private,
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduled,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId(soundUri),
+            'Medication Reminders',
+            channelDescription: 'Daily medication and prescription reminders',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            sound: _androidSound(soundUri),
+            visibility: NotificationVisibility.private,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (_) {}
   }
 
   static Future<void> scheduleOnceNotification({
@@ -105,38 +120,42 @@ class NotificationService {
     required String body,
     required DateTime scheduledDateTime,
   }) async {
-    final scheduled = tz.TZDateTime.from(scheduledDateTime, tz.local);
-    if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
+    try {
+      final scheduled = tz.TZDateTime.from(scheduledDateTime, tz.local);
+      if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduled,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          'appointment_channel',
-          'Appointment Reminders',
-          channelDescription: 'One-time appointment reminders',
-          importance: Importance.high,
-          priority: Priority.high,
-          playSound: true,
-          visibility: NotificationVisibility.private,
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduled,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'appointment_channel',
+            'Appointment Reminders',
+            channelDescription: 'One-time appointment reminders',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            visibility: NotificationVisibility.private,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {}
   }
 
   static Future<void> cancelNotification(int id) async {
-    await _plugin.cancel(id);
+    try {
+      await _plugin.cancel(id);
+    } catch (_) {}
   }
 
   static int idFromString(String id) =>

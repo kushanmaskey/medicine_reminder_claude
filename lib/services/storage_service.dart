@@ -320,7 +320,7 @@ class StorageService {
     await _db.from('vitals').insert({
       'id': v.id,
       'user_id': _uid,
-      'recorded_at': v.recordedAt.toIso8601String(),
+      'recorded_at': v.recordedAt.toUtc().toIso8601String(),
       'category': v.category,
       'event_name': v.eventName,
       'bp_systolic': v.bpSystolic,
@@ -341,7 +341,7 @@ class StorageService {
 
   static Future<void> updateVital(Vital v) async {
     await _db.from('vitals').update({
-      'recorded_at': v.recordedAt.toIso8601String(),
+      'recorded_at': v.recordedAt.toUtc().toIso8601String(),
       'category': v.category,
       'event_name': v.eventName,
       'bp_systolic': v.bpSystolic,

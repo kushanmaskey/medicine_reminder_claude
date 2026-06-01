@@ -14,6 +14,7 @@ class AppointmentsTab extends StatefulWidget {
 class AppointmentsTabState extends State<AppointmentsTab> {
   List<Appointment> _appointments = [];
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -22,20 +23,25 @@ class AppointmentsTabState extends State<AppointmentsTab> {
   }
 
   Future<void> _load() async {
-    final list = await StorageService.getAppointments();
-    final now = DateTime.now();
+    if (mounted) setState(() { _loading = true; _loadError = null; });
+    try {
+      final list = await StorageService.getAppointments();
+      final now = DateTime.now();
 
-    for (final a in list.where((a) => !a.appointmentDateTime.isAfter(now))) {
-      await StorageService.deleteAppointment(a.id);
-      await NotificationService.cancelNotification(
-          NotificationService.idFromString(a.id));
+      for (final a in list.where((a) => !a.appointmentDateTime.isAfter(now))) {
+        await StorageService.deleteAppointment(a.id);
+        await NotificationService.cancelNotification(
+            NotificationService.idFromString(a.id));
+      }
+
+      final active = list
+          .where((a) => a.appointmentDateTime.isAfter(now))
+          .toList()
+        ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
+      if (mounted) setState(() { _appointments = active; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _loadError = e.toString(); });
     }
-
-    final active = list
-        .where((a) => a.appointmentDateTime.isAfter(now))
-        .toList()
-      ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
-    if (mounted) setState(() { _appointments = active; _loading = false; });
   }
 
   void reload() => _load();
@@ -52,6 +58,29 @@ class AppointmentsTabState extends State<AppointmentsTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 12),
+              const Text('Failed to load appointments',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(_loadError!,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_appointments.isEmpty) {

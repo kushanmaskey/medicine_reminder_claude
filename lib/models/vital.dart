@@ -1,6 +1,8 @@
 class Vital {
   final String id;
   final DateTime recordedAt;
+  final String category; // 'daily' | 'monthly' | 'open'
+  final String eventName; // used by 'open' category
   final int? bpSystolic;
   final int? bpDiastolic;
   final double? weight;
@@ -18,6 +20,8 @@ class Vital {
   Vital({
     required this.id,
     required this.recordedAt,
+    this.category = 'daily',
+    this.eventName = '',
     this.bpSystolic,
     this.bpDiastolic,
     this.weight,
@@ -60,6 +64,8 @@ class Vital {
   Map<String, dynamic> toJson() => {
         'id': id,
         'recordedAt': recordedAt.toIso8601String(),
+        'category': category,
+        'eventName': eventName,
         'bpSystolic': bpSystolic,
         'bpDiastolic': bpDiastolic,
         'weight': weight,
@@ -77,12 +83,14 @@ class Vital {
 
   static DateTime? _tryParse(dynamic value) {
     if (value == null) return null;
-    try { return DateTime.parse(value as String); } catch (_) { return null; }
+    try { return DateTime.parse(value as String).toLocal(); } catch (_) { return null; }
   }
 
   factory Vital.fromJson(Map<String, dynamic> json) => Vital(
         id: json['id'],
         recordedAt: _tryParse(json['recordedAt']) ?? DateTime.now(),
+        category: json['category'] ?? 'daily',
+        eventName: json['eventName'] ?? '',
         bpSystolic: json['bpSystolic'],
         bpDiastolic: json['bpDiastolic'],
         weight: (json['weight'] as num?)?.toDouble(),
