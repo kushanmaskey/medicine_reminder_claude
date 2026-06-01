@@ -51,23 +51,17 @@ class _SplashRouter extends StatelessWidget {
   const _SplashRouter();
 
   Future<_StartupState> _resolve() async {
-    final results = await Future.wait([
-      AuthService.isLoggedIn(),
-      AuthService.hasAccount(),
-    ]);
-    final isLoggedIn = results[0];
-    final hasAccount = results[1];
-
-    if (!isLoggedIn) {
-      return hasAccount ? _StartupState.login : _StartupState.register;
-    }
-
-    // Logged in — show onboarding only on first login ever
     final prefs = await SharedPreferences.getInstance();
     final onboardingDone = prefs.getBool('onboarding_done') ?? false;
     if (!onboardingDone) return _StartupState.onboarding;
 
-    return _StartupState.home;
+    final results = await Future.wait([
+      AuthService.isLoggedIn(),
+      AuthService.hasAccount(),
+    ]);
+    if (results[0]) return _StartupState.home;
+    if (results[1]) return _StartupState.login;
+    return _StartupState.register;
   }
 
   @override

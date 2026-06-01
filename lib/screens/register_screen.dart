@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFFE8607C), Color(0xFFF4A0B8)],
+  colors: [Color(0xFF501513), Color(0xFF7A2420)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -104,6 +105,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -341,7 +345,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? null
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFFE8607C)
+                                    color: const Color(0xFF501513)
                                         .withValues(alpha: 0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
@@ -389,7 +393,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               TextSpan(
                                 text: 'Sign In',
                                 style: TextStyle(
-                                    color: Color(0xFFE8607C),
+                                    color: Color(0xFF501513),
                                     fontWeight: FontWeight.w600),
                               ),
                             ],
@@ -471,8 +475,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── Sex selector ───────────────────────────────────────────────────────────
 
   Widget _buildSexSelector() {
-    const teal = Color(0xFFE8607C);
-    const pink = Color(0xFFEC4899);
+    const teal = Color(0xFF501513);
+    const pink = Color(0xFF7A2420);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,7 +524,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFFE8607C)),
+      prefixIcon: Icon(icon, color: const Color(0xFF501513)),
       filled: true,
       fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(
@@ -534,7 +538,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide:
-            const BorderSide(color: Color(0xFFE8607C), width: 1.5),
+            const BorderSide(color: Color(0xFF501513), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
