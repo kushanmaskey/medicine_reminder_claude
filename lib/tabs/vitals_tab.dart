@@ -52,16 +52,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       StorageService.getVitals().then((v) { list = v; }).catchError((_) {}),
     ]);
 
-    final cutoff = DateTime.now().subtract(const Duration(days: 5));
-
-    // Auto-delete only daily vitals older than 5 days
-    for (final v in list.where((v) => v.category == 'daily' && v.recordedAt.isBefore(cutoff))) {
-      await StorageService.deleteVital(v.id);
-    }
-
-    final kept = list
-        .where((v) => v.category != 'daily' || !v.recordedAt.isBefore(cutoff))
-        .toList()
+    final kept = List<Vital>.from(list)
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
 
     if (!mounted) return;

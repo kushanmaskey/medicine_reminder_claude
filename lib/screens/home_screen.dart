@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -50,6 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _avatarType;
   int? _avatarIndex;
   Uint8List? _avatarImageBytes;
+  Timer? _sessionTimer;
+
   final _summaryKey = GlobalKey<SummaryTabState>();
   final _prescriptionsKey = GlobalKey<PrescriptionsTabState>();
   final _appointmentsKey = GlobalKey<AppointmentsTabState>();
@@ -59,12 +63,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<String> _titles = ['Summary', 'Doctors', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
 
+  static const _sessionDuration = Duration(hours: 1);
+
   @override
   void initState() {
     super.initState();
     _requestNotificationPermission();
     _loadAvatar();
     StorageService.decrementPillsIfNeeded();
+    _startSessionTimer();
+  }
+
+  @override
+  void dispose() {
+    _sessionTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startSessionTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loginMs = prefs.getInt('session_login_time');
+    if (loginMs == null) return;
+
+    final loginTime = DateTime.fromMillisecondsSinceEpoch(loginMs);
+    final elapsed = DateTime.now().difference(loginTime);
+    final remaining = _sessionDuration - elapsed;
+
+    if (remaining <= Duration.zero) {
+      // Already expired — sign out immediately
+      _expireSession();
+      return;
+    }
+
+    _sessionTimer = Timer(remaining, _expireSession);
+  }
+
+  Future<void> _expireSession() async {
+    _sessionTimer?.cancel();
+    await AuthService.logout();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_login_time');
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Session Expired'),
+        content: const Text(
+          'For your security, you have been signed out after 1 hour. Please sign in again to continue.',
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (_) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF501513),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sign In'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -264,6 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SummaryTab(
             key: _summaryKey,
             onTabChange: (i) => setState(() => _currentIndex = i),
+            onVitalChanged: () => _vitalsKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
           PrescriptionsTab(key: _prescriptionsKey),
