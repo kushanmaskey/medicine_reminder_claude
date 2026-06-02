@@ -133,7 +133,16 @@ class SummaryTabState extends State<SummaryTab> {
     }).toList();
   }
 
-  List<Vital> get _latestVitals => _vitals.take(3).toList();
+  List<Vital> get _latestVitals =>
+      _vitals.where((v) => v.category == 'daily').take(3).toList();
+
+  List<Prescription> get _rxPrescriptions =>
+      _prescriptions.where((p) => !p.isOtc).toList();
+
+  static const _dailyActivityTypes = {'Walk', 'Run', 'Exercise', 'Yoga', 'Meditation'};
+
+  List<Activity> get _dailyActivities =>
+      _activities.where((a) => _dailyActivityTypes.contains(a.type)).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -175,20 +184,20 @@ class SummaryTabState extends State<SummaryTab> {
           _buildSectionHeader('Prescriptions', Icons.description_outlined,
               onViewAll: () => widget.onTabChange(2)),
           const SizedBox(height: 10),
-          if (_prescriptions.isEmpty)
+          if (_rxPrescriptions.isEmpty)
             _buildEmptyState('No prescriptions',
                 'Tap + on the Prescriptions tab to add one')
           else
-            ..._prescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
+            ..._rxPrescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
               onViewAll: () => widget.onTabChange(5)),
           const SizedBox(height: 10),
-          if (_activities.isEmpty)
+          if (_dailyActivities.isEmpty)
             _buildEmptyState('No activities logged',
                 'Tap + on the Activities tab to log one')
           else
-            ..._activities.take(3).map((a) => _buildActivityRow(a)),
+            ..._dailyActivities.take(3).map((a) => _buildActivityRow(a)),
           const SizedBox(height: 24),
           _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
               onViewAll: () => widget.onTabChange(1)),
@@ -301,8 +310,16 @@ class SummaryTabState extends State<SummaryTab> {
     return Row(
       children: [
         _StatCard(
+          label: 'Doctors',
+          count: _doctors.length,
+          icon: Icons.medical_services_outlined,
+          color: const Color(0xFF0EA5E9),
+          onTap: () => widget.onTabChange(1),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
           label: 'Rx',
-          count: _prescriptions.length,
+          count: _rxPrescriptions.length,
           icon: Icons.description_outlined,
           color: const Color(0xFF3B82F6),
           onTap: () => widget.onTabChange(2),
@@ -318,7 +335,7 @@ class SummaryTabState extends State<SummaryTab> {
         const SizedBox(width: 8),
         _StatCard(
           label: 'Vitals',
-          count: _vitals.length,
+          count: _vitals.where((v) => v.category == 'daily').length,
           icon: Icons.monitor_heart_outlined,
           color: const Color(0xFF501513),
           onTap: () => widget.onTabChange(4),
@@ -326,18 +343,10 @@ class SummaryTabState extends State<SummaryTab> {
         const SizedBox(width: 8),
         _StatCard(
           label: 'Activity',
-          count: _activities.length,
+          count: _dailyActivities.length,
           icon: Icons.directions_walk_outlined,
           color: const Color(0xFF22C55E),
           onTap: () => widget.onTabChange(5),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Doctors',
-          count: _doctors.length,
-          icon: Icons.medical_services_outlined,
-          color: const Color(0xFF0EA5E9),
-          onTap: () => widget.onTabChange(1),
         ),
       ],
     );
@@ -381,12 +390,6 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Latest vitals card ─────────────────────────────────────────────────────
 
   Widget _buildLatestVitalsCard(Vital v) {
-    final riskColor = v.riskLevel == 'High'
-        ? const Color(0xFFEF4444)
-        : v.riskLevel == 'Medium'
-            ? const Color(0xFFF97316)
-            : const Color(0xFF22C55E);
-
     return Tooltip(
       message: 'Tap to edit latest vitals',
       child: GestureDetector(
@@ -427,29 +430,6 @@ class SummaryTabState extends State<SummaryTab> {
                       fontWeight: FontWeight.w500),
                 ),
                 const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: riskColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: riskColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.circle, size: 7, color: riskColor),
-                      const SizedBox(width: 4),
-                      Text('${v.riskLevel} Risk',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: riskColor)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
                 const Icon(Icons.edit_outlined,
                     size: 16, color: Color(0xFF501513)),
               ],

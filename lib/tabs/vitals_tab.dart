@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../models/doctor.dart';
 import '../models/vital.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../screens/add_vital_screen.dart';
 
 class VitalsTab extends StatefulWidget {
-  const VitalsTab({super.key});
+  final VoidCallback? onDoctorAdded;
+  const VitalsTab({super.key, this.onDoctorAdded});
 
   @override
   State<VitalsTab> createState() => VitalsTabState();
@@ -14,21 +16,14 @@ class VitalsTab extends StatefulWidget {
 class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixin {
   TabController? _tabController;
   List<Vital> _vitals = [];
+  Map<String, String> _doctorNames = {};
   bool _loading = true;
   String? _sex;
 
-  bool get _isFemale => _sex == 'Female';
-
-  List<String> get _tabs => _isFemale
-      ? ['Daily', 'Monthly', 'Misc']
-      : ['Daily', 'Misc'];
-
-  List<String> get _categories => _isFemale
-      ? ['daily', 'monthly', 'open']
-      : ['daily', 'open'];
+  List<String> get _tabs => ['Daily', 'Misc'];
 
   String get _currentCategory =>
-      _tabController != null ? _categories[_tabController!.index] : 'daily';
+      _tabController != null && _tabController!.index == 1 ? 'open' : 'daily';
 
   @override
   void initState() {
@@ -47,9 +42,11 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
     String? sex;
     List<Vital> list = [];
+    List<Doctor> doctors = [];
     await Future.wait([
       AuthService.getSex().then((v) { sex = v; }).catchError((_) {}),
       StorageService.getVitals().then((v) { list = v; }).catchError((_) {}),
+      StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
     ]);
 
     final kept = List<Vital>.from(list)
@@ -57,13 +54,17 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
     if (!mounted) return;
 
-    final tabCount = sex == 'Female' ? 3 : 2;
-    if (_tabController == null || _tabController!.length != tabCount) {
+    if (_tabController == null || _tabController!.length != 2) {
       _tabController?.dispose();
-      _tabController = TabController(length: tabCount, vsync: this);
+      _tabController = TabController(length: 2, vsync: this);
     }
 
-    setState(() { _sex = sex; _vitals = kept; _loading = false; });
+    setState(() {
+      _sex = sex;
+      _vitals = kept;
+      _doctorNames = {for (final d in doctors) d.id: d.fullName};
+      _loading = false;
+    });
   }
 
   void reload() => _load();
@@ -72,7 +73,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
     final result = await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddVitalScreen(category: _currentCategory),
+        builder: (_) => AddVitalScreen(category: _currentCategory, onDoctorAdded: widget.onDoctorAdded),
       ),
     );
     if (result == true || result == 'deleted') {
@@ -85,13 +86,16 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   Future<void> _open(Vital v) async {
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
+      MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category, onDoctorAdded: widget.onDoctorAdded)),
     );
     if (result == true || result == 'deleted') _load();
   }
 
   List<Vital> _filtered(String category) =>
       _vitals.where((v) => v.category == category).toList();
+
+  List<Vital> _filteredMisc() =>
+      _vitals.where((v) => v.category == 'open' || v.category == 'monthly').toList();
 
   @override
   Widget build(BuildContext context) {
@@ -111,16 +115,11 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
                 onTap: _open,
                 onRefresh: _load,
               ),
-              if (_isFemale)
-                _VitalsListView(
-                  vitals: _filtered('monthly'),
-                  category: 'monthly',
-                  onTap: _open,
-                  onRefresh: _load,
-                ),
               _VitalsListView(
-                vitals: _filtered('open'),
+                vitals: _filteredMisc(),
                 category: 'open',
+                isFemale: _sex == 'Female',
+                doctorNames: _doctorNames,
                 onTap: _open,
                 onRefresh: _load,
               ),
@@ -166,12 +165,16 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 class _VitalsListView extends StatelessWidget {
   final List<Vital> vitals;
   final String category;
+  final bool isFemale;
+  final Map<String, String> doctorNames;
   final Future<void> Function(Vital) onTap;
   final Future<void> Function() onRefresh;
 
   const _VitalsListView({
     required this.vitals,
     required this.category,
+    this.isFemale = false,
+    this.doctorNames = const {},
     required this.onTap,
     required this.onRefresh,
   });
@@ -231,9 +234,8 @@ class _VitalsListView extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final v = vitals[i];
           return switch (category) {
-            'monthly' => _MonthlyCard(vital: v, onTap: () => onTap(v)),
-            'open'    => _OpenCard(vital: v, onTap: () => onTap(v)),
-            _         => _DailyCard(vital: v, onTap: () => onTap(v)),
+            'open' => _OpenCard(vital: v, isFemale: isFemale, doctorNames: doctorNames, onTap: () => onTap(v)),
+            _      => _DailyCard(vital: v, onTap: () => onTap(v)),
           };
         },
       ),
@@ -277,22 +279,6 @@ class _DailyCard extends StatelessWidget {
   final VoidCallback onTap;
   const _DailyCard({required this.vital, required this.onTap});
 
-  Color get _riskColor {
-    switch (vital.riskLevel) {
-      case 'High': return const Color(0xFFEF4444);
-      case 'Medium': return const Color(0xFFF97316);
-      default: return const Color(0xFF22C55E);
-    }
-  }
-
-  Color get _riskBg {
-    switch (vital.riskLevel) {
-      case 'High': return const Color(0xFFFEF2F2);
-      case 'Medium': return const Color(0xFFFFF7ED);
-      default: return const Color(0xFFF0FDF4);
-    }
-  }
-
   String _formatDate(DateTime dt) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun',
                     'Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -328,27 +314,6 @@ class _DailyCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _riskBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _riskColor.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, size: 7, color: _riskColor),
-                    const SizedBox(width: 4),
-                    Text('${vital.riskLevel} Risk',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _riskColor,
-                        )),
-                  ],
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -376,12 +341,14 @@ class _DailyCard extends StatelessWidget {
   }
 }
 
-// ── Monthly card (Period / Mammogram) ────────────────────────────────────────
+// ── Misc card (Period / Mammogram / Colonoscopy / Event/Procedure) ────────────
 
-class _MonthlyCard extends StatelessWidget {
+class _OpenCard extends StatelessWidget {
   final Vital vital;
+  final bool isFemale;
+  final Map<String, String> doctorNames;
   final VoidCallback onTap;
-  const _MonthlyCard({required this.vital, required this.onTap});
+  const _OpenCard({required this.vital, this.isFemale = false, this.doctorNames = const {}, required this.onTap});
 
   String _fmtDate(DateTime dt) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun',
@@ -396,34 +363,40 @@ class _MonthlyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_fmtDate(vital.recordedAt),
-              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-          const SizedBox(height: 8),
-          if (vital.periodDate != null)
-            _MonthlyRow(
-              icon: Icons.calendar_month_outlined,
-              label: 'Last Period',
-              value: _fmtDate(vital.periodDate!),
-              color: const Color(0xFF7A2420),
-            ),
-          if (vital.mammogramDate != null) ...[
-            if (vital.periodDate != null) const SizedBox(height: 6),
-            _MonthlyRow(
-              icon: Icons.medical_information_outlined,
-              label: 'Mammogram',
-              value: _fmtDate(vital.mammogramDate!),
-              color: const Color(0xFF8B5CF6),
-            ),
-          ],
-          if (vital.periodDate == null && vital.mammogramDate == null)
-            Text('No dates recorded',
-                style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.event_note, color: Color(0xFF3B82F6), size: 17),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _fmtDate(vital.recordedAt),
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF635A5A)),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (isFemale && vital.periodDate != null)
+            _MiscRow(icon: Icons.calendar_month_outlined, label: 'Last Period', value: _fmtDate(vital.periodDate!), color: const Color(0xFF7A2420)),
+          if (isFemale && vital.mammogramDate != null)
+            _MiscRow(icon: Icons.medical_information_outlined, label: 'Mammogram', value: _fmtDate(vital.mammogramDate!), color: const Color(0xFF8B5CF6)),
+          if (vital.colonoscopyDate != null)
+            _MiscRow(icon: Icons.biotech_outlined, label: 'Colonoscopy', value: _fmtDate(vital.colonoscopyDate!), color: const Color(0xFF0EA5E9)),
+          if (vital.eventName.isNotEmpty)
+            _MiscRow(icon: Icons.event_note_outlined, label: 'Event/Procedure', value: vital.eventName, color: const Color(0xFF3B82F6)),
+          if (vital.doctorId != null && doctorNames.containsKey(vital.doctorId))
+            _MiscRow(icon: Icons.medical_services_outlined, label: 'Doctor', value: doctorNames[vital.doctorId!]!, color: const Color(0xFF0EA5E9)),
           if (vital.notes.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(vital.notes,
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 4),
+            Text(vital.notes, style: TextStyle(fontSize: 12, color: Colors.grey[400]), maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ],
       ),
@@ -431,85 +404,25 @@ class _MonthlyCard extends StatelessWidget {
   }
 }
 
-class _MonthlyRow extends StatelessWidget {
+class _MiscRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
   final Color color;
-  const _MonthlyRow({required this.icon, required this.label, required this.value, required this.color});
+  const _MiscRow({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 8),
-        Text('$label: ', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-      ],
-    );
-  }
-}
-
-// ── Open card (custom event) ─────────────────────────────────────────────────
-
-class _OpenCard extends StatelessWidget {
-  final Vital vital;
-  final VoidCallback onTap;
-  const _OpenCard({required this.vital, required this.onTap});
-
-  String _fmtDate(DateTime dt) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun',
-                    'Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final name = vital.eventName.isNotEmpty ? vital.eventName : 'Health Event';
-    return _BaseCard(
-      onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.event_note, color: Color(0xFF3B82F6), size: 20),
-          ),
-          const SizedBox(width: 12),
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text('$label: ', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: Color(0xFF635A5A),
-                          )),
-                    ),
-                    Text(_fmtDate(vital.recordedAt),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  ],
-                ),
-                if (vital.notes.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(vital.notes,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ],
-            ),
+            child: Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color), overflow: TextOverflow.ellipsis),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
         ],
       ),
     );

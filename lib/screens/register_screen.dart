@@ -1,8 +1,12 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'terms_screen.dart';
+import 'privacy_policy_screen.dart';
 
 const _gradient = LinearGradient(
   colors: [Color(0xFF501513), Color(0xFF7A2420)],
@@ -30,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading           = false;
   bool _obscurePass       = true;
   bool _obscureConfirm    = true;
+  bool _agreedToTerms     = false;
   String _sex             = 'Male';
   int _passwordLength     = 0;
   String? _emailError;
@@ -37,12 +42,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _passwordController.addListener(
-        () => setState(() => _passwordLength = _passwordController.text.length));
+    for (final c in [_nameController, _emailController, _phoneController, _confirmController]) {
+      c.addListener(_onFieldChanged);
+    }
+    _passwordController.addListener(() {
+      setState(() => _passwordLength = _passwordController.text.length);
+    });
+  }
+
+  void _onFieldChanged() => setState(() {});
+
+  bool get _canSubmit {
+    if (_loading || !_agreedToTerms) return false;
+    if (_nameController.text.trim().isEmpty) return false;
+    if (_emailController.text.trim().isEmpty) return false;
+    if (_phoneController.text.trim().isEmpty) return false;
+    if (_passwordController.text.isEmpty) return false;
+    if (_confirmController.text.isEmpty) return false;
+    return true;
   }
 
   @override
   void dispose() {
+    for (final c in [_nameController, _emailController, _phoneController, _confirmController]) {
+      c.removeListener(_onFieldChanged);
+    }
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -73,10 +97,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     setState(() => _emailError = null);
     if (!_formKey.currentState!.validate()) return;
+    if (!_agreedToTerms) {
+      setState(() => _emailError = 'Please agree to the Terms & Conditions and Privacy Policy to continue.');
+      return;
+    }
 
     setState(() => _loading = true);
 
     final email = _emailController.text.trim();
+    final agreedAt = DateTime.now().toUtc();
     final error = await AuthService.register(
       email,
       _passwordController.text,
@@ -102,6 +131,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
       return;
     }
+
+    // Save consent record (email + timestamp + agreement)
+    try {
+      await StorageService.saveConsent(email: email, agreedAt: agreedAt);
+    } catch (_) {}
 
     if (!mounted) return;
     setState(() => _loading = false);
@@ -302,6 +336,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 20),
 
+                    // Terms & Conditions agreement
+                    _buildTermsCheckbox(),
+                    const SizedBox(height: 12),
+
                     // Email-already-exists error
                     if (_emailError != null) ...[
                       Container(
@@ -337,23 +375,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 52,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: _loading ? null : _gradient,
-                          color:
-                              _loading ? Colors.grey.shade200 : null,
+                          gradient: _canSubmit ? _gradient : null,
+                          color: _canSubmit ? null : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: _loading
-                              ? null
-                              : [
+                          boxShadow: _canSubmit
+                              ? [
                                   BoxShadow(
                                     color: const Color(0xFF501513)
                                         .withValues(alpha: 0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
-                                ],
+                                ]
+                              : null,
                         ),
                         child: ElevatedButton(
-                          onPressed: _loading ? null : _register,
+                          onPressed: _canSubmit ? _register : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -404,6 +441,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 24),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Terms & Conditions checkbox ───────────────────────────────────────────
+
+  Widget _buildTermsCheckbox() {
+    return GestureDetector(
+      onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: _agreedToTerms,
+              activeColor: const Color(0xFF501513),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+              onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.5),
+                children: [
+                  const TextSpan(text: 'I have read and agree to the '),
+                  TextSpan(
+                    text: 'Terms & Conditions',
+                    style: const TextStyle(
+                      color: Color(0xFF501513),
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF501513),
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TermsScreen()),
+                          ),
+                  ),
+                  const TextSpan(text: ' and '),
+                  TextSpan(
+                    text: 'Privacy Policy',
+                    style: const TextStyle(
+                      color: Color(0xFF501513),
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF501513),
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                          ),
+                  ),
+                  const TextSpan(text: '. I understand this app is a personal health organiser and does not provide medical advice.'),
+                ],
               ),
             ),
           ),

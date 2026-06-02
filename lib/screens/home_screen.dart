@@ -335,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
           DoctorsTab(key: _doctorsKey),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
-          VitalsTab(key: _vitalsKey),
+          VitalsTab(key: _vitalsKey, onDoctorAdded: () => _doctorsKey.currentState?.reload()),
           ActivitiesTab(key: _activitiesKey),
         ],
       ),

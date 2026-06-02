@@ -258,3 +258,24 @@ ALTER TABLE prescriptions
 ALTER TABLE prescriptions
   ADD COLUMN IF NOT EXISTS doctor_id text REFERENCES doctors(id) ON DELETE SET NULL;
 
+-- Migration: doctor_id on vitals
+ALTER TABLE vitals
+  ADD COLUMN IF NOT EXISTS doctor_id text REFERENCES doctors(id) ON DELETE SET NULL;
+
+-- User consent records (Terms & Conditions agreement at registration)
+CREATE TABLE IF NOT EXISTS user_consents (
+  id            text PRIMARY KEY,
+  user_id       uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  email         text NOT NULL,
+  agreed_at     timestamptz NOT NULL,
+  terms_version text NOT NULL DEFAULT '1.0',
+  agreed        boolean NOT NULL DEFAULT true,
+  created_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE user_consents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user_consents_all" ON user_consents FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+

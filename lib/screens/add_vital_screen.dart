@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/doctor.dart';
 import '../models/vital.dart';
+import '../screens/add_doctor_screen.dart';
+import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 
 class AddVitalScreen extends StatefulWidget {
   final Vital? existing;
   final String category;
+  final VoidCallback? onDoctorAdded;
 
   const AddVitalScreen({
     super.key,
     this.existing,
     this.category = 'daily',
+    this.onDoctorAdded,
   });
 
   @override
@@ -37,12 +42,16 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   String _weightUnit      = 'lbs';
   String _sugarUnit       = 'mg/dL';
   String _cholesterolUnit = 'mg/dL';
-  String _riskLevel       = 'Low';
   DateTime _recordedAt    = DateTime.now();
 
-  // Monthly fields
+  // Misc fields
   DateTime? _periodDate;
   DateTime? _mammogramDate;
+  DateTime? _colonoscopyDate;
+  bool _hasEventDate = false;
+  String? _sex;
+  List<Doctor> _doctors = [];
+  Doctor? _selectedDoctor;
 
   bool _saving = false;
 
@@ -63,18 +72,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   String get _screenTitle {
     if (_isEditing) {
-      switch (_category) {
-        case 'monthly': return 'Edit Monthly Record';
-        case 'open':    return 'Edit Health Event';
-        default:        return 'Edit Daily Vitals';
-      }
+      return _category == 'daily' ? 'Edit Daily Vitals' : 'Edit Misc Record';
     }
-    switch (_category) {
-      case 'monthly': return 'Log Monthly Record';
-      case 'open':    return 'Log Health Event';
-      default:        return 'Log Daily Vitals';
-    }
+    return _category == 'daily' ? 'Log Daily Vitals' : 'Log Misc Record';
   }
+
+  bool get _isFemale => _sex == 'Female';
 
   void _onVitalChanged() => setState(() {});
 
@@ -96,10 +99,23 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _weightUnit      = e.weightUnit;
       _sugarUnit       = e.sugarUnit;
       _cholesterolUnit = e.cholesterolUnit;
-      _riskLevel       = e.riskLevel;
       _recordedAt      = e.recordedAt;
+      _hasEventDate    = e.category != 'daily';
       _periodDate      = e.periodDate;
+      if (e.doctorId != null) {
+        StorageService.getDoctors().then((list) {
+          if (mounted) setState(() {
+            _doctors = list;
+            try { _selectedDoctor = list.firstWhere((d) => d.id == e.doctorId); } catch (_) {}
+          });
+        });
+      }
       _mammogramDate   = e.mammogramDate;
+      _colonoscopyDate = e.colonoscopyDate;
+    }
+    if (_category != 'daily') {
+      AuthService.getSex().then((s) { if (mounted) setState(() => _sex = s); });
+      StorageService.getDoctors().then((d) { if (mounted) setState(() => _doctors = d); });
     }
   }
 
@@ -128,6 +144,71 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       firstDate: DateTime(DateTime.now().year - 30),
       lastDate: DateTime.now(),
       helpText: 'Last $label date',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+            colorScheme: ColorScheme.light(primary: _accentColor)),
+        child: child!,
+      ),
+    );
+  }
+
+  Future<void> _showDoctorPicker() async {
+    if (_doctors.isEmpty) {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('No Doctors Added'),
+          content: const Text('Add a doctor first to select them here.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF501513), foregroundColor: Colors.white),
+              child: const Text('Add Doctor'),
+            ),
+          ],
+        ),
+      );
+      if (result == true && mounted) {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDoctorScreen()));
+        final list = await StorageService.getDoctors();
+        if (mounted) {
+          setState(() => _doctors = list);
+          widget.onDoctorAdded?.call();
+        }
+      }
+      return;
+    }
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _VitalDoctorPickerSheet(
+        doctors: _doctors,
+        selected: _selectedDoctor,
+        onSelect: (d) { setState(() => _selectedDoctor = d); Navigator.pop(context); },
+        onAddNew: () async {
+          Navigator.pop(context);
+          await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDoctorScreen()));
+          final list = await StorageService.getDoctors();
+          if (mounted) {
+            setState(() => _doctors = list);
+            widget.onDoctorAdded?.call();
+          }
+        },
+      ),
+    );
+  }
+
+  Future<DateTime?> _pickAnyDate(DateTime? initial, String label) async {
+    _dismissFocus();
+    return showDatePicker(
+      context: context,
+      initialDate: initial ?? DateTime.now(),
+      firstDate: DateTime(DateTime.now().year - 30),
+      lastDate: DateTime(DateTime.now().year + 10),
+      helpText: '$label date',
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
             colorScheme: ColorScheme.light(primary: _accentColor)),
@@ -166,6 +247,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   Future<void> _save() async {
     try {
       if (_formKey.currentState?.validate() != true) return;
+      if (_category != 'daily' && _eventNameController.text.trim().isNotEmpty && !_hasEventDate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a date for the event / procedure')),
+        );
+        return;
+      }
       setState(() => _saving = true);
 
       final vital = Vital(
@@ -181,10 +268,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         sugarUnit:       _sugarUnit,
         cholesterol:     _category == 'daily' ? double.tryParse(_cholesterolController.text.trim()) : null,
         cholesterolUnit: _cholesterolUnit,
-        periodDate:      _category == 'monthly' ? _periodDate : null,
-        mammogramDate:   _category == 'monthly' ? _mammogramDate : null,
-        riskLevel:       _category == 'daily' ? _riskLevel : 'Low',
+        colonoscopyDate: _category != 'daily' ? _colonoscopyDate : null,
+        periodDate:      _category != 'daily' ? _periodDate : null,
+        mammogramDate:   _category != 'daily' ? _mammogramDate : null,
+        riskLevel:       'Low',
         notes:           _notesController.text.trim(),
+        doctorId:        _category != 'daily' ? _selectedDoctor?.id : null,
       );
 
       if (_isEditing) {
@@ -314,8 +403,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.of(context).padding.bottom),
           children: [
             if (_category == 'daily') ..._buildDailyFields(context),
-            if (_category == 'monthly') ..._buildMonthlyFields(),
-            if (_category == 'open') ..._buildOpenFields(),
+            if (_category != 'daily') ..._buildMiscFields(),
             const SizedBox(height: 16),
             _buildNotesSection(),
             const SizedBox(height: 32),
@@ -849,61 +937,79 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         ),
       ],
     ),
-    const SizedBox(height: 16),
-    _buildRiskSection(),
   ];
 
-  // ── Monthly fields ────────────────────────────────────────────────────────
+  // ── Misc fields (Period, Mammogram, Colonoscopy, Event/Procedure) ──────────
 
-  List<Widget> _buildMonthlyFields() => [
+  List<Widget> _buildMiscFields() => [
+    if (_isFemale) ...[
+      _SectionCard(
+        title: 'Last Period',
+        icon: Icons.calendar_month_outlined,
+        iconColor: _mauve,
+        children: [
+          Text('Last menstrual period start date',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+          const SizedBox(height: 10),
+          _DatePickerTile(
+            date: _periodDate,
+            hint: 'Tap to set last period date',
+            color: _mauve,
+            onTap: () async {
+              final d = await _pickPastDate(_periodDate, 'Period');
+              if (d != null && mounted) setState(() => _periodDate = d);
+            },
+            onClear: () => setState(() => _periodDate = null),
+            formatDate: _formatDate,
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      _SectionCard(
+        title: 'Mammogram',
+        icon: Icons.medical_information_outlined,
+        iconColor: _mauve,
+        children: [
+          Text('Last mammogram screening date',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+          const SizedBox(height: 10),
+          _DatePickerTile(
+            date: _mammogramDate,
+            hint: 'Tap to set last mammogram date',
+            color: _mauve,
+            onTap: () async {
+              final d = await _pickPastDate(_mammogramDate, 'Mammogram');
+              if (d != null && mounted) setState(() => _mammogramDate = d);
+            },
+            onClear: () => setState(() => _mammogramDate = null),
+            formatDate: _formatDate,
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+    ],
     _SectionCard(
-      title: 'Last Period',
-      icon: Icons.calendar_month_outlined,
-      iconColor: _mauve,
+      title: 'Colonoscopy',
+      icon: Icons.biotech_outlined,
+      iconColor: const Color(0xFF0EA5E9),
       children: [
-        Text('Last menstrual period start date',
+        Text('Last colonoscopy date',
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         const SizedBox(height: 10),
         _DatePickerTile(
-          date: _periodDate,
-          hint: 'Tap to set last period date',
-          color: _mauve,
+          date: _colonoscopyDate,
+          hint: 'Tap to set last colonoscopy date',
+          color: const Color(0xFF0EA5E9),
           onTap: () async {
-            final d = await _pickPastDate(_periodDate, 'Period');
-            if (d != null && mounted) setState(() => _periodDate = d);
+            final d = await _pickPastDate(_colonoscopyDate, 'Colonoscopy');
+            if (d != null && mounted) setState(() => _colonoscopyDate = d);
           },
-          onClear: () => setState(() => _periodDate = null),
+          onClear: () => setState(() => _colonoscopyDate = null),
           formatDate: _formatDate,
         ),
       ],
     ),
     const SizedBox(height: 16),
-    _SectionCard(
-      title: 'Mammogram',
-      icon: Icons.medical_information_outlined,
-      iconColor: _mauve,
-      children: [
-        Text('Last mammogram screening date',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-        const SizedBox(height: 10),
-        _DatePickerTile(
-          date: _mammogramDate,
-          hint: 'Tap to set last mammogram date',
-          color: _mauve,
-          onTap: () async {
-            final d = await _pickPastDate(_mammogramDate, 'Mammogram');
-            if (d != null && mounted) setState(() => _mammogramDate = d);
-          },
-          onClear: () => setState(() => _mammogramDate = null),
-          formatDate: _formatDate,
-        ),
-      ],
-    ),
-  ];
-
-  // ── Open fields ───────────────────────────────────────────────────────────
-
-  List<Widget> _buildOpenFields() => [
     _SectionCard(
       title: 'Event / Procedure',
       icon: Icons.event_note_outlined,
@@ -912,91 +1018,61 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         TextFormField(
           controller: _eventNameController,
           maxLength: 100,
-          decoration: _inputDecoration('e.g. Colonoscopy, Eye Exam, Dental…', ''),
-          validator: (v) =>
-              (v == null || v.trim().isEmpty) ? 'Enter an event name' : null,
+          decoration: _inputDecoration('e.g. Eye Exam, Dental, Physiotherapy…', ''),
+          onChanged: (_) => setState(() {}),
+          validator: (v) {
+            final hasDate = _periodDate != null || _mammogramDate != null || _colonoscopyDate != null;
+            if (!hasDate && (v == null || v.trim().isEmpty)) {
+              return 'Enter an event name or select a date above';
+            }
+            return null;
+          },
         ),
-        const SizedBox(height: 8),
-        Text('Describe the procedure or health event',
-            style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+        const SizedBox(height: 10),
+        Text('Doctor / Specialist',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        _DoctorPickerTile(
+          selected: _selectedDoctor,
+          onTap: () => _showDoctorPicker(),
+          onClear: () => setState(() => _selectedDoctor = null),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Text('Event Date',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+            if (_eventNameController.text.trim().isNotEmpty)
+              Text(' *', style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600)),
+            if (_eventNameController.text.trim().isEmpty)
+              Text(' (optional)', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _DatePickerTile(
+          date: _hasEventDate ? _recordedAt : null,
+          hint: 'Tap to set event date',
+          color: _blue,
+          onTap: () async {
+            final d = await _pickAnyDate(_recordedAt, 'Event');
+            if (d != null && mounted) setState(() { _recordedAt = d; _hasEventDate = true; });
+          },
+          onClear: () => setState(() { _recordedAt = DateTime.now(); _hasEventDate = false; }),
+          formatDate: _formatDate,
+        ),
+        if (_eventNameController.text.trim().isNotEmpty && !_hasEventDate) ...[
+          const SizedBox(height: 4),
+          const Text('Date is required when an event name is entered',
+              style: TextStyle(fontSize: 11, color: Colors.red)),
+        ] else ...[
+          const SizedBox(height: 4),
+          Text('When the event or procedure took place',
+              style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+        ],
       ],
     ),
   ];
 
-  // ── Risk section (daily only) ─────────────────────────────────────────────
-
-  Color get _riskBulbColor => switch (_riskLevel) {
-    'High'   => const Color(0xFFEF4444),
-    'Medium' => const Color(0xFFF97316),
-    _        => const Color(0xFF22C55E),
-  };
-
-  Widget _buildRiskSection() {
-    return _SectionCard(
-      title: 'Overall Risk Level',
-      icon: Icons.shield_outlined,
-      iconColor: const Color(0xFF8B5CF6),
-      trailing: IconButton(
-        icon: Icon(Icons.lightbulb, size: 18, color: _riskBulbColor),
-        tooltip: '$_riskLevel Risk — learn more',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () => launchUrl(
-          Uri.parse('https://medlineplus.gov'),
-          mode: LaunchMode.externalApplication,
-        ),
-      ),
-      children: [
-        ...[
-          ('Low',    const Color(0xFF22C55E), Icons.sentiment_satisfied_outlined),
-          ('Medium', const Color(0xFFF97316), Icons.sentiment_neutral_outlined),
-          ('High',   const Color(0xFFEF4444), Icons.sentiment_dissatisfied_outlined),
-        ].map((entry) {
-          final (level, color, icon) = entry;
-          final selected = _riskLevel == level;
-          return InkWell(
-            onTap: () => setState(() => _riskLevel = level),
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: selected ? color.withValues(alpha: 0.10) : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: selected ? color.withValues(alpha: 0.5) : Colors.grey.shade200,
-                  width: selected ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Radio<String>(
-                    value: level,
-                    groupValue: _riskLevel,
-                    activeColor: color,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    onChanged: (v) => setState(() => _riskLevel = v!),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(icon, color: color, size: 20),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$level Risk',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? color : const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
 
   // ── Notes section ─────────────────────────────────────────────────────────
 
@@ -1390,6 +1466,131 @@ class _TipCard extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Doctor picker tile ────────────────────────────────────────────────────────
+
+class _DoctorPickerTile extends StatelessWidget {
+  final Doctor? selected;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+  const _DoctorPickerTile({required this.selected, required this.onTap, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: selected != null ? const Color(0xFF0EA5E9).withValues(alpha: 0.07) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected != null ? const Color(0xFF0EA5E9).withValues(alpha: 0.4) : Colors.grey.shade200,
+            width: selected != null ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.medical_services_outlined,
+                size: 18, color: selected != null ? const Color(0xFF0EA5E9) : Colors.grey[400]),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                selected?.fullName ?? 'Tap to select a doctor',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: selected != null ? const Color(0xFF484141) : Colors.grey[400],
+                  fontWeight: selected != null ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (selected != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
+              )
+            else
+              Icon(Icons.chevron_right, size: 18, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Doctor picker bottom sheet ────────────────────────────────────────────────
+
+class _VitalDoctorPickerSheet extends StatelessWidget {
+  final List<Doctor> doctors;
+  final Doctor? selected;
+  final void Function(Doctor) onSelect;
+  final VoidCallback onAddNew;
+  const _VitalDoctorPickerSheet({required this.doctors, required this.selected, required this.onSelect, required this.onAddNew});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 16),
+          const Text('Select Doctor / Specialist',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF484141))),
+          const SizedBox(height: 12),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: doctors.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 48),
+              itemBuilder: (_, i) {
+                final d = doctors[i];
+                final isSelected = selected?.id == d.id;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    child: Text(d.lastName.isNotEmpty ? d.lastName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.w700)),
+                  ),
+                  title: Text(d.fullName,
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF484141))),
+                  subtitle: d.specialty.isNotEmpty
+                      ? Text(d.specialty, style: TextStyle(fontSize: 12, color: Colors.grey[500]))
+                      : null,
+                  trailing: isSelected ? const Icon(Icons.check_circle, color: Color(0xFF0EA5E9)) : null,
+                  onTap: () => onSelect(d),
+                );
+              },
+            ),
+          ),
+          const Divider(height: 24),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFEFF6FF),
+              child: Icon(Icons.add, color: Color(0xFF0EA5E9)),
+            ),
+            title: const Text('Add New Doctor',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0EA5E9))),
+            onTap: onAddNew,
           ),
         ],
       ),

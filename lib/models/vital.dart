@@ -16,6 +16,7 @@ class Vital {
   final DateTime? mammogramDate;
   final String riskLevel;
   final String notes;
+  final String? doctorId;
 
   Vital({
     required this.id,
@@ -35,6 +36,7 @@ class Vital {
     this.mammogramDate,
     required this.riskLevel,
     this.notes = '',
+    this.doctorId,
   });
 
   bool get hasBP => bpSystolic != null && bpDiastolic != null;
@@ -79,6 +81,7 @@ class Vital {
         'mammogramDate': mammogramDate?.toIso8601String(),
         'riskLevel': riskLevel,
         'notes': notes,
+        'doctorId': doctorId,
       };
 
   static DateTime? _tryParse(dynamic value) {
@@ -104,5 +107,6 @@ class Vital {
         mammogramDate: _tryParse(json['mammogramDate']),
         riskLevel: json['riskLevel'] ?? 'Low',
         notes: json['notes'] ?? '',
+        doctorId: json['doctorId'] as String?,
       );
 }

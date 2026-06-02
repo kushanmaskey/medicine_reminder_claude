@@ -336,6 +336,7 @@ class StorageService {
       'mammogram_date': v.mammogramDate?.toIso8601String(),
       'risk_level': v.riskLevel,
       'notes': v.notes,
+      'doctor_id': v.doctorId,
     });
   }
 
@@ -357,6 +358,7 @@ class StorageService {
       'mammogram_date': v.mammogramDate?.toIso8601String(),
       'risk_level': v.riskLevel,
       'notes': v.notes,
+      'doctor_id': v.doctorId,
     }).eq('id', v.id).eq('user_id', _uid);
   }
 
@@ -382,6 +384,7 @@ class StorageService {
     'mammogramDate': r['mammogram_date'],
     'riskLevel': r['risk_level'] ?? 'Low',
     'notes': r['notes'] ?? '',
+    'doctorId': r['doctor_id'],
   };
 
   // ── Activities ────────────────────────────────────────────────────────────
@@ -493,5 +496,22 @@ class StorageService {
 
   static Future<void> deleteDoctor(String id) async {
     await _db.from('doctors').delete().eq('id', id).eq('user_id', _uid);
+  }
+
+  // ── User Consents ─────────────────────────────────────────────────────────
+
+  static Future<void> saveConsent({
+    required String email,
+    required DateTime agreedAt,
+    String termsVersion = '1.0',
+  }) async {
+    await _db.from('user_consents').insert({
+      'id': agreedAt.millisecondsSinceEpoch.toString(),
+      'user_id': _uid,
+      'email': email,
+      'agreed_at': agreedAt.toUtc().toIso8601String(),
+      'terms_version': termsVersion,
+      'agreed': true,
+    });
   }
 }

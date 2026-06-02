@@ -4,6 +4,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../services/ringtone_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_screen.dart';
 
 const _gradient = LinearGradient(
   colors: [Color(0xFF501513), Color(0xFF7A2420)],
@@ -230,6 +232,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () => openAppSettings(),
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(title: 'Legal'),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.gavel_outlined, color: Color(0xFF3B82F6), size: 20),
+                  ),
+                  title: const Text(
+                    'Terms & Conditions',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                  subtitle: Text(
+                    'Your rights and responsibilities using this app',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsScreen()),
+                  ),
+                ),
+                Divider(height: 1, indent: 72, color: Colors.grey.shade100),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.policy_outlined, color: Color(0xFF3B82F6), size: 20),
+                  ),
+                  title: const Text(
+                    'Privacy Policy',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                  subtitle: Text(
+                    'How we collect and protect your data',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                  ),
+                ),
               ],
             ),
           ),
