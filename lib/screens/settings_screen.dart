@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../services/biometric_service.dart';
 import '../services/ringtone_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -23,11 +24,36 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String? _soundName;
   bool _loading = false;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _loadSoundName();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      final success = await BiometricService.authenticate(
+        reason: 'Verify your identity to enable biometric login',
+      );
+      if (!success) return;
+    }
+    await BiometricService.setEnabled(value);
+    if (mounted) setState(() => _biometricEnabled = value);
   }
 
   Future<void> _loadSoundName() async {
@@ -139,6 +165,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (_biometricAvailable) ...[
+            _SectionHeader(title: 'Security'),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SwitchListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                secondary: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: _gradient,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.fingerprint,
+                      color: Colors.white, size: 22),
+                ),
+                title: const Text(
+                  'Biometric Login',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+                subtitle: Text(
+                  'Use Face ID or fingerprint to unlock the app',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+                value: _biometricEnabled,
+                activeColor: const Color(0xFF501513),
+                onChanged: _toggleBiometric,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
           _SectionHeader(title: 'Notifications'),
           const SizedBox(height: 8),
           Container(
