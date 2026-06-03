@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../tabs/summary_tab.dart';
@@ -12,6 +13,7 @@ import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import '../tabs/doctors_tab.dart';
+import 'biometric_lock_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -100,8 +102,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _expireSession() async {
     _sessionTimer?.cancel();
-    await AuthService.logout();
     final prefs = await SharedPreferences.getInstance();
+
+    final biometricEnabled = await BiometricService.isEnabled();
+    final biometricAvailable = await BiometricService.isAvailable();
+
+    if (biometricEnabled && biometricAvailable) {
+      if (!mounted) return;
+      final unlocked = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const BiometricLockScreen(),
+        ),
+      );
+      if (unlocked == true) {
+        // Reset session timer
+        await prefs.setInt(
+          'session_login_time',
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        _startSessionTimer();
+      } else {
+        // Biometric dismissed or failed — sign out
+        await AuthService.logout();
+        await prefs.remove('session_login_time');
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (_) => false,
+        );
+      }
+      return;
+    }
+
+    // No biometric — standard sign-out with dialog
+    await AuthService.logout();
     await prefs.remove('session_login_time');
     if (!mounted) return;
     showDialog(

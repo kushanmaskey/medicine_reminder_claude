@@ -3,10 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/supabase_config.dart';
 import 'services/auth_service.dart';
+import 'services/biometric_service.dart';
 import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/biometric_lock_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 
 void main() async {
@@ -59,7 +61,14 @@ class _SplashRouter extends StatelessWidget {
       AuthService.isLoggedIn(),
       AuthService.hasAccount(),
     ]);
-    if (results[0]) return _StartupState.home;
+    if (results[0]) {
+      final biometricEnabled = await BiometricService.isEnabled();
+      final biometricAvailable = await BiometricService.isAvailable();
+      if (biometricEnabled && biometricAvailable) {
+        return _StartupState.biometricLock;
+      }
+      return _StartupState.home;
+    }
     if (results[1]) return _StartupState.login;
     return _StartupState.register;
   }
@@ -83,13 +92,14 @@ class _SplashRouter extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const _SplashRouter()),
               ),
             ),
-          _StartupState.home     => const HomeScreen(),
-          _StartupState.login    => const LoginScreen(),
-          _StartupState.register => const RegisterScreen(),
+          _StartupState.biometricLock => const BiometricLockScreen(replaceWithHome: true),
+          _StartupState.home         => const HomeScreen(),
+          _StartupState.login        => const LoginScreen(),
+          _StartupState.register     => const RegisterScreen(),
         };
       },
     );
   }
 }
 
-enum _StartupState { onboarding, home, login, register }
+enum _StartupState { onboarding, biometricLock, home, login, register }
