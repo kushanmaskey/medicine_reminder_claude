@@ -36,14 +36,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
       _authenticating = true;
       _errorMessage = null;
     });
-    final success = await BiometricService.authenticate();
+    final (success, error) = await BiometricService.authenticateWithError();
     if (!mounted) return;
     if (success) {
       _unlock();
     } else {
       setState(() {
         _authenticating = false;
-        _errorMessage =
+        _errorMessage = error ??
             'Authentication failed. Tap "Use Biometrics" to try again, or use your password to sign in.';
       });
     }
