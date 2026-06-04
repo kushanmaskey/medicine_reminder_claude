@@ -94,7 +94,7 @@ You agree to:
 
 ## 8. Account Termination
 
-You may delete your account at any time by contacting us at kushan.maskey@gmail.com. Upon request, all your personal data will be permanently deleted from our systems within 30 days.
+You may delete your account at any time by contacting us at medicalwallet473@gmail.com. Upon request, all your personal data will be permanently deleted from our systems within 30 days.
 
 We reserve the right to suspend or terminate accounts that violate these Terms.
 
@@ -128,7 +128,7 @@ These Terms are governed by the laws of the United States. Any disputes shall be
 
 For questions about these Terms:
 
-**Email:** kushan.maskey@gmail.com
+**Email:** medicalwallet473@gmail.com
 
 ---
 

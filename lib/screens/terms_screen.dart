@@ -124,7 +124,7 @@ class TermsScreen extends StatelessWidget {
             number: '8',
             title: 'Account Termination',
             body:
-                'You may delete your account at any time by contacting kushan.maskey@gmail.com. All personal data will be permanently deleted within 30 days of your request.\n\n'
+                'You may delete your account at any time by contacting medicalwallet473@gmail.com. All personal data will be permanently deleted within 30 days of your request.\n\n'
                 'We reserve the right to suspend accounts that violate these Terms.',
           ),
           _TermsSection(
@@ -148,7 +148,7 @@ class TermsScreen extends StatelessWidget {
           _TermsSection(
             number: '12',
             title: 'Contact',
-            body: 'For questions about these Terms:\n\nkushan.maskey@gmail.com',
+            body: 'For questions about these Terms:\n\nmedicalwallet473@gmail.com',
           ),
           SizedBox(height: 8),
           _TermsFooter(),

@@ -165,7 +165,7 @@ We may update this Privacy Policy from time to time. When we do, we will update 
 
 For privacy questions, data requests, or account deletion:
 
-**Email:** kushan.maskey@gmail.com
+**Email:** medicalwallet473@gmail.com
 
 We aim to respond to all privacy-related requests within **14 business days**.
 

@@ -166,7 +166,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             number: '14',
             title: 'Contact Us',
             body:
-                'For privacy questions or data deletion requests:\n\nkushan.maskey@gmail.com\n\nWe aim to respond within 14 business days.',
+                'For privacy questions or data deletion requests:\n\nmedicalwallet473@gmail.com\n\nWe aim to respond within 14 business days.',
           ),
           SizedBox(height: 8),
           _PolicyFooter(),
