@@ -430,103 +430,100 @@ class SummaryTabState extends State<SummaryTab> {
     return Tooltip(
       message: 'Tap to edit latest vitals',
       child: GestureDetector(
-      onTap: () async {
-        final result = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
-        );
-        if (result == true) {
-          _load();
-          widget.onVitalChanged?.call();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  _fmtDateTime(v.recordedAt),
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                      fontWeight: FontWeight.w500),
-                ),
-                const Spacer(),
-                const Icon(Icons.edit_outlined,
-                    size: 16, color: Color(0xFF501513)),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.favorite_outlined,
-                  label: 'Blood Pressure',
-                  value: v.bpDisplay,
-                  color: const Color(0xFFEF4444),
-                ),
-                const SizedBox(width: 10),
-                _VitalChip(
-                  icon: Icons.water_drop_outlined,
-                  label: 'Sugar Level',
-                  value: v.sugarDisplay,
-                  color: const Color(0xFFF97316),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.scale_outlined,
-                  label: 'Weight',
-                  value: v.weightDisplay,
-                  color: const Color(0xFF3B82F6),
-                ),
-                const SizedBox(width: 10),
-                _VitalChip(
-                  icon: Icons.biotech_outlined,
-                  label: 'Cholesterol',
-                  value: v.cholesterolDisplay,
-                  color: const Color(0xFF8B5CF6),
-                ),
-              ],
-            ),
-            if (v.notes.isNotEmpty) ...[
-              const SizedBox(height: 10),
+        onTap: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
+          );
+          if (result == true) {
+            _load();
+            widget.onVitalChanged?.call();
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Icon(Icons.notes_outlined,
-                      size: 14, color: Colors.grey[400]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(v.notes,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey[500]),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
+                  Text(
+                    _fmtDateTime(v.recordedAt),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF501513)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _VitalChip(
+                    icon: Icons.favorite_outlined,
+                    label: 'Blood Pressure',
+                    value: v.bpDisplay,
+                    color: const Color(0xFFEF4444),
+                  ),
+                  const SizedBox(width: 10),
+                  _VitalChip(
+                    icon: Icons.water_drop_outlined,
+                    label: 'Sugar Level',
+                    value: v.sugarDisplay,
+                    color: const Color(0xFFF97316),
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _VitalChip(
+                    icon: Icons.scale_outlined,
+                    label: 'Weight',
+                    value: v.weightDisplay,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                  const SizedBox(width: 10),
+                  _VitalChip(
+                    icon: Icons.biotech_outlined,
+                    label: 'Cholesterol',
+                    value: v.cholesterolDisplay,
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                ],
+              ),
+              if (v.notes.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.notes_outlined, size: 14, color: Colors.grey[400]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(v.notes,
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1164,8 +1161,7 @@ class _VitalChip extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color:
-                              value == '—' ? Colors.grey[400] : color)),
+                          color: value == '—' ? Colors.grey[400] : color)),
                 ],
               ),
             ),

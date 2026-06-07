@@ -73,7 +73,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
     final result = await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddVitalScreen(category: _currentCategory, onDoctorAdded: widget.onDoctorAdded),
+        builder: (_) => AddVitalScreen(category: _currentCategory),
       ),
     );
     if (result == true || result == 'deleted') {
@@ -86,7 +86,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   Future<void> _open(Vital v) async {
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category, onDoctorAdded: widget.onDoctorAdded)),
+      MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
     );
     if (result == true || result == 'deleted') _load();
   }
@@ -319,13 +319,42 @@ class _DailyCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _MiniVital(icon: Icons.favorite_outlined,   value: vital.bpDisplay,          color: const Color(0xFFEF4444), bulbColor: _bpBulbColor(vital.bpSystolic, vital.bpDiastolic)),
+              _MiniVital(
+                icon: Icons.favorite_outlined,
+                value: vital.bpDisplay,
+                color: const Color(0xFFEF4444),
+                count: vital.bpReadings.length,
+                bulbColor: vital.hasBP
+                    ? _bpBulbColor(vital.bpReadings.last.systolic, vital.bpReadings.last.diastolic)
+                    : null,
+              ),
               const SizedBox(width: 8),
-              _MiniVital(icon: Icons.water_drop_outlined, value: vital.sugarDisplay,       color: const Color(0xFFF97316), bulbColor: _sugarBulbColor(vital.sugarLevel, vital.sugarUnit)),
+              _MiniVital(
+                icon: Icons.water_drop_outlined,
+                value: vital.sugarDisplay,
+                color: const Color(0xFFF97316),
+                count: vital.sugarReadings.length,
+                bulbColor: vital.hasSugar
+                    ? _sugarBulbColor(vital.sugarReadings.last.value, vital.sugarUnit)
+                    : null,
+              ),
               const SizedBox(width: 8),
-              _MiniVital(icon: Icons.scale_outlined,      value: vital.weightDisplay,      color: const Color(0xFF3B82F6)),
+              _MiniVital(
+                icon: Icons.scale_outlined,
+                value: vital.weightDisplay,
+                color: const Color(0xFF3B82F6),
+                count: vital.weightReadings.length,
+              ),
               const SizedBox(width: 8),
-              _MiniVital(icon: Icons.biotech_outlined,    value: vital.cholesterolDisplay, color: const Color(0xFF8B5CF6), bulbColor: _cholesterolBulbColor(vital.cholesterol, vital.cholesterolUnit)),
+              _MiniVital(
+                icon: Icons.biotech_outlined,
+                value: vital.cholesterolDisplay,
+                color: const Color(0xFF8B5CF6),
+                count: vital.cholesterolReadings.length,
+                bulbColor: vital.hasCholesterol
+                    ? _cholesterolBulbColor(vital.cholesterolReadings.last.value, vital.cholesterolUnit)
+                    : null,
+              ),
             ],
           ),
           if (vital.notes.isNotEmpty) ...[
@@ -363,65 +392,97 @@ class _OpenCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Icon(Icons.event_note, color: Color(0xFF3B82F6), size: 17),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _fmtDate(vital.recordedAt),
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF635A5A)),
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
           ),
-          const SizedBox(height: 10),
-          if (isFemale && vital.periodDate != null)
-            _MiscRow(icon: Icons.calendar_month_outlined, label: 'Last Period', value: _fmtDate(vital.periodDate!), color: const Color(0xFF7A2420)),
-          if (isFemale && vital.mammogramDate != null)
-            _MiscRow(icon: Icons.medical_information_outlined, label: 'Mammogram', value: _fmtDate(vital.mammogramDate!), color: const Color(0xFF8B5CF6)),
-          if (vital.colonoscopyDate != null)
-            _MiscRow(icon: Icons.biotech_outlined, label: 'Colonoscopy', value: _fmtDate(vital.colonoscopyDate!), color: const Color(0xFF0EA5E9)),
+          const SizedBox(height: 8),
           if (vital.eventName.isNotEmpty)
-            _MiscRow(icon: Icons.event_note_outlined, label: 'Event/Procedure', value: vital.eventName, color: const Color(0xFF3B82F6)),
-          if (vital.doctorId != null && doctorNames.containsKey(vital.doctorId))
-            _MiscRow(icon: Icons.medical_services_outlined, label: 'Doctor', value: doctorNames[vital.doctorId!]!, color: const Color(0xFF0EA5E9)),
-          if (vital.notes.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(vital.notes, style: TextStyle(fontSize: 12, color: Colors.grey[400]), maxLines: 1, overflow: TextOverflow.ellipsis),
-          ],
+            _ProcedureBlock(
+              icon: Icons.event_note_outlined,
+              color: const Color(0xFF3B82F6),
+              label: vital.eventName,
+              date: _fmtDate(vital.recordedAt),
+              location: vital.location,
+            ),
+          if (isFemale && vital.periodDate != null)
+            _ProcedureBlock(
+              icon: Icons.calendar_month_outlined,
+              color: const Color(0xFF7A2420),
+              label: 'Period',
+              date: _fmtDate(vital.periodDate!),
+            ),
+          if (isFemale && vital.mammogramDate != null)
+            _ProcedureBlock(
+              icon: Icons.medical_information_outlined,
+              color: const Color(0xFF8B5CF6),
+              label: 'Mammogram',
+              date: _fmtDate(vital.mammogramDate!),
+              location: vital.mammogramLocation,
+            ),
+          if (vital.colonoscopyDate != null)
+            _ProcedureBlock(
+              icon: Icons.biotech_outlined,
+              color: const Color(0xFF0EA5E9),
+              label: 'Colonoscopy',
+              date: _fmtDate(vital.colonoscopyDate!),
+              location: vital.colonoscopyLocation,
+            ),
+          if (vital.dentalDate != null)
+            _ProcedureBlock(
+              icon: Icons.health_and_safety_outlined,
+              color: const Color(0xFF22C55E),
+              label: 'Dental',
+              date: _fmtDate(vital.dentalDate!),
+              location: vital.dentalLocation,
+            ),
+          if (vital.eyeExamDate != null)
+            _ProcedureBlock(
+              icon: Icons.visibility_outlined,
+              color: const Color(0xFF8B5CF6),
+              label: 'Eye Exam',
+              date: _fmtDate(vital.eyeExamDate!),
+              location: vital.eyeExamLocation,
+            ),
         ],
       ),
     );
   }
 }
 
-class _MiscRow extends StatelessWidget {
+class _ProcedureBlock extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final String value;
   final Color color;
-  const _MiscRow({required this.icon, required this.label, required this.value, required this.color});
+  final String label;
+  final String? date;
+  final String location;
+
+  const _ProcedureBlock({
+    required this.icon,
+    required this.color,
+    required this.label,
+    this.date,
+    this.location = '',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final parts = <String>[label];
+    if (date != null) parts.add(date!);
+    if (location.isNotEmpty) parts.add(location);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: 7),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: color),
+          Icon(icon, size: 13, color: color),
           const SizedBox(width: 6),
-          Text('$label: ', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color), overflow: TextOverflow.ellipsis),
+            child: Text(
+              parts.join('  ·  '),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -475,7 +536,14 @@ class _MiniVital extends StatelessWidget {
   final String value;
   final Color color;
   final Color? bulbColor;
-  const _MiniVital({required this.icon, required this.value, required this.color, this.bulbColor});
+  final int count;
+  const _MiniVital({
+    required this.icon,
+    required this.value,
+    required this.color,
+    this.bulbColor,
+    this.count = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -489,25 +557,37 @@ class _MiniVital extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: hasValue ? color : Colors.grey[400],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 13, color: color),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: hasValue ? color : Colors.grey[400],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+                if (showBulb) ...[
+                  const SizedBox(width: 3),
+                  Icon(Icons.lightbulb, size: 10, color: bulbColor),
+                ],
+              ],
             ),
-            if (showBulb) ...[
-              const SizedBox(width: 3),
-              Icon(Icons.lightbulb, size: 10, color: bulbColor),
+            if (count > 1) ...[
+              const SizedBox(height: 2),
+              Text(
+                '×$count',
+                style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.6), fontWeight: FontWeight.w600),
+              ),
             ],
           ],
         ),
