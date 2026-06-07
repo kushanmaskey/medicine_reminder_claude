@@ -13,6 +13,7 @@ import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import '../tabs/doctors_tab.dart';
+import '../tabs/allergies_tab.dart';
 import 'biometric_lock_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
@@ -62,8 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _vitalsKey = GlobalKey<VitalsTabState>();
   final _activitiesKey = GlobalKey<ActivitiesTabState>();
   final _doctorsKey = GlobalKey<DoctorsTabState>();
+  final _allergiesKey = GlobalKey<AllergiesTabState>();
 
-  final List<String> _titles = ['Summary', 'Doctors', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
+  final List<String> _titles = ['Summary', 'Doctors', 'Prescriptions', 'Appointments', 'Vitals', 'Activities', 'Allergies'];
 
   static const _sessionDuration = Duration(hours: 1);
 
@@ -171,6 +173,77 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _requestNotificationPermission() async {
     await NotificationService.requestPermission();
+    await _rescheduleNotificationsIfNeeded();
+  }
+
+  // Reschedules all reminders once after the notification channel/permission fix
+  // so that existing data is re-queued with correct settings.
+  static const _notifMigrationKey = 'notif_migration_v2';
+
+  Future<void> _rescheduleNotificationsIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_notifMigrationKey) == true) return;
+
+    try {
+      final prescriptions = await StorageService.getPrescriptions();
+      for (final p in prescriptions) {
+        final time = p.notificationTime;
+        if (time == null) continue;
+        final id = NotificationService.idFromString(p.id);
+        await NotificationService.cancelNotification(id);
+        await NotificationService.scheduleDailyNotification(
+          id: id,
+          title: 'Prescription Reminder',
+          body: '${p.name} — ${p.instructions}',
+          time: time,
+        );
+        for (final alert in p.alerts) {
+          if (alert.acknowledged) continue;
+          if (alert.scheduledAt.isBefore(DateTime.now())) continue;
+          final alertId = NotificationService.idFromString(alert.id);
+          await NotificationService.cancelNotification(alertId);
+          await NotificationService.scheduleOnceNotification(
+            id: alertId,
+            title: 'Refill Reminder: ${p.name}',
+            body: p.instructions.isNotEmpty ? p.instructions : 'Time to refill your prescription',
+            scheduledDateTime: alert.scheduledAt,
+          );
+        }
+      }
+
+      final medications = await StorageService.getMedications();
+      for (final m in medications) {
+        final time = m.notificationTime;
+        if (time == null) continue;
+        final id = NotificationService.idFromString(m.id);
+        await NotificationService.cancelNotification(id);
+        await NotificationService.scheduleDailyNotification(
+          id: id,
+          title: 'Medication Reminder',
+          body: '${m.prescriptionName} — ${m.instructions}',
+          time: time,
+        );
+      }
+
+      final appointments = await StorageService.getAppointments();
+      for (final a in appointments) {
+        for (final alert in a.alerts) {
+          if (alert.acknowledged) continue;
+          if (alert.scheduledAt.isBefore(DateTime.now())) continue;
+          final alertId = NotificationService.idFromString(alert.id);
+          await NotificationService.cancelNotification(alertId);
+          await NotificationService.scheduleOnceNotification(
+            id: alertId,
+            title: 'Appointment Alert: ${a.title}',
+            body: 'With ${a.doctorName}'
+                '${a.location.isNotEmpty ? ' at ${a.location}' : ''}',
+            scheduledDateTime: alert.scheduledAt,
+          );
+        }
+      }
+    } catch (_) {}
+
+    await prefs.setBool(_notifMigrationKey, true);
   }
 
   Future<void> _loadAvatar() async {
@@ -210,6 +283,13 @@ class _HomeScreenState extends State<HomeScreen> {
         _summaryKey.currentState?.reload();
         setState(() {});
       }
+      return;
+    }
+
+    // index 6 = Allergies
+    if (_currentIndex == 6) {
+      await _allergiesKey.currentState?.openAdd();
+      _summaryKey.currentState?.reload();
       return;
     }
 
@@ -367,12 +447,18 @@ class _HomeScreenState extends State<HomeScreen> {
             key: _summaryKey,
             onTabChange: (i) => setState(() => _currentIndex = i),
             onVitalChanged: () => _vitalsKey.currentState?.reload(),
+            onAllergyChanged: () => _allergiesKey.currentState?.reload(),
+            onPrescriptionChanged: () => _prescriptionsKey.currentState?.reload(),
+            onAppointmentChanged: () => _appointmentsKey.currentState?.reload(),
+            onActivityChanged: () => _activitiesKey.currentState?.reload(),
+            onDoctorChanged: () => _doctorsKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey, onDoctorAdded: () => _doctorsKey.currentState?.reload()),
           ActivitiesTab(key: _activitiesKey),
+          AllergiesTab(key: _allergiesKey),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -415,6 +501,12 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon:
                 Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
             label: 'Activities',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.coronavirus_outlined),
+            selectedIcon:
+                Icon(Icons.coronavirus, color: Color(0xFFF59E0B)),
+            label: 'Allergies',
           ),
         ],
       ),

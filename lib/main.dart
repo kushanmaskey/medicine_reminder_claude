@@ -6,7 +6,6 @@ import 'services/auth_service.dart';
 import 'services/biometric_service.dart';
 import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/biometric_lock_screen.dart';
 import 'onboarding/onboarding_screen.dart';
@@ -17,9 +16,8 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+  await NotificationService.initialize();
   runApp(const MedicalWalletApp());
-  // Initialise notifications after the app renders so it never blocks the UI.
-  NotificationService.initialize();
 }
 
 class MedicalWalletApp extends StatelessWidget {
@@ -69,8 +67,7 @@ class _SplashRouter extends StatelessWidget {
       }
       return _StartupState.home;
     }
-    if (results[1]) return _StartupState.login;
-    return _StartupState.register;
+    return _StartupState.login;
   }
 
   @override
@@ -95,11 +92,10 @@ class _SplashRouter extends StatelessWidget {
           _StartupState.biometricLock => const BiometricLockScreen(replaceWithHome: true),
           _StartupState.home         => const HomeScreen(),
           _StartupState.login        => const LoginScreen(),
-          _StartupState.register     => const RegisterScreen(),
         };
       },
     );
   }
 }
 
-enum _StartupState { onboarding, biometricLock, home, login, register }
+enum _StartupState { onboarding, biometricLock, home, login }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/prescription.dart';
 import '../models/prescription_alert.dart';
@@ -6,6 +8,7 @@ import '../models/appointment.dart';
 import '../models/appointment_alert.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
+import '../models/allergy.dart';
 import '../models/doctor.dart';
 import 'auth_service.dart';
 
@@ -513,5 +516,44 @@ class StorageService {
       'terms_version': termsVersion,
       'agreed': true,
     });
+  }
+
+  // ── Allergies (local) ─────────────────────────────────────────────────────
+
+  static String get _allergiesKey => 'allergies_$_uid';
+
+  static Future<List<Allergy>> getAllergies() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_allergiesKey) ?? [];
+    return raw
+        .map((s) => Allergy.fromJson(jsonDecode(s) as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<void> saveAllergy(Allergy a) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_allergiesKey) ?? [];
+    raw.add(jsonEncode(a.toJson()));
+    await prefs.setStringList(_allergiesKey, raw);
+  }
+
+  static Future<void> updateAllergy(Allergy a) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_allergiesKey) ?? [];
+    final updated = raw.map((s) {
+      final map = jsonDecode(s) as Map<String, dynamic>;
+      return map['id'] == a.id ? jsonEncode(a.toJson()) : s;
+    }).toList();
+    await prefs.setStringList(_allergiesKey, updated);
+  }
+
+  static Future<void> deleteAllergy(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_allergiesKey) ?? [];
+    raw.removeWhere((s) {
+      final map = jsonDecode(s) as Map<String, dynamic>;
+      return map['id'] == id;
+    });
+    await prefs.setStringList(_allergiesKey, raw);
   }
 }

@@ -5,6 +5,7 @@ import '../models/prescription.dart';
 import '../models/appointment.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
+import '../models/allergy.dart';
 import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
@@ -13,6 +14,7 @@ import '../screens/add_appointment_screen.dart';
 import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
 import '../screens/add_doctor_screen.dart';
+import '../screens/add_allergy_screen.dart';
 
 const _defaultAvatarBgs = [
   Color(0xFF501513), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
@@ -41,7 +43,21 @@ const _pinkGradient = LinearGradient(
 class SummaryTab extends StatefulWidget {
   final void Function(int) onTabChange;
   final VoidCallback? onVitalChanged;
-  const SummaryTab({super.key, required this.onTabChange, this.onVitalChanged});
+  final VoidCallback? onAllergyChanged;
+  final VoidCallback? onPrescriptionChanged;
+  final VoidCallback? onAppointmentChanged;
+  final VoidCallback? onActivityChanged;
+  final VoidCallback? onDoctorChanged;
+  const SummaryTab({
+    super.key,
+    required this.onTabChange,
+    this.onVitalChanged,
+    this.onAllergyChanged,
+    this.onPrescriptionChanged,
+    this.onAppointmentChanged,
+    this.onActivityChanged,
+    this.onDoctorChanged,
+  });
 
   @override
   State<SummaryTab> createState() => SummaryTabState();
@@ -52,6 +68,7 @@ class SummaryTabState extends State<SummaryTab> {
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
+  List<Allergy> _allergies = [];
   List<Doctor> _doctors = [];
   String? _name;
   String? _sex;
@@ -74,6 +91,7 @@ class SummaryTabState extends State<SummaryTab> {
     List<Appointment> appointments = [];
     List<Vital> vitals = [];
     List<Activity> activities = [];
+    List<Allergy> allergies = [];
     List<Doctor> doctors = [];
     String? name;
     String? sex;
@@ -84,6 +102,7 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getAppointments().then((v) { appointments = v; }).catchError((_) {}),
       StorageService.getVitals().then((v) { vitals = v; }).catchError((_) {}),
       StorageService.getActivities().then((v) { activities = v; }).catchError((_) {}),
+      StorageService.getAllergies().then((v) { allergies = v; }).catchError((_) {}),
       StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
       AuthService.getName().then((v) { name = v; }).catchError((_) {}),
       AuthService.getSex().then((v) { sex = v; }).catchError((_) {}),
@@ -106,6 +125,7 @@ class SummaryTabState extends State<SummaryTab> {
       _appointments = appointments;
       _vitals = vitals;
       _activities = activities;
+      _allergies = allergies;
       _doctors = doctors;
       _name = name;
       _sex = sex;
@@ -198,6 +218,15 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Activities tab to log one')
           else
             ..._dailyActivities.take(3).map((a) => _buildActivityRow(a)),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Allergies', Icons.coronavirus_outlined,
+              onViewAll: () => widget.onTabChange(6)),
+          const SizedBox(height: 10),
+          if (_allergies.isEmpty)
+            _buildEmptyState('No allergies recorded',
+                'Tap + on the Allergies tab to add one')
+          else
+            ..._allergies.take(3).map((a) => _buildAllergyRow(a)),
           const SizedBox(height: 24),
           _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
               onViewAll: () => widget.onTabChange(1)),
@@ -347,6 +376,14 @@ class SummaryTabState extends State<SummaryTab> {
           icon: Icons.directions_walk_outlined,
           color: const Color(0xFF22C55E),
           onTap: () => widget.onTabChange(5),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
+          label: 'Allergies',
+          count: _allergies.length,
+          icon: Icons.coronavirus_outlined,
+          color: const Color(0xFFF59E0B),
+          onTap: () => widget.onTabChange(6),
         ),
       ],
     );
@@ -521,7 +558,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddAppointmentScreen(existing: a)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onAppointmentChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -626,7 +666,10 @@ class SummaryTabState extends State<SummaryTab> {
           MaterialPageRoute(
               builder: (_) => AddPrescriptionScreen(existing: p)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onPrescriptionChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -734,7 +777,10 @@ class SummaryTabState extends State<SummaryTab> {
             context,
             MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
           );
-          if (result == true) _load();
+          if (result == true) {
+            _load();
+            widget.onActivityChanged?.call();
+          }
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -840,7 +886,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddDoctorScreen(existing: d)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onDoctorChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -893,6 +942,74 @@ class SummaryTabState extends State<SummaryTab> {
                     Text(subtitle.join(' · '),
                         style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                color: Color(0xFFCBD5E1), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Allergy row ────────────────────────────────────────────────────────────
+
+  Widget _buildAllergyRow(Allergy a) {
+    const color = Color(0xFFF59E0B);
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(builder: (_) => AddAllergyScreen(existing: a)),
+        );
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onAllergyChanged?.call();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.coronavirus,
+                  color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(a.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF635A5A))),
+                  if (a.reason != null) ...[
+                    const SizedBox(height: 3),
+                    Text(a.reason!,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                   ],
                 ],
               ),

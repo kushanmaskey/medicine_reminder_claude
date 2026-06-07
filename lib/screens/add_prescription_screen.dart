@@ -756,10 +756,11 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                         const Icon(Icons.volume_up_outlined,
                             size: 18, color: Color(0xFF3B82F6)),
                         const SizedBox(width: 10),
-                        Text(
-                          'Uses your phone\'s default notification sound',
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        Expanded(
+                          child: Text(
+                            'Uses your phone\'s default notification sound',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          ),
                         ),
                       ],
                     ),
@@ -920,10 +921,13 @@ class _AlertRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPast = !isNew && dateTime.isBefore(DateTime.now());
+    final isDone = acknowledged || isPast;
+
     final Color iconColor;
     final IconData iconData;
-    if (acknowledged) {
-      iconColor = Colors.green;
+    if (isDone) {
+      iconColor = Colors.grey.shade400;
       iconData = Icons.check_circle_outline;
     } else if (isNew) {
       iconColor = const Color(0xFF3B82F6);
@@ -948,15 +952,12 @@ class _AlertRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: acknowledged
-                        ? Colors.grey[400]
-                        : const Color(0xFF501513),
-                    decoration:
-                        acknowledged ? TextDecoration.lineThrough : null,
+                    color: isDone ? Colors.grey[400] : const Color(0xFF501513),
+                    decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                if (acknowledged)
-                  Text('Acknowledged',
+                if (isDone)
+                  Text(isPast && !acknowledged ? 'Passed' : 'Acknowledged',
                       style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                 if (isNew)
                   Text('New — will be scheduled on save',
@@ -967,7 +968,7 @@ class _AlertRow extends StatelessWidget {
               ],
             ),
           ),
-          if (onAcknowledge != null) ...[
+          if (!isDone && onAcknowledge != null) ...[
             const SizedBox(width: 8),
             GestureDetector(
               onTap: onAcknowledge,
@@ -986,7 +987,7 @@ class _AlertRow extends StatelessWidget {
               ),
             ),
           ],
-          if (onRemove != null) ...[
+          if (!isDone && onRemove != null) ...[
             const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.close, size: 18, color: Colors.grey),
