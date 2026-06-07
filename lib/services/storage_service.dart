@@ -320,12 +320,31 @@ class StorageService {
   }
 
   static Future<void> saveVital(Vital v) async {
-    await _db.from('vitals').insert(_vitalToRow(v, uid: _uid));
+    final row = _vitalToRow(v, uid: _uid);
+    try {
+      await _db.from('vitals').insert(row);
+    } on PostgrestException catch (e) {
+      if (e.code == '42703' || (e.message).contains('readings_data')) {
+        row.remove('readings_data');
+        await _db.from('vitals').insert(row);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   static Future<void> updateVital(Vital v) async {
     final row = _vitalToRow(v, uid: _uid)..remove('id')..remove('user_id');
-    await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+    try {
+      await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+    } on PostgrestException catch (e) {
+      if (e.code == '42703' || (e.message).contains('readings_data')) {
+        row.remove('readings_data');
+        await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   static Map<String, dynamic> _vitalToRow(Vital v, {required String uid}) => {
@@ -334,7 +353,7 @@ class StorageService {
     'recorded_at': v.recordedAt.toUtc().toIso8601String(),
     'category': v.category,
     'event_name': v.eventName,
-    // Single-value columns (existing schema) — store last reading
+    // Single-value columns (existing schema) — store last reading for backward compat
     'bp_systolic': v.hasBP ? v.bpReadings.last.systolic : null,
     'bp_diastolic': v.hasBP ? v.bpReadings.last.diastolic : null,
     'weight': v.hasWeight ? v.weightReadings.last.value : null,
@@ -343,6 +362,13 @@ class StorageService {
     'sugar_unit': v.sugarUnit,
     'cholesterol': v.hasCholesterol ? v.cholesterolReadings.last.value : null,
     'cholesterol_unit': v.cholesterolUnit,
+    // Full multi-reading data (requires readings_data TEXT column in Supabase)
+    if (v.category == 'daily') 'readings_data': jsonEncode({
+      'bp': v.bpReadings.map((r) => r.toJson()).toList(),
+      'sugar': v.sugarReadings.map((r) => r.toJson()).toList(),
+      'cholesterol': v.cholesterolReadings.map((r) => r.toJson()).toList(),
+      'weight': v.weightReadings.map((r) => r.toJson()).toList(),
+    }),
     // Original misc date columns (existing schema)
     'colonoscopy_date': v.colonoscopyDate?.toIso8601String(),
     'period_date': v.periodDate?.toIso8601String(),
@@ -389,6 +415,7 @@ class StorageService {
       'notes': r['notes'] ?? '',
       'doctorId': r['doctor_id'],
       'location': r['location'] ?? '',
+      'readings_data': r['readings_data'],
     };
   }
 

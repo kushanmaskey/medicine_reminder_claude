@@ -69,11 +69,23 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
   void reload() => _load();
 
+  List<Vital> _sameDayHistory(DateTime date, {String? excludeId}) {
+    return _vitals.where((v) {
+      if (v.category != 'daily') return false;
+      if (excludeId != null && v.id == excludeId) return false;
+      final d = v.recordedAt;
+      return d.year == date.year && d.month == date.month && d.day == date.day;
+    }).toList();
+  }
+
   Future<bool> openAdd() async {
     final result = await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddVitalScreen(category: _currentCategory),
+        builder: (_) => AddVitalScreen(
+          category: _currentCategory,
+          sameDayHistory: _currentCategory == 'daily' ? _sameDayHistory(DateTime.now()) : const [],
+        ),
       ),
     );
     if (result == true || result == 'deleted') {
@@ -86,7 +98,11 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   Future<void> _open(Vital v) async {
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
+      MaterialPageRoute(builder: (_) => AddVitalScreen(
+        existing: v,
+        category: v.category,
+        sameDayHistory: v.category == 'daily' ? _sameDayHistory(v.recordedAt, excludeId: v.id) : const [],
+      )),
     );
     if (result == true || result == 'deleted') _load();
   }
