@@ -9,11 +9,13 @@ import '../services/storage_service.dart';
 class AddVitalScreen extends StatefulWidget {
   final Vital? existing;
   final String category;
+  final List<Vital> sameDayHistory;
 
   const AddVitalScreen({
     super.key,
     this.existing,
     this.category = 'daily',
+    this.sameDayHistory = const [],
   });
 
   @override
@@ -23,7 +25,13 @@ class AddVitalScreen extends StatefulWidget {
 class _AddVitalScreenState extends State<AddVitalScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Daily — multiple readings per type
+  // Previously saved readings for this vital (shown as read-only history)
+  List<BpReading> _existingBpReadings          = [];
+  List<VitalReading> _existingSugarReadings    = [];
+  List<VitalReading> _existingCholesterolReadings = [];
+  List<VitalReading> _existingWeightReadings   = [];
+
+  // New readings added this session (can be deleted before saving)
   List<BpReading> _bpReadings          = [];
   List<VitalReading> _sugarReadings    = [];
   List<VitalReading> _cholesterolReadings = [];
@@ -90,10 +98,11 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     super.initState();
     if (_isEditing) {
       final e = widget.existing!;
-      _bpReadings          = List.from(e.bpReadings);
-      _sugarReadings       = List.from(e.sugarReadings);
-      _cholesterolReadings = List.from(e.cholesterolReadings);
-      _weightReadings      = List.from(e.weightReadings);
+      // Move saved readings into history; new session starts empty
+      _existingBpReadings          = List.from(e.bpReadings);
+      _existingSugarReadings       = List.from(e.sugarReadings);
+      _existingCholesterolReadings = List.from(e.cholesterolReadings);
+      _existingWeightReadings      = List.from(e.weightReadings);
       _eventNameController.text            = e.eventName;
       _locationController.text             = e.location;
       _mammogramLocationController.text    = e.mammogramLocation;
@@ -216,10 +225,10 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         recordedAt:      _recordedAt,
         category:        _category,
         eventName:       _eventNameController.text.trim(),
-        bpReadings:          _category == 'daily' ? _bpReadings : [],
-        sugarReadings:       _category == 'daily' ? _sugarReadings : [],
-        cholesterolReadings: _category == 'daily' ? _cholesterolReadings : [],
-        weightReadings:      _category == 'daily' ? _weightReadings : [],
+        bpReadings:          _category == 'daily' ? [..._existingBpReadings, ..._bpReadings] : [],
+        sugarReadings:       _category == 'daily' ? [..._existingSugarReadings, ..._sugarReadings] : [],
+        cholesterolReadings: _category == 'daily' ? [..._existingCholesterolReadings, ..._cholesterolReadings] : [],
+        weightReadings:      _category == 'daily' ? [..._existingWeightReadings, ..._weightReadings] : [],
         weightUnit:      _weightUnit,
         sugarUnit:       _sugarUnit,
         cholesterolUnit: _cholesterolUnit,
@@ -444,20 +453,79 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Daily fields (multi-reading) ──────────────────────────────────────────
 
+  /// Returns up to 3 past BP readings (existing saved + same-day other vitals),
+  /// newest first. Each entry is (label, time).
+  List<(String, DateTime)> get _histBp {
+    final rows = <(String, DateTime)>[];
+    // Previously saved readings on this vital record
+    for (final r in _existingBpReadings) {
+      rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
+    }
+    // Same-day readings from other vital records
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.bpReadings) {
+        rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(2).toList();
+  }
+
+  List<(String, DateTime)> _histVital(
+    List<VitalReading> existingReadings,
+    List<VitalReading> Function(Vital) getter,
+    String unit,
+  ) {
+    final rows = <(String, DateTime)>[];
+    for (final r in existingReadings) {
+      rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
+    }
+    for (final v in widget.sameDayHistory) {
+      for (final r in getter(v)) {
+        rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    return '$h:$m $period';
+  }
+
+  List<Widget> _historyRows(List<(String, DateTime)> history, Color color) {
+    if (history.isEmpty) return [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Text('Previous readings',
+            style: TextStyle(fontSize: 11, color: Colors.grey[400], fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+      ),
+      ...history.map((h) => _HistoryRow(label: h.$1, time: _formatDateTime(h.$2), accentColor: color)),
+      const Divider(height: 20, thickness: 0.5),
+    ];
+  }
+
   List<Widget> _buildDailyFields(BuildContext context) => [
     _SectionCard(
       title: 'Blood Pressure',
       icon: Icons.favorite_outlined,
       iconColor: const Color(0xFFEF4444),
       children: [
-        ..._bpReadings.asMap().entries.map((e) => _ReadingRow(
-          label: '${e.value.systolic} / ${e.value.diastolic} mmHg',
-          time: _formatTime(e.value.time),
-          notes: e.value.notes,
-          accentColor: const Color(0xFFEF4444),
-          onEdit: () => _addBpReading(context, editIndex: e.key),
-          onDelete: () => setState(() => _bpReadings.removeAt(e.key)),
-        )),
+        ..._bpReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _bpReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.systolic} / ${e.value.diastolic} mmHg',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFFEF4444),
+            onDelete: () => setState(() => _bpReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histBp, const Color(0xFFEF4444)),
         _AddReadingButton(
           label: _bpReadings.isEmpty ? 'Add BP Reading' : 'Add Another',
           color: const Color(0xFFEF4444),
@@ -477,17 +545,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         onChanged: (u) => setState(() => _sugarUnit = u),
       ),
       children: [
-        ..._sugarReadings.asMap().entries.map((e) => _ReadingRow(
-          label: '${e.value.value.toStringAsFixed(1)} $_sugarUnit',
-          time: _formatTime(e.value.time),
-          notes: e.value.notes,
-          accentColor: const Color(0xFFF97316),
-          onEdit: () => _addVitalReading(
-            context, _sugarReadings, 'Blood Glucose', _sugarUnit, 'e.g. 95', const Color(0xFFF97316),
-            editIndex: e.key,
-          ),
-          onDelete: () => setState(() => _sugarReadings.removeAt(e.key)),
-        )),
+        ..._sugarReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _sugarReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_sugarUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFFF97316),
+            onDelete: () => setState(() => _sugarReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingSugarReadings, (v) => v.sugarReadings, _sugarUnit), const Color(0xFFF97316)),
         _AddReadingButton(
           label: _sugarReadings.isEmpty ? 'Add Sugar Reading' : 'Add Another',
           color: const Color(0xFFF97316),
@@ -511,17 +579,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         onChanged: (u) => setState(() => _cholesterolUnit = u),
       ),
       children: [
-        ..._cholesterolReadings.asMap().entries.map((e) => _ReadingRow(
-          label: '${e.value.value.toStringAsFixed(1)} $_cholesterolUnit',
-          time: _formatTime(e.value.time),
-          notes: e.value.notes,
-          accentColor: const Color(0xFF8B5CF6),
-          onEdit: () => _addVitalReading(
-            context, _cholesterolReadings, 'Total Cholesterol', _cholesterolUnit, 'e.g. 185', const Color(0xFF8B5CF6),
-            editIndex: e.key,
-          ),
-          onDelete: () => setState(() => _cholesterolReadings.removeAt(e.key)),
-        )),
+        ..._cholesterolReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _cholesterolReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_cholesterolUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFF8B5CF6),
+            onDelete: () => setState(() => _cholesterolReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingCholesterolReadings, (v) => v.cholesterolReadings, _cholesterolUnit), const Color(0xFF8B5CF6)),
         _AddReadingButton(
           label: _cholesterolReadings.isEmpty ? 'Add Cholesterol Reading' : 'Add Another',
           color: const Color(0xFF8B5CF6),
@@ -545,17 +613,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         onChanged: (u) => setState(() => _weightUnit = u),
       ),
       children: [
-        ..._weightReadings.asMap().entries.map((e) => _ReadingRow(
-          label: '${e.value.value.toStringAsFixed(1)} $_weightUnit',
-          time: _formatTime(e.value.time),
-          notes: e.value.notes,
-          accentColor: const Color(0xFF3B82F6),
-          onEdit: () => _addVitalReading(
-            context, _weightReadings, 'Weight', _weightUnit, 'e.g. 155', const Color(0xFF3B82F6),
-            editIndex: e.key,
-          ),
-          onDelete: () => setState(() => _weightReadings.removeAt(e.key)),
-        )),
+        ..._weightReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _weightReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_weightUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFF3B82F6),
+            onDelete: () => setState(() => _weightReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingWeightReadings, (v) => v.weightReadings, _weightUnit), const Color(0xFF3B82F6)),
         _AddReadingButton(
           label: _weightReadings.isEmpty ? 'Add Weight Reading' : 'Add Another',
           color: const Color(0xFF3B82F6),
@@ -907,12 +975,51 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
 // ── Reading row ───────────────────────────────────────────────────────────────
 
+// ── History row (read-only, no delete) ───────────────────────────────────────
+
+class _HistoryRow extends StatelessWidget {
+  final String label;
+  final String time;
+  final Color accentColor;
+
+  const _HistoryRow({
+    required this.label,
+    required this.time,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accentColor.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.history, size: 14, color: Colors.grey[400]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[600])),
+          ),
+          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Current-session reading row ───────────────────────────────────────────────
+
 class _ReadingRow extends StatelessWidget {
   final String label;
   final String time;
   final String notes;
   final Color accentColor;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _ReadingRow({
@@ -920,7 +1027,6 @@ class _ReadingRow extends StatelessWidget {
     required this.time,
     required this.notes,
     required this.accentColor,
-    required this.onEdit,
     required this.onDelete,
   });
 
@@ -933,10 +1039,7 @@ class _ReadingRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: accentColor.withValues(alpha: 0.2)),
       ),
-      child: InkWell(
-        onTap: onEdit,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
+      child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
@@ -970,7 +1073,6 @@ class _ReadingRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -990,22 +1092,15 @@ class _AddReadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-          ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: Icon(Icons.add, size: 16, color: color),
+        label: Text(label, style: TextStyle(color: color, fontSize: 13)),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
     );

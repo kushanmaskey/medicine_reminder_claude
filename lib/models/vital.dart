@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'vital_reading.dart';
 
 class Vital {
@@ -147,9 +148,21 @@ class Vital {
     final id = json['id'] as String;
     final recordedAt = _tryParse(json['recordedAt']) ?? DateTime.now();
 
-    // Migrate old single-value BP → list
+    // readings_data (full multi-reading persistence) takes priority when present
+    Map<String, dynamic>? rd;
+    final rdRaw = json['readings_data'];
+    if (rdRaw != null) {
+      try {
+        rd = (rdRaw is String ? jsonDecode(rdRaw) : rdRaw) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+
+    // BP readings: readings_data > bpReadings list > legacy single-value columns
     List<BpReading> bpReadings = [];
-    if (json['bpReadings'] != null) {
+    final rdBp = rd?['bp'] as List?;
+    if (rdBp != null && rdBp.isNotEmpty) {
+      bpReadings = rdBp.map((e) => BpReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['bpReadings'] != null) {
       bpReadings = (json['bpReadings'] as List)
           .map((e) => BpReading.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -164,9 +177,12 @@ class Vital {
       ];
     }
 
-    // Migrate old single-value sugar → list
+    // Sugar readings
     List<VitalReading> sugarReadings = [];
-    if (json['sugarReadings'] != null) {
+    final rdSugar = rd?['sugar'] as List?;
+    if (rdSugar != null && rdSugar.isNotEmpty) {
+      sugarReadings = rdSugar.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['sugarReadings'] != null) {
       sugarReadings = (json['sugarReadings'] as List)
           .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -180,9 +196,12 @@ class Vital {
       ];
     }
 
-    // Migrate old single-value cholesterol → list
+    // Cholesterol readings
     List<VitalReading> cholesterolReadings = [];
-    if (json['cholesterolReadings'] != null) {
+    final rdChol = rd?['cholesterol'] as List?;
+    if (rdChol != null && rdChol.isNotEmpty) {
+      cholesterolReadings = rdChol.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['cholesterolReadings'] != null) {
       cholesterolReadings = (json['cholesterolReadings'] as List)
           .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -196,9 +215,12 @@ class Vital {
       ];
     }
 
-    // Migrate old single-value weight → list
+    // Weight readings
     List<VitalReading> weightReadings = [];
-    if (json['weightReadings'] != null) {
+    final rdWeight = rd?['weight'] as List?;
+    if (rdWeight != null && rdWeight.isNotEmpty) {
+      weightReadings = rdWeight.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['weightReadings'] != null) {
       weightReadings = (json['weightReadings'] as List)
           .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
           .toList();
