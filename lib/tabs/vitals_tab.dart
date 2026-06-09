@@ -405,61 +405,59 @@ class _OpenCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _BaseCard(
       onTap: onTap,
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (vital.eventName.isNotEmpty)
+                  _ProcedureBlock(
+                    icon: Icons.event_note_outlined,
+                    color: const Color(0xFF3B82F6),
+                    label: vital.eventName,
+                    date: _fmtDate(vital.recordedAt),
+                  ),
+                if (isFemale && vital.periodDate != null)
+                  _ProcedureBlock(
+                    icon: Icons.calendar_month_outlined,
+                    color: const Color(0xFF7A2420),
+                    label: 'Period',
+                    date: _fmtDate(vital.periodDate!),
+                  ),
+                if (isFemale && vital.mammogramDate != null)
+                  _ProcedureBlock(
+                    icon: Icons.medical_information_outlined,
+                    color: const Color(0xFF8B5CF6),
+                    label: 'Mammogram',
+                    date: _fmtDate(vital.mammogramDate!),
+                  ),
+                if (vital.colonoscopyDate != null)
+                  _ProcedureBlock(
+                    icon: Icons.biotech_outlined,
+                    color: const Color(0xFF0EA5E9),
+                    label: 'Colonoscopy',
+                    date: _fmtDate(vital.colonoscopyDate!),
+                  ),
+                if (vital.dentalDate != null)
+                  _ProcedureBlock(
+                    icon: Icons.health_and_safety_outlined,
+                    color: const Color(0xFF22C55E),
+                    label: 'Dental',
+                    date: _fmtDate(vital.dentalDate!),
+                  ),
+                if (vital.eyeExamDate != null)
+                  _ProcedureBlock(
+                    icon: Icons.visibility_outlined,
+                    color: const Color(0xFF8B5CF6),
+                    label: 'Eye Exam',
+                    date: _fmtDate(vital.eyeExamDate!),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          if (vital.eventName.isNotEmpty)
-            _ProcedureBlock(
-              icon: Icons.event_note_outlined,
-              color: const Color(0xFF3B82F6),
-              label: vital.eventName,
-              date: _fmtDate(vital.recordedAt),
-              location: vital.location,
-            ),
-          if (isFemale && vital.periodDate != null)
-            _ProcedureBlock(
-              icon: Icons.calendar_month_outlined,
-              color: const Color(0xFF7A2420),
-              label: 'Period',
-              date: _fmtDate(vital.periodDate!),
-            ),
-          if (isFemale && vital.mammogramDate != null)
-            _ProcedureBlock(
-              icon: Icons.medical_information_outlined,
-              color: const Color(0xFF8B5CF6),
-              label: 'Mammogram',
-              date: _fmtDate(vital.mammogramDate!),
-              location: vital.mammogramLocation,
-            ),
-          if (vital.colonoscopyDate != null)
-            _ProcedureBlock(
-              icon: Icons.biotech_outlined,
-              color: const Color(0xFF0EA5E9),
-              label: 'Colonoscopy',
-              date: _fmtDate(vital.colonoscopyDate!),
-              location: vital.colonoscopyLocation,
-            ),
-          if (vital.dentalDate != null)
-            _ProcedureBlock(
-              icon: Icons.health_and_safety_outlined,
-              color: const Color(0xFF22C55E),
-              label: 'Dental',
-              date: _fmtDate(vital.dentalDate!),
-              location: vital.dentalLocation,
-            ),
-          if (vital.eyeExamDate != null)
-            _ProcedureBlock(
-              icon: Icons.visibility_outlined,
-              color: const Color(0xFF8B5CF6),
-              label: 'Eye Exam',
-              date: _fmtDate(vital.eyeExamDate!),
-              location: vital.eyeExamLocation,
-            ),
+          const Icon(Icons.chevron_right, color: Colors.grey, size: 22),
         ],
       ),
     );
@@ -471,33 +469,37 @@ class _ProcedureBlock extends StatelessWidget {
   final Color color;
   final String label;
   final String? date;
-  final String location;
 
   const _ProcedureBlock({
     required this.icon,
     required this.color,
     required this.label,
     this.date,
-    this.location = '',
   });
 
   @override
   Widget build(BuildContext context) {
-    final parts = <String>[label];
-    if (date != null) parts.add(date!);
-    if (location.isNotEmpty) parts.add(location);
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 13, color: color),
-          const SizedBox(width: 6),
+          Icon(icon, size: 22, color: color),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              parts.join('  ·  '),
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                ),
+                if (date != null)
+                  Text(
+                    date!,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+              ],
             ),
           ),
         ],
