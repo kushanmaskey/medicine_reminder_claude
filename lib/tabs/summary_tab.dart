@@ -181,16 +181,15 @@ class SummaryTabState extends State<SummaryTab> {
           const SizedBox(height: 16),
           _buildStatsRow(),
           const SizedBox(height: 24),
-          if (_latestVitals.isNotEmpty) ...[
-            _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
-                onViewAll: () => widget.onTabChange(4)),
-            const SizedBox(height: 10),
-            ..._latestVitals.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildLatestVitalsCard(v),
-            )),
-            const SizedBox(height: 14),
-          ],
+          _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
+              onViewAll: () => widget.onTabChange(1)),
+          const SizedBox(height: 10),
+          if (_doctors.isEmpty)
+            _buildEmptyState('No doctors added',
+                'Tap + on the Doctors tab to add one')
+          else
+            ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
+          const SizedBox(height: 24),
           _buildSectionHeader('Upcoming Appointments',
               Icons.calendar_today_outlined,
               onViewAll: () => widget.onTabChange(3)),
@@ -210,6 +209,16 @@ class SummaryTabState extends State<SummaryTab> {
           else
             ..._rxPrescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
+          if (_latestVitals.isNotEmpty) ...[
+            _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
+                onViewAll: () => widget.onTabChange(4)),
+            const SizedBox(height: 10),
+            ..._latestVitals.map((v) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildLatestVitalsCard(v),
+            )),
+            const SizedBox(height: 24),
+          ],
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
               onViewAll: () => widget.onTabChange(5)),
           const SizedBox(height: 10),
@@ -227,15 +236,6 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Allergies tab to add one')
           else
             ..._allergies.take(3).map((a) => _buildAllergyRow(a)),
-          const SizedBox(height: 24),
-          _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
-              onViewAll: () => widget.onTabChange(1)),
-          const SizedBox(height: 10),
-          if (_doctors.isEmpty)
-            _buildEmptyState('No doctors added',
-                'Tap + on the Doctors tab to add one')
-          else
-            ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
         ],
       ),
     );
@@ -766,103 +766,100 @@ class SummaryTabState extends State<SummaryTab> {
     final color = _activityColors[a.type] ?? const Color(0xFF22C55E);
     final icon  = _activityIcons[a.type]  ?? Icons.directions_walk;
 
-    return Tooltip(
-      message: 'Tap to edit activity',
-      child: GestureDetector(
-        onTap: () async {
-          final result = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
-          );
-          if (result == true) {
-            _load();
-            widget.onActivityChanged?.call();
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
+        );
+        if (result == true) {
+          _load();
+          widget.onActivityChanged?.call();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(a.type,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Color(0xFF635A5A))),
-                        if (a.type == 'Walk') ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(a.walkType,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: color)),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(_fmtDateTime(a.recordedAt),
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(a.displayValue,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: color)),
+                  Row(
+                    children: [
+                      Text(a.type,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(0xFF635A5A))),
+                      if (a.type == 'Walk') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(a.walkType,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: color)),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+                  const SizedBox(height: 2),
+                  Text(_fmtDateTime(a.recordedAt),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(a.displayValue,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: color)),
+                ),
+                const SizedBox(height: 4),
+                Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+              ],
+            ),
+          ],
         ),
       ),
     );
