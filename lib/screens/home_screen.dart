@@ -377,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
             key: _summaryKey,
             onTabChange: (i) => setState(() => _currentIndex = i),
             onVitalChanged: () => _vitalsKey.currentState?.reload(),
+            onInsuranceChanged: () => _insuranceKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
           InsuranceTab(key: _insuranceKey, onChanged: () => _summaryKey.currentState?.reload()),

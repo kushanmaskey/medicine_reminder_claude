@@ -8,7 +8,7 @@ const _gradient = LinearGradient(
   end: Alignment.bottomRight,
 );
 
-const _providers = [
+const _healthProviders = [
   'BCBS (Blue Cross Blue Shield)',
   'UnitedHealthcare (UHC)',
   'Aetna',
@@ -21,6 +21,66 @@ const _providers = [
   'Medicaid',
   'Other',
 ];
+
+const _dentalProviders = [
+  'Delta Dental',
+  'Cigna Dental',
+  'Aetna Dental',
+  'MetLife Dental',
+  'Guardian Dental',
+  'United Concordia',
+  'Humana Dental',
+  'Anthem Dental (BCBS)',
+  'UnitedHealthcare Dental',
+  'Other',
+];
+
+const _visionProviders = [
+  'VSP Vision Care',
+  'EyeMed',
+  'Davis Vision',
+  'Cigna Vision',
+  'Aetna Vision',
+  'Humana Vision',
+  'UnitedHealthcare Vision',
+  'Anthem Vision (BCBS)',
+  'Superior Vision',
+  'Other',
+];
+
+const _providerDefaults = {
+  // Health
+  'BCBS (Blue Cross Blue Shield)':  {'phone': '1-888-630-2583', 'website': 'bcbs.com'},
+  'UnitedHealthcare (UHC)':         {'phone': '1-866-414-1959', 'website': 'uhc.com'},
+  'Aetna':                           {'phone': '1-888-267-2879', 'website': 'aetna.com'},
+  'Cigna':                           {'phone': '1-800-244-6224', 'website': 'cigna.com'},
+  'Humana':                          {'phone': '1-800-448-6262', 'website': 'humana.com'},
+  'Kaiser Permanente':               {'phone': '1-800-464-4000', 'website': 'kp.org'},
+  'Molina Healthcare':               {'phone': '1-888-665-4621', 'website': 'molinahealthcare.com'},
+  'Centene':                         {'phone': '1-866-912-8191', 'website': 'centene.com'},
+  'Medicare':                        {'phone': '1-800-633-4227', 'website': 'medicare.gov'},
+  'Medicaid':                        {'phone': '',               'website': 'medicaid.gov'},
+  // Dental
+  'Delta Dental':                    {'phone': '1-800-521-2651', 'website': 'deltadentalplans.com'},
+  'Cigna Dental':                    {'phone': '1-800-244-6224', 'website': 'cigna.com'},
+  'Aetna Dental':                    {'phone': '1-888-267-2879', 'website': 'aetna.com'},
+  'MetLife Dental':                  {'phone': '1-800-942-0854', 'website': 'metlife.com/dental'},
+  'Guardian Dental':                 {'phone': '1-888-482-7342', 'website': 'guardiananytime.com'},
+  'United Concordia':                {'phone': '1-888-971-8268', 'website': 'unitedconcordia.com'},
+  'Humana Dental':                   {'phone': '1-800-448-6262', 'website': 'humana.com'},
+  'Anthem Dental (BCBS)':            {'phone': '1-888-630-2583', 'website': 'anthem.com'},
+  'UnitedHealthcare Dental':         {'phone': '1-866-414-1959', 'website': 'uhc.com'},
+  // Vision
+  'VSP Vision Care':                 {'phone': '1-800-877-7195', 'website': 'vsp.com'},
+  'EyeMed':                          {'phone': '1-866-939-3633', 'website': 'eyemedvisioncare.com'},
+  'Davis Vision':                    {'phone': '1-800-999-5431', 'website': 'davisvision.com'},
+  'Cigna Vision':                    {'phone': '1-800-244-6224', 'website': 'cigna.com'},
+  'Aetna Vision':                    {'phone': '1-888-267-2879', 'website': 'aetna.com'},
+  'Humana Vision':                   {'phone': '1-800-448-6262', 'website': 'humana.com'},
+  'UnitedHealthcare Vision':         {'phone': '1-866-414-1959', 'website': 'myuhcvision.com'},
+  'Anthem Vision (BCBS)':            {'phone': '1-888-630-2583', 'website': 'anthem.com'},
+  'Superior Vision':                 {'phone': '1-800-507-3800', 'website': 'superiorvision.com'},
+};
 
 const _planTypes = [
   'PPO (Preferred Provider Organization)',
@@ -50,6 +110,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
   late final TextEditingController _memberId;
   late final TextEditingController _groupNumber;
   late final TextEditingController _phone;
+  late final TextEditingController _website;
   late final TextEditingController _copay;
   late final TextEditingController _deductible;
   late final TextEditingController _notes;
@@ -62,18 +123,33 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     super.initState();
     final e = widget.existing;
     final existingProvider = e?.providerName ?? '';
-    _selectedProvider = _providers.contains(existingProvider) ? existingProvider : (existingProvider.isNotEmpty ? 'Other' : null);
+    final providers = widget.insuranceType == 'Dental'
+        ? _dentalProviders
+        : widget.insuranceType == 'Vision'
+            ? _visionProviders
+            : _healthProviders;
+    _selectedProvider = providers.contains(existingProvider) ? existingProvider : (existingProvider.isNotEmpty ? 'Other' : null);
     _providerOther = TextEditingController(text: _selectedProvider == 'Other' ? existingProvider : '');
     final existingPlan = e?.planName ?? '';
     _selectedPlanType = _planTypes.contains(existingPlan) ? existingPlan : (existingPlan.isNotEmpty ? 'Other' : null);
     _memberId = TextEditingController(text: e?.memberId ?? '');
     _groupNumber = TextEditingController(text: e?.groupNumber ?? '');
     _phone = TextEditingController(text: e?.phone ?? '');
+    _website = TextEditingController(text: e?.website ?? '');
     _copay = TextEditingController(text: e?.copay ?? '');
     _deductible = TextEditingController(text: e?.deductible ?? '');
     _notes = TextEditingController(text: e?.notes ?? '');
     _effectiveDate = e?.effectiveDate;
     _expirationDate = e?.expirationDate;
+  }
+
+  void _onProviderChanged(String? provider) {
+    setState(() => _selectedProvider = provider);
+    if (provider == null || provider == 'Other') return;
+    final defaults = _providerDefaults[provider];
+    if (defaults == null) return;
+    if (_phone.text.isEmpty) _phone.text = defaults['phone'] ?? '';
+    if (_website.text.isEmpty) _website.text = defaults['website'] ?? '';
   }
 
   @override
@@ -82,6 +158,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     _memberId.dispose();
     _groupNumber.dispose();
     _phone.dispose();
+    _website.dispose();
     _copay.dispose();
     _deductible.dispose();
     _notes.dispose();
@@ -128,6 +205,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         effectiveDate: _effectiveDate,
         expirationDate: _expirationDate,
         phone: _phone.text.trim(),
+        website: _website.text.trim(),
         copay: _copay.text.trim(),
         deductible: _deductible.text.trim(),
         notes: _notes.text.trim(),
@@ -239,9 +317,13 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
               _buildDropdown(
                 label: 'Insurance Provider',
                 value: _selectedProvider,
-                items: _providers,
+                items: widget.insuranceType == 'Dental'
+                    ? _dentalProviders
+                    : widget.insuranceType == 'Vision'
+                        ? _visionProviders
+                        : _healthProviders,
                 required: true,
-                onChanged: (v) => setState(() => _selectedProvider = v),
+                onChanged: _onProviderChanged,
               ),
               if (_selectedProvider == 'Other') ...[
                 const SizedBox(height: 12),
@@ -279,6 +361,10 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
               _buildField(_phone, 'Customer Service Phone',
                   hint: 'e.g. 1-800-123-4567',
                   keyboardType: TextInputType.phone),
+              const SizedBox(height: 12),
+              _buildField(_website, 'Customer Care Website',
+                  hint: 'e.g. bcbs.com',
+                  keyboardType: TextInputType.url),
             ]),
             const SizedBox(height: 20),
             _buildSection('Notes', [

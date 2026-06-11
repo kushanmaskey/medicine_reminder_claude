@@ -8,6 +8,7 @@ class Insurance {
   final DateTime? effectiveDate;
   final DateTime? expirationDate;
   final String phone;
+  final String website;
   final String copay;
   final String deductible;
   final String notes;
@@ -22,6 +23,7 @@ class Insurance {
     this.effectiveDate,
     this.expirationDate,
     this.phone = '',
+    this.website = '',
     this.copay = '',
     this.deductible = '',
     this.notes = '',

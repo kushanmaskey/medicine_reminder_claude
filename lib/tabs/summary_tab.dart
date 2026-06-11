@@ -43,7 +43,8 @@ const _pinkGradient = LinearGradient(
 class SummaryTab extends StatefulWidget {
   final void Function(int) onTabChange;
   final VoidCallback? onVitalChanged;
-  const SummaryTab({super.key, required this.onTabChange, this.onVitalChanged});
+  final VoidCallback? onInsuranceChanged;
+  const SummaryTab({super.key, required this.onTabChange, this.onVitalChanged, this.onInsuranceChanged});
 
   @override
   State<SummaryTab> createState() => SummaryTabState();
@@ -972,7 +973,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddInsuranceScreen(existing: ins)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onInsuranceChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
