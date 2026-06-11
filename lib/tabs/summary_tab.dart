@@ -221,7 +221,11 @@ class SummaryTabState extends State<SummaryTab> {
             _buildEmptyState('No insurance added',
                 'Tap + on the Insurance tab to add one')
           else
-            ..._insurances.take(3).map((ins) => _buildInsuranceRow(ins)),
+            ...[
+              _insurances.where((i) => i.type == 'Health').lastOrNull,
+              _insurances.where((i) => i.type == 'Dental').lastOrNull,
+              _insurances.where((i) => i.type == 'Vision').lastOrNull,
+            ].whereType<Insurance>().map((ins) => _buildInsuranceRow(ins)),
         ],
       ),
     );
@@ -934,7 +938,17 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Insurance row ──────────────────────────────────────────────────────────
 
   Widget _buildInsuranceRow(Insurance ins) {
-    const accent = Color(0xFF059669);
+    final typeColor = const {
+      'Health': Color(0xFF059669),
+      'Dental': Color(0xFF3B82F6),
+      'Vision': Color(0xFF8B5CF6),
+    }[ins.type] ?? const Color(0xFF059669);
+    final typeIcon = const {
+      'Health': Icons.health_and_safety_outlined,
+      'Dental': Icons.sentiment_satisfied_outlined,
+      'Vision': Icons.visibility_outlined,
+    }[ins.type] ?? Icons.health_and_safety_outlined;
+
     final Color statusColor;
     final String? statusBadge;
 
@@ -945,10 +959,10 @@ class SummaryTabState extends State<SummaryTab> {
       statusColor = const Color(0xFFF97316);
       statusBadge = 'Expiring Soon';
     } else if (ins.expirationDate != null) {
-      statusColor = accent;
+      statusColor = typeColor;
       statusBadge = 'Active';
     } else {
-      statusColor = accent;
+      statusColor = typeColor;
       statusBadge = null;
     }
 
@@ -984,11 +998,10 @@ class SummaryTabState extends State<SummaryTab> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
+                color: typeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.health_and_safety_outlined,
-                  color: accent, size: 18),
+              child: Icon(typeIcon, color: typeColor, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1005,9 +1018,9 @@ class SummaryTabState extends State<SummaryTab> {
                   if (ins.planName.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(ins.planName,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12,
-                            color: accent,
+                            color: typeColor,
                             fontWeight: FontWeight.w500)),
                   ],
                   if (ins.memberId.isNotEmpty) ...[

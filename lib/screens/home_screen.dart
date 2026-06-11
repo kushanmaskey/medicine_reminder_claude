@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onVitalChanged: () => _vitalsKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
-          InsuranceTab(key: _insuranceKey),
+          InsuranceTab(key: _insuranceKey, onChanged: () => _summaryKey.currentState?.reload()),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey, onDoctorAdded: () => _doctorsKey.currentState?.reload()),
@@ -388,7 +388,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        onDestinationSelected: (i) {
+          setState(() => _currentIndex = i);
+          if (i == 0) _summaryKey.currentState?.reload();
+        },
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFF501513).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,

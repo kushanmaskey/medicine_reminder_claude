@@ -506,12 +506,13 @@ class StorageService {
         .from('insurance')
         .select()
         .eq('user_id', _uid)
-        .order('created_at');
+        .order('created_at', ascending: true, nullsFirst: false);
     final result = <Insurance>[];
     for (final r in rows) {
       try {
         result.add(Insurance(
           id: r['id'] as String,
+          type: r['type'] as String? ?? 'Health',
           providerName: r['provider_name'] as String,
           planName: r['plan_name'] as String? ?? '',
           memberId: r['member_id'] as String? ?? '',
@@ -532,6 +533,7 @@ class StorageService {
     await _db.from('insurance').insert({
       'id': ins.id,
       'user_id': _uid,
+      'type': ins.type,
       'provider_name': ins.providerName,
       'plan_name': ins.planName.isEmpty ? null : ins.planName,
       'member_id': ins.memberId.isEmpty ? null : ins.memberId,
@@ -547,6 +549,7 @@ class StorageService {
 
   static Future<void> updateInsurance(Insurance ins) async {
     await _db.from('insurance').update({
+      'type': ins.type,
       'provider_name': ins.providerName,
       'plan_name': ins.planName.isEmpty ? null : ins.planName,
       'member_id': ins.memberId.isEmpty ? null : ins.memberId,

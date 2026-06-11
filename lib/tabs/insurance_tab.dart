@@ -3,25 +3,49 @@ import '../models/insurance.dart';
 import '../services/storage_service.dart';
 import '../screens/add_insurance_screen.dart';
 
-const _accent = Color(0xFF059669);
 const _primary = Color(0xFF501513);
+const _accent = Color(0xFF059669);
+
+const _types = ['Health', 'Dental', 'Vision'];
+
+const _typeIcons = {
+  'Health': Icons.health_and_safety_outlined,
+  'Dental': Icons.sentiment_satisfied_outlined,
+  'Vision': Icons.visibility_outlined,
+};
+
+const _typeColors = {
+  'Health': Color(0xFF059669),
+  'Dental': Color(0xFF3B82F6),
+  'Vision': Color(0xFF8B5CF6),
+};
 
 class InsuranceTab extends StatefulWidget {
-  const InsuranceTab({super.key});
+  final VoidCallback? onChanged;
+  const InsuranceTab({super.key, this.onChanged});
 
   @override
   State<InsuranceTab> createState() => InsuranceTabState();
 }
 
-class InsuranceTabState extends State<InsuranceTab> {
+class InsuranceTabState extends State<InsuranceTab>
+    with SingleTickerProviderStateMixin {
   List<Insurance> _insurances = [];
   bool _loading = true;
   bool _loadFailed = false;
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -43,9 +67,12 @@ class InsuranceTabState extends State<InsuranceTab> {
   void reload() => _load();
 
   Future<void> openAdd() async {
+    final type = _types[_tabController.index];
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(builder: (_) => const AddInsuranceScreen()),
+      MaterialPageRoute(
+        builder: (_) => AddInsuranceScreen(insuranceType: type),
+      ),
     );
     if (result == true || result == 'deleted') _load();
   }
@@ -55,7 +82,10 @@ class InsuranceTabState extends State<InsuranceTab> {
       context,
       MaterialPageRoute(builder: (_) => AddInsuranceScreen(existing: ins)),
     );
-    if (result == true || result == 'deleted') _load();
+    if (result == true || result == 'deleted') {
+      _load();
+      widget.onChanged?.call();
+    }
   }
 
   @override
@@ -93,30 +123,73 @@ class InsuranceTabState extends State<InsuranceTab> {
       );
     }
 
-    if (_insurances.isEmpty) {
-      return const ColoredBox(
-        color: Colors.white,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.health_and_safety_outlined, size: 64, color: Color(0xFFE2E8F0)),
-              SizedBox(height: 16),
-              Text(
-                'No Insurance Added',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+    return ColoredBox(
+      color: Colors.white,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: _primary,
+              unselectedLabelColor: const Color(0xFF94A3B8),
+              indicatorColor: _primary,
+              indicatorWeight: 2.5,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              tabs: _types.map((t) => Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_typeIcons[t], size: 16,
+                        color: _tabController.index == _types.indexOf(t)
+                            ? _typeColors[t]
+                            : const Color(0xFF94A3B8)),
+                    const SizedBox(width: 6),
+                    Text(t),
+                  ],
                 ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Tap + to add your insurance info',
-                style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-              ),
-            ],
+              )).toList(),
+            ),
           ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: _types.map((t) => _buildTypeList(t)).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeList(String type) {
+    final list = _insurances.where((ins) => ins.type == type).toList();
+    final color = _typeColors[type] ?? _accent;
+    final icon = _typeIcons[type] ?? Icons.health_and_safety_outlined;
+
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: const Color(0xFFE2E8F0)),
+            const SizedBox(height: 16),
+            Text(
+              'No $type Insurance Added',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap + to add your $type insurance',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+            ),
+          ],
         ),
       );
     }
@@ -126,10 +199,12 @@ class InsuranceTabState extends State<InsuranceTab> {
       color: _primary,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _insurances.length,
+        itemCount: list.length,
         itemBuilder: (_, i) => _InsuranceCard(
-          insurance: _insurances[i],
-          onTap: () => _openEdit(_insurances[i]),
+          insurance: list[i],
+          color: color,
+          icon: icon,
+          onTap: () => _openEdit(list[i]),
         ),
       ),
     );
@@ -138,9 +213,16 @@ class InsuranceTabState extends State<InsuranceTab> {
 
 class _InsuranceCard extends StatelessWidget {
   final Insurance insurance;
+  final Color color;
+  final IconData icon;
   final VoidCallback onTap;
 
-  const _InsuranceCard({required this.insurance, required this.onTap});
+  const _InsuranceCard({
+    required this.insurance,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +236,12 @@ class _InsuranceCard extends StatelessWidget {
     } else if (ins.isExpiringSoon) {
       statusColor = const Color(0xFFF97316);
       statusBadge = 'Expiring Soon';
+    } else if (ins.expirationDate != null) {
+      statusColor = color;
+      statusBadge = 'Active';
     } else {
-      statusColor = _accent;
-      statusBadge = ins.expirationDate != null ? 'Active' : null;
+      statusColor = color;
+      statusBadge = null;
     }
 
     return Container(
@@ -165,7 +250,7 @@ class _InsuranceCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: ins.isExpired || ins.isExpiringSoon
+          color: (ins.isExpired || ins.isExpiringSoon)
               ? statusColor.withValues(alpha: 0.3)
               : Colors.grey.shade100,
         ),
@@ -191,11 +276,10 @@ class _InsuranceCard extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: _accent.withValues(alpha: 0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.health_and_safety_outlined,
-                      color: _accent, size: 20),
+                  child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -212,21 +296,17 @@ class _InsuranceCard extends StatelessWidget {
                       ),
                       if (ins.planName.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          ins.planName,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              color: _accent,
-                              fontWeight: FontWeight.w500),
-                        ),
+                        Text(ins.planName,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: color,
+                                fontWeight: FontWeight.w500)),
                       ],
                       if (ins.memberId.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          'Member ID: ${ins.memberId}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text('Member ID: ${ins.memberId}',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            overflow: TextOverflow.ellipsis),
                       ],
                     ],
                   ),
@@ -242,13 +322,11 @@ class _InsuranceCard extends StatelessWidget {
                           color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          statusBadge,
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: statusColor),
-                        ),
+                        child: Text(statusBadge,
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: statusColor)),
                       ),
                     const SizedBox(height: 4),
                     const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 18),

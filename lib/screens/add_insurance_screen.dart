@@ -33,7 +33,8 @@ const _planTypes = [
 
 class AddInsuranceScreen extends StatefulWidget {
   final Insurance? existing;
-  const AddInsuranceScreen({super.key, this.existing});
+  final String insuranceType;
+  const AddInsuranceScreen({super.key, this.existing, this.insuranceType = 'Health'});
 
   @override
   State<AddInsuranceScreen> createState() => _AddInsuranceScreenState();
@@ -119,6 +120,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     try {
       final insurance = Insurance(
         id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        type: widget.existing?.type ?? widget.insuranceType,
         providerName: _selectedProvider == 'Other' ? _providerOther.text.trim() : (_selectedProvider ?? ''),
         planName: _selectedPlanType == 'Other' ? '' : (_selectedPlanType ?? ''),
         memberId: _memberId.text.trim(),
@@ -201,7 +203,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         scrolledUnderElevation: 1,
         shadowColor: Colors.black.withValues(alpha: 0.06),
         title: Text(
-          isEdit ? 'Edit Insurance' : 'Add Insurance',
+          isEdit ? 'Edit ${widget.existing?.type ?? widget.insuranceType} Insurance' : 'Add ${widget.insuranceType} Insurance',
           style: const TextStyle(
             color: Color(0xFF484141),
             fontWeight: FontWeight.bold,

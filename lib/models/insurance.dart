@@ -1,5 +1,6 @@
 class Insurance {
   final String id;
+  final String type; // 'Health', 'Dental', 'Vision'
   final String providerName;
   final String planName;
   final String memberId;
@@ -13,6 +14,7 @@ class Insurance {
 
   Insurance({
     required this.id,
+    this.type = 'Health',
     required this.providerName,
     this.planName = '',
     this.memberId = '',
