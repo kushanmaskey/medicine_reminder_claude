@@ -4,6 +4,7 @@ import '../services/storage_service.dart';
 import '../screens/add_insurance_screen.dart';
 
 const _accent = Color(0xFF059669);
+const _primary = Color(0xFF501513);
 
 class InsuranceTab extends StatefulWidget {
   const InsuranceTab({super.key});
@@ -60,60 +61,69 @@ class InsuranceTabState extends State<InsuranceTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: _accent));
+      return const ColoredBox(
+        color: Colors.white,
+        child: Center(child: CircularProgressIndicator(color: _primary)),
+      );
     }
 
     if (_loadFailed) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Could not load insurance',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-              const SizedBox(height: 6),
-              const Text('Check your internet connection and try again.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _load, child: const Text('Retry')),
-            ],
+      return ColoredBox(
+        color: Colors.white,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey),
+                const SizedBox(height: 12),
+                const Text('Could not load insurance',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                const SizedBox(height: 6),
+                const Text('Check your internet connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 20),
+                ElevatedButton(onPressed: _load, child: const Text('Retry')),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (_insurances.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.health_and_safety_outlined, size: 64, color: Color(0xFFE2E8F0)),
-            SizedBox(height: 16),
-            Text(
-              'No Insurance Added',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+      return const ColoredBox(
+        color: Colors.white,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.health_and_safety_outlined, size: 64, color: Color(0xFFE2E8F0)),
+              SizedBox(height: 16),
+              Text(
+                'No Insurance Added',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                ),
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Tap + to add your insurance info',
-              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-            ),
-          ],
+              SizedBox(height: 8),
+              Text(
+                'Tap + to add your insurance info',
+                style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: _accent,
+      color: _primary,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _insurances.length,
