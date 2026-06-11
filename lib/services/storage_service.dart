@@ -547,42 +547,74 @@ class StorageService {
     });
   }
 
-  // ── Allergies (local) ─────────────────────────────────────────────────────
+  // ── Allergies (Supabase) ──────────────────────────────────────────────────
 
-  static String get _allergiesKey => 'allergies_$_uid';
+  // Legacy SharedPreferences key — used only for one-time migration.
+  static String get _allergiesLocalKey => 'allergies_$_uid';
+
+  /// Migrates any allergies stored locally in SharedPreferences to Supabase,
+  /// then clears local storage. Runs silently; errors are non-fatal.
+  static Future<void> _migrateLocalAllergies() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_allergiesLocalKey) ?? [];
+      if (raw.isEmpty) return;
+      for (final s in raw) {
+        try {
+          final a = Allergy.fromJson(jsonDecode(s) as Map<String, dynamic>);
+          await _db.from('allergies').upsert({
+            'id': a.id,
+            'user_id': _uid,
+            'name': a.name,
+            'reason': a.reason,
+            'notes': a.notes,
+          });
+        } catch (_) {}
+      }
+      await prefs.remove(_allergiesLocalKey);
+    } catch (_) {}
+  }
 
   static Future<List<Allergy>> getAllergies() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_allergiesKey) ?? [];
-    return raw
-        .map((s) => Allergy.fromJson(jsonDecode(s) as Map<String, dynamic>))
-        .toList();
+    await _migrateLocalAllergies();
+    final rows = await _db
+        .from('allergies')
+        .select()
+        .eq('user_id', _uid)
+        .order('created_at', ascending: true);
+    final result = <Allergy>[];
+    for (final r in rows) {
+      try {
+        result.add(Allergy(
+          id: r['id'] as String,
+          name: r['name'] as String,
+          reason: r['reason'] as String?,
+          notes: r['notes'] as String?,
+        ));
+      } catch (_) {}
+    }
+    return result;
   }
 
   static Future<void> saveAllergy(Allergy a) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_allergiesKey) ?? [];
-    raw.add(jsonEncode(a.toJson()));
-    await prefs.setStringList(_allergiesKey, raw);
+    await _db.from('allergies').insert({
+      'id': a.id,
+      'user_id': _uid,
+      'name': a.name,
+      'reason': a.reason,
+      'notes': a.notes,
+    });
   }
 
   static Future<void> updateAllergy(Allergy a) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_allergiesKey) ?? [];
-    final updated = raw.map((s) {
-      final map = jsonDecode(s) as Map<String, dynamic>;
-      return map['id'] == a.id ? jsonEncode(a.toJson()) : s;
-    }).toList();
-    await prefs.setStringList(_allergiesKey, updated);
+    await _db.from('allergies').update({
+      'name': a.name,
+      'reason': a.reason,
+      'notes': a.notes,
+    }).eq('id', a.id).eq('user_id', _uid);
   }
 
   static Future<void> deleteAllergy(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_allergiesKey) ?? [];
-    raw.removeWhere((s) {
-      final map = jsonDecode(s) as Map<String, dynamic>;
-      return map['id'] == id;
-    });
-    await prefs.setStringList(_allergiesKey, raw);
+    await _db.from('allergies').delete().eq('id', id).eq('user_id', _uid);
   }
 }

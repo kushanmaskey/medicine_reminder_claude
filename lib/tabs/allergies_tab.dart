@@ -13,6 +13,7 @@ class AllergiesTab extends StatefulWidget {
 class AllergiesTabState extends State<AllergiesTab> {
   List<Allergy> _allergies = [];
   bool _loading = true;
+  bool _loadFailed = false;
 
   @override
   void initState() {
@@ -21,8 +22,13 @@ class AllergiesTabState extends State<AllergiesTab> {
   }
 
   Future<void> _load() async {
-    final list = await StorageService.getAllergies();
-    if (mounted) setState(() { _allergies = list; _loading = false; });
+    if (mounted) setState(() => _loading = true);
+    try {
+      final list = await StorageService.getAllergies();
+      if (mounted) setState(() { _allergies = list; _loading = false; _loadFailed = false; });
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _loadFailed = true; });
+    }
   }
 
   void reload() => _load();
@@ -47,6 +53,26 @@ class AllergiesTabState extends State<AllergiesTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loadFailed) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              const Text('Could not load allergies', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const SizedBox(height: 6),
+              const Text('Check your internet connection and try again.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 20),
+              ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_allergies.isEmpty) {
