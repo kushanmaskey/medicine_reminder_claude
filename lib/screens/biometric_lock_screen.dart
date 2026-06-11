@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/biometric_service.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
@@ -36,10 +37,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
       _authenticating = true;
       _errorMessage = null;
     });
-    final (success, error) = await BiometricService.authenticateWithError();
+    final (success, error) = await BiometricService.authenticateWithError()
+        .timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => (false, 'Authentication timed out. Please try again.'),
+        );
     if (!mounted) return;
     if (success) {
-      _unlock();
+      await _unlock();
     } else {
       setState(() {
         _authenticating = false;
@@ -49,7 +54,12 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
     }
   }
 
-  void _unlock() {
+  // Reset session timer so HomeScreen doesn't immediately expire and
+  // prompt for biometrics a second time.
+  Future<void> _unlock() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
+    if (!mounted) return;
     if (widget.replaceWithHome) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
