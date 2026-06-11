@@ -6,6 +6,7 @@ import '../models/appointment.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
 import '../models/doctor.dart';
+import '../models/insurance.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../screens/add_prescription_screen.dart';
@@ -13,6 +14,7 @@ import '../screens/add_appointment_screen.dart';
 import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
 import '../screens/add_doctor_screen.dart';
+import '../screens/add_insurance_screen.dart';
 
 const _defaultAvatarBgs = [
   Color(0xFF501513), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
@@ -53,6 +55,7 @@ class SummaryTabState extends State<SummaryTab> {
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
   List<Doctor> _doctors = [];
+  List<Insurance> _insurances = [];
   String? _name;
   String? _sex;
   String? _avatarType;
@@ -75,6 +78,7 @@ class SummaryTabState extends State<SummaryTab> {
     List<Vital> vitals = [];
     List<Activity> activities = [];
     List<Doctor> doctors = [];
+    List<Insurance> insurances = [];
     String? name;
     String? sex;
     Map<String, dynamic> avatarData = {};
@@ -85,6 +89,7 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getVitals().then((v) { vitals = v; }).catchError((_) {}),
       StorageService.getActivities().then((v) { activities = v; }).catchError((_) {}),
       StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
+      StorageService.getInsurances().then((v) { insurances = v; }).catchError((_) {}),
       AuthService.getName().then((v) { name = v; }).catchError((_) {}),
       AuthService.getSex().then((v) { sex = v; }).catchError((_) {}),
       AuthService.getAvatarData().then((v) { avatarData = v; }).catchError((_) {}),
@@ -107,6 +112,7 @@ class SummaryTabState extends State<SummaryTab> {
       _vitals = vitals;
       _activities = activities;
       _doctors = doctors;
+      _insurances = insurances;
       _name = name;
       _sex = sex;
       _avatarType = avatarData['type'] as String?;
@@ -173,7 +179,7 @@ class SummaryTabState extends State<SummaryTab> {
           ],
           _buildSectionHeader('Upcoming Appointments',
               Icons.calendar_today_outlined,
-              onViewAll: () => widget.onTabChange(3)),
+              onViewAll: () => widget.onTabChange(4)),
           const SizedBox(height: 10),
           if (_upcomingAppointments.isEmpty)
             _buildEmptyState('No upcoming appointments',
@@ -182,7 +188,7 @@ class SummaryTabState extends State<SummaryTab> {
             ..._upcomingAppointments.take(3).map((a) => _buildAppointmentRow(a)),
           const SizedBox(height: 24),
           _buildSectionHeader('Prescriptions', Icons.description_outlined,
-              onViewAll: () => widget.onTabChange(2)),
+              onViewAll: () => widget.onTabChange(3)),
           const SizedBox(height: 10),
           if (_rxPrescriptions.isEmpty)
             _buildEmptyState('No prescriptions',
@@ -191,7 +197,7 @@ class SummaryTabState extends State<SummaryTab> {
             ..._rxPrescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
-              onViewAll: () => widget.onTabChange(5)),
+              onViewAll: () => widget.onTabChange(6)),
           const SizedBox(height: 10),
           if (_dailyActivities.isEmpty)
             _buildEmptyState('No activities logged',
@@ -207,6 +213,15 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Doctors tab to add one')
           else
             ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Insurance', Icons.health_and_safety_outlined,
+              onViewAll: () => widget.onTabChange(2)),
+          const SizedBox(height: 10),
+          if (_insurances.isEmpty)
+            _buildEmptyState('No insurance added',
+                'Tap + on the Insurance tab to add one')
+          else
+            ..._insurances.take(3).map((ins) => _buildInsuranceRow(ins)),
         ],
       ),
     );
@@ -307,8 +322,10 @@ class SummaryTabState extends State<SummaryTab> {
   // ── Stats row ──────────────────────────────────────────────────────────────
 
   Widget _buildStatsRow() {
-    return Row(
-      children: [
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
         _StatCard(
           label: 'Doctors',
           count: _doctors.length,
@@ -318,11 +335,19 @@ class SummaryTabState extends State<SummaryTab> {
         ),
         const SizedBox(width: 8),
         _StatCard(
+          label: 'Insurance',
+          count: _insurances.length,
+          icon: Icons.health_and_safety_outlined,
+          color: const Color(0xFF059669),
+          onTap: () => widget.onTabChange(2),
+        ),
+        const SizedBox(width: 8),
+        _StatCard(
           label: 'Rx',
           count: _rxPrescriptions.length,
           icon: Icons.description_outlined,
           color: const Color(0xFF3B82F6),
-          onTap: () => widget.onTabChange(2),
+          onTap: () => widget.onTabChange(3),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -330,7 +355,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _upcomingAppointments.length,
           icon: Icons.calendar_today_outlined,
           color: const Color(0xFF8B5CF6),
-          onTap: () => widget.onTabChange(3),
+          onTap: () => widget.onTabChange(4),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -338,7 +363,7 @@ class SummaryTabState extends State<SummaryTab> {
           count: _vitals.where((v) => v.category == 'daily').length,
           icon: Icons.monitor_heart_outlined,
           color: const Color(0xFF501513),
-          onTap: () => widget.onTabChange(4),
+          onTap: () => widget.onTabChange(5),
         ),
         const SizedBox(width: 8),
         _StatCard(
@@ -346,9 +371,10 @@ class SummaryTabState extends State<SummaryTab> {
           count: _dailyActivities.length,
           icon: Icons.directions_walk_outlined,
           color: const Color(0xFF22C55E),
-          onTap: () => widget.onTabChange(5),
+          onTap: () => widget.onTabChange(6),
         ),
       ],
+      ),
     );
   }
 
@@ -905,6 +931,116 @@ class SummaryTabState extends State<SummaryTab> {
     );
   }
 
+  // ── Insurance row ──────────────────────────────────────────────────────────
+
+  Widget _buildInsuranceRow(Insurance ins) {
+    const accent = Color(0xFF059669);
+    final Color statusColor;
+    final String? statusBadge;
+
+    if (ins.isExpired) {
+      statusColor = const Color(0xFFEF4444);
+      statusBadge = 'Expired';
+    } else if (ins.isExpiringSoon) {
+      statusColor = const Color(0xFFF97316);
+      statusBadge = 'Expiring Soon';
+    } else if (ins.expirationDate != null) {
+      statusColor = accent;
+      statusBadge = 'Active';
+    } else {
+      statusColor = accent;
+      statusBadge = null;
+    }
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(builder: (_) => AddInsuranceScreen(existing: ins)),
+        );
+        if (result == true || result == 'deleted') _load();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: (ins.isExpired || ins.isExpiringSoon)
+                ? statusColor.withValues(alpha: 0.3)
+                : Colors.grey.shade100,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.health_and_safety_outlined,
+                  color: accent, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ins.providerName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF635A5A)),
+                  ),
+                  if (ins.planName.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(ins.planName,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: accent,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                  if (ins.memberId.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text('Member ID: ${ins.memberId}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+            if (statusBadge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(statusBadge,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor)),
+              ),
+            ],
+            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Empty state ────────────────────────────────────────────────────────────
 
   Widget _buildEmptyState(String title, String subtitle) {
@@ -966,9 +1102,10 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 72,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(

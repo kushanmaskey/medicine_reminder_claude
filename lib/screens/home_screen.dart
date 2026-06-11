@@ -13,6 +13,7 @@ import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import '../tabs/doctors_tab.dart';
+import '../tabs/insurance_tab.dart';
 import 'biometric_lock_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
@@ -62,8 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _vitalsKey = GlobalKey<VitalsTabState>();
   final _activitiesKey = GlobalKey<ActivitiesTabState>();
   final _doctorsKey = GlobalKey<DoctorsTabState>();
+  final _insuranceKey = GlobalKey<InsuranceTabState>();
 
-  final List<String> _titles = ['Summary', 'Doctors', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
+  final List<String> _titles = ['Summary', 'Doctors', 'Insurance', 'Prescriptions', 'Appointments', 'Vitals', 'Activities'];
 
   static const _sessionDuration = Duration(hours: 1);
 
@@ -195,16 +197,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // index 2 = Prescriptions
+    // index 2 = Insurance
     if (_currentIndex == 2) {
+      await _insuranceKey.currentState?.openAdd();
+      _summaryKey.currentState?.reload();
+      setState(() {});
+      return;
+    }
+
+    // index 3 = Prescriptions
+    if (_currentIndex == 3) {
       await _prescriptionsKey.currentState?.openAdd();
       _summaryKey.currentState?.reload();
       setState(() {});
       return;
     }
 
-    // index 4 = Vitals
-    if (_currentIndex == 4) {
+    // index 5 = Vitals
+    if (_currentIndex == 5) {
       final changed = await _vitalsKey.currentState?.openAdd() ?? false;
       if (changed) {
         _summaryKey.currentState?.reload();
@@ -214,18 +224,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final Widget screen;
-    if (_currentIndex == 3) {
+    if (_currentIndex == 4) {
       screen = const AddAppointmentScreen();
     } else {
-      screen = const AddActivityScreen(); // index 5 = Activities
+      screen = const AddActivityScreen(); // index 6 = Activities
     }
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => screen),
     );
     if (result == true) {
-      if (_currentIndex == 3) _appointmentsKey.currentState?.reload();
-      if (_currentIndex == 5) _activitiesKey.currentState?.reload();
+      if (_currentIndex == 4) _appointmentsKey.currentState?.reload();
+      if (_currentIndex == 6) _activitiesKey.currentState?.reload();
       _summaryKey.currentState?.reload();
       setState(() {});
     }
@@ -369,6 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onVitalChanged: () => _vitalsKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
+          InsuranceTab(key: _insuranceKey),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
           VitalsTab(key: _vitalsKey, onDoctorAdded: () => _doctorsKey.currentState?.reload()),
@@ -392,6 +403,12 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon:
                 Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
             label: 'Doctors',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.health_and_safety_outlined),
+            selectedIcon:
+                Icon(Icons.health_and_safety, color: Color(0xFF059669)),
+            label: 'Insurance',
           ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
