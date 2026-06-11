@@ -8,6 +8,29 @@ const _gradient = LinearGradient(
   end: Alignment.bottomRight,
 );
 
+const _providers = [
+  'BCBS (Blue Cross Blue Shield)',
+  'UnitedHealthcare (UHC)',
+  'Aetna',
+  'Cigna',
+  'Humana',
+  'Kaiser Permanente',
+  'Molina Healthcare',
+  'Centene',
+  'Medicare',
+  'Medicaid',
+  'Other',
+];
+
+const _planTypes = [
+  'PPO (Preferred Provider Organization)',
+  'HMO (Health Maintenance Organization)',
+  'EPO (Exclusive Provider Organization)',
+  'POS (Point of Service)',
+  'HDHP (High Deductible Health Plan)',
+  'Other',
+];
+
 class AddInsuranceScreen extends StatefulWidget {
   final Insurance? existing;
   const AddInsuranceScreen({super.key, this.existing});
@@ -20,8 +43,9 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
 
-  late final TextEditingController _provider;
-  late final TextEditingController _plan;
+  String? _selectedProvider;
+  late final TextEditingController _providerOther;
+  String? _selectedPlanType;
   late final TextEditingController _memberId;
   late final TextEditingController _groupNumber;
   late final TextEditingController _phone;
@@ -36,8 +60,11 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    _provider = TextEditingController(text: e?.providerName ?? '');
-    _plan = TextEditingController(text: e?.planName ?? '');
+    final existingProvider = e?.providerName ?? '';
+    _selectedProvider = _providers.contains(existingProvider) ? existingProvider : (existingProvider.isNotEmpty ? 'Other' : null);
+    _providerOther = TextEditingController(text: _selectedProvider == 'Other' ? existingProvider : '');
+    final existingPlan = e?.planName ?? '';
+    _selectedPlanType = _planTypes.contains(existingPlan) ? existingPlan : (existingPlan.isNotEmpty ? 'Other' : null);
     _memberId = TextEditingController(text: e?.memberId ?? '');
     _groupNumber = TextEditingController(text: e?.groupNumber ?? '');
     _phone = TextEditingController(text: e?.phone ?? '');
@@ -50,8 +77,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
 
   @override
   void dispose() {
-    _provider.dispose();
-    _plan.dispose();
+    _providerOther.dispose();
     _memberId.dispose();
     _groupNumber.dispose();
     _phone.dispose();
@@ -93,8 +119,8 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     try {
       final insurance = Insurance(
         id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        providerName: _provider.text.trim(),
-        planName: _plan.text.trim(),
+        providerName: _selectedProvider == 'Other' ? _providerOther.text.trim() : (_selectedProvider ?? ''),
+        planName: _selectedPlanType == 'Other' ? '' : (_selectedPlanType ?? ''),
         memberId: _memberId.text.trim(),
         groupNumber: _groupNumber.text.trim(),
         effectiveDate: _effectiveDate,
@@ -205,13 +231,28 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
           children: [
             _buildSection('Insurance Provider', [
-              _buildField(_provider, 'Provider Name', required: true,
-                  hint: 'e.g. Blue Cross Blue Shield'),
+              _buildDropdown(
+                label: 'Insurance Provider',
+                value: _selectedProvider,
+                items: _providers,
+                required: true,
+                onChanged: (v) => setState(() => _selectedProvider = v),
+              ),
+              if (_selectedProvider == 'Other') ...[
+                const SizedBox(height: 12),
+                _buildField(_providerOther, 'Provider Name', required: true,
+                    hint: 'Enter provider name'),
+              ],
               const SizedBox(height: 12),
-              _buildField(_plan, 'Plan Name', hint: 'e.g. Gold PPO'),
+              _buildDropdown(
+                label: 'Plan Type',
+                value: _selectedPlanType,
+                items: _planTypes,
+                onChanged: (v) => setState(() => _selectedPlanType = v),
+              ),
             ]),
             const SizedBox(height: 20),
             _buildSection('Member Information', [
@@ -241,54 +282,51 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
             _buildSection('Notes', [
               _buildField(_notes, 'Notes', maxLines: 3, hint: 'Additional information...'),
             ]),
+            const SizedBox(height: 28),
+            _buildSaveButton(isEdit),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: SizedBox(
-            width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: _gradient,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF501513).withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  onTap: _saving ? null : _save,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: _saving
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
-                            )
-                          : Text(
-                              isEdit ? 'Save Changes' : 'Add Insurance',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
+    );
+  }
+
+  Widget _buildSaveButton(bool isEdit) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _gradient,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF501513).withValues(alpha: 0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: _saving ? null : _save,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      isEdit ? 'Save Changes' : 'Add Insurance',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),
@@ -327,6 +365,39 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
           child: Column(children: children),
         ),
       ],
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+    bool required = false,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF501513), width: 1.5),
+        ),
+        labelStyle: const TextStyle(fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        isDense: true,
+      ),
+      hint: Text('Select $label', style: const TextStyle(fontSize: 14)),
+      isExpanded: true,
+      items: items.map((item) => DropdownMenuItem(
+        value: item,
+        child: Text(item, style: const TextStyle(fontSize: 14)),
+      )).toList(),
+      onChanged: onChanged,
+      validator: required
+          ? (v) => (v == null || v.isEmpty) ? 'Required' : null
+          : null,
     );
   }
 
