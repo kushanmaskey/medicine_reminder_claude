@@ -175,6 +175,77 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _requestNotificationPermission() async {
     await NotificationService.requestPermission();
+    await _rescheduleNotificationsIfNeeded();
+  }
+
+  // Reschedules all reminders once after the notification channel/permission fix
+  // so that existing data is re-queued with correct settings.
+  static const _notifMigrationKey = 'notif_migration_v2';
+
+  Future<void> _rescheduleNotificationsIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_notifMigrationKey) == true) return;
+
+    try {
+      final prescriptions = await StorageService.getPrescriptions();
+      for (final p in prescriptions) {
+        final time = p.notificationTime;
+        if (time == null) continue;
+        final id = NotificationService.idFromString(p.id);
+        await NotificationService.cancelNotification(id);
+        await NotificationService.scheduleDailyNotification(
+          id: id,
+          title: 'Prescription Reminder',
+          body: '${p.name} — ${p.instructions}',
+          time: time,
+        );
+        for (final alert in p.alerts) {
+          if (alert.acknowledged) continue;
+          if (alert.scheduledAt.isBefore(DateTime.now())) continue;
+          final alertId = NotificationService.idFromString(alert.id);
+          await NotificationService.cancelNotification(alertId);
+          await NotificationService.scheduleOnceNotification(
+            id: alertId,
+            title: 'Refill Reminder: ${p.name}',
+            body: p.instructions.isNotEmpty ? p.instructions : 'Time to refill your prescription',
+            scheduledDateTime: alert.scheduledAt,
+          );
+        }
+      }
+
+      final medications = await StorageService.getMedications();
+      for (final m in medications) {
+        final time = m.notificationTime;
+        if (time == null) continue;
+        final id = NotificationService.idFromString(m.id);
+        await NotificationService.cancelNotification(id);
+        await NotificationService.scheduleDailyNotification(
+          id: id,
+          title: 'Medication Reminder',
+          body: '${m.prescriptionName} — ${m.instructions}',
+          time: time,
+        );
+      }
+
+      final appointments = await StorageService.getAppointments();
+      for (final a in appointments) {
+        for (final alert in a.alerts) {
+          if (alert.acknowledged) continue;
+          if (alert.scheduledAt.isBefore(DateTime.now())) continue;
+          final alertId = NotificationService.idFromString(alert.id);
+          await NotificationService.cancelNotification(alertId);
+          await NotificationService.scheduleOnceNotification(
+            id: alertId,
+            title: 'Appointment Alert: ${a.title}',
+            body: 'With ${a.doctorName}'
+                '${a.location.isNotEmpty ? ' at ${a.location}' : ''}',
+            scheduledDateTime: alert.scheduledAt,
+          );
+        }
+      }
+    } catch (_) {}
+
+    await prefs.setBool(_notifMigrationKey, true);
   }
 
   Future<void> _loadAvatar() async {
@@ -387,6 +458,12 @@ class _HomeScreenState extends State<HomeScreen> {
             key: _summaryKey,
             onTabChange: (i) => setState(() => _currentIndex = i),
             onVitalChanged: () => _vitalsKey.currentState?.reload(),
+            onAllergyChanged: () => _allergiesKey.currentState?.reload(),
+            onPrescriptionChanged: () => _prescriptionsKey.currentState?.reload(),
+            onAppointmentChanged: () => _appointmentsKey.currentState?.reload(),
+            onActivityChanged: () => _activitiesKey.currentState?.reload(),
+            onDoctorChanged: () => _doctorsKey.currentState?.reload(),
+            onInsuranceChanged: () => _insuranceKey.currentState?.reload(),
           ),
           DoctorsTab(key: _doctorsKey),
           InsuranceTab(key: _insuranceKey, onChanged: () => _summaryKey.currentState?.reload()),
@@ -399,7 +476,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        onDestinationSelected: (i) {
+          setState(() => _currentIndex = i);
+          if (i == 0) _summaryKey.currentState?.reload();
+        },
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFF501513).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,

@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/doctor.dart';
 import '../models/vital.dart';
-import '../screens/add_doctor_screen.dart';
+import '../models/vital_reading.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 
 class AddVitalScreen extends StatefulWidget {
   final Vital? existing;
   final String category;
-  final VoidCallback? onDoctorAdded;
+  final List<Vital> sameDayHistory;
 
   const AddVitalScreen({
     super.key,
     this.existing,
     this.category = 'daily',
-    this.onDoctorAdded,
+    this.sameDayHistory = const [],
   });
 
   @override
@@ -26,15 +25,30 @@ class AddVitalScreen extends StatefulWidget {
 class _AddVitalScreenState extends State<AddVitalScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Daily fields
-  final _systolicController    = TextEditingController();
-  final _diastolicController   = TextEditingController();
-  final _weightController      = TextEditingController();
-  final _sugarController       = TextEditingController();
-  final _cholesterolController = TextEditingController();
+  // Previously saved readings for this vital (shown as read-only history)
+  List<BpReading> _existingBpReadings          = [];
+  List<VitalReading> _existingSugarReadings    = [];
+  List<VitalReading> _existingCholesterolReadings = [];
+  List<VitalReading> _existingWeightReadings   = [];
+
+  // New readings added this session (can be deleted before saving)
+  List<BpReading> _bpReadings          = [];
+  List<VitalReading> _sugarReadings    = [];
+  List<VitalReading> _cholesterolReadings = [];
+  List<VitalReading> _weightReadings   = [];
 
   // Open fields
-  final _eventNameController = TextEditingController();
+  final _eventNameController          = TextEditingController();
+  final _locationController           = TextEditingController();
+  final _mammogramLocationController  = TextEditingController();
+  final _colonoscopyLocationController = TextEditingController();
+  final _dentalLocationController     = TextEditingController();
+  final _eyeExamLocationController    = TextEditingController();
+  final _periodNotesController        = TextEditingController();
+  final _mammogramNotesController     = TextEditingController();
+  final _colonoscopyNotesController   = TextEditingController();
+  final _dentalNotesController        = TextEditingController();
+  final _eyeExamNotesController       = TextEditingController();
 
   // Shared
   final _notesController = TextEditingController();
@@ -49,9 +63,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   DateTime? _mammogramDate;
   DateTime? _colonoscopyDate;
   bool _hasEventDate = false;
+  DateTime? _dentalDate;
+  DateTime? _eyeExamDate;
   String? _sex;
-  List<Doctor> _doctors = [];
-  Doctor? _selectedDoctor;
 
   bool _saving = false;
 
@@ -79,22 +93,27 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   bool get _isFemale => _sex == 'Female';
 
-  void _onVitalChanged() => setState(() {});
-
   @override
   void initState() {
     super.initState();
-    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController, _weightController]) {
-      c.addListener(_onVitalChanged);
-    }
     if (_isEditing) {
       final e = widget.existing!;
-      _systolicController.text    = e.bpSystolic?.toString() ?? '';
-      _diastolicController.text   = e.bpDiastolic?.toString() ?? '';
-      _weightController.text      = e.weight?.toString() ?? '';
-      _sugarController.text       = e.sugarLevel?.toString() ?? '';
-      _cholesterolController.text = e.cholesterol?.toString() ?? '';
-      _eventNameController.text   = e.eventName;
+      // Move saved readings into history; new session starts empty
+      _existingBpReadings          = List.from(e.bpReadings);
+      _existingSugarReadings       = List.from(e.sugarReadings);
+      _existingCholesterolReadings = List.from(e.cholesterolReadings);
+      _existingWeightReadings      = List.from(e.weightReadings);
+      _eventNameController.text            = e.eventName;
+      _locationController.text             = e.location;
+      _mammogramLocationController.text    = e.mammogramLocation;
+      _colonoscopyLocationController.text  = e.colonoscopyLocation;
+      _dentalLocationController.text       = e.dentalLocation;
+      _eyeExamLocationController.text      = e.eyeExamLocation;
+      _periodNotesController.text          = e.periodNotes;
+      _mammogramNotesController.text       = e.mammogramNotes;
+      _colonoscopyNotesController.text     = e.colonoscopyNotes;
+      _dentalNotesController.text          = e.dentalNotes;
+      _eyeExamNotesController.text         = e.eyeExamNotes;
       _notesController.text       = e.notes;
       _weightUnit      = e.weightUnit;
       _sugarUnit       = e.sugarUnit;
@@ -102,34 +121,29 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _recordedAt      = e.recordedAt;
       _hasEventDate    = e.category != 'daily';
       _periodDate      = e.periodDate;
-      if (e.doctorId != null) {
-        StorageService.getDoctors().then((list) {
-          if (mounted) setState(() {
-            _doctors = list;
-            try { _selectedDoctor = list.firstWhere((d) => d.id == e.doctorId); } catch (_) {}
-          });
-        });
-      }
       _mammogramDate   = e.mammogramDate;
       _colonoscopyDate = e.colonoscopyDate;
+      _dentalDate      = e.dentalDate;
+      _eyeExamDate     = e.eyeExamDate;
     }
     if (_category != 'daily') {
       AuthService.getSex().then((s) { if (mounted) setState(() => _sex = s); });
-      StorageService.getDoctors().then((d) { if (mounted) setState(() => _doctors = d); });
     }
   }
 
   @override
   void dispose() {
-    for (final c in [_systolicController, _diastolicController, _sugarController, _cholesterolController, _weightController]) {
-      c.removeListener(_onVitalChanged);
-    }
-    _systolicController.dispose();
-    _diastolicController.dispose();
-    _weightController.dispose();
-    _sugarController.dispose();
-    _cholesterolController.dispose();
     _eventNameController.dispose();
+    _locationController.dispose();
+    _mammogramLocationController.dispose();
+    _colonoscopyLocationController.dispose();
+    _dentalLocationController.dispose();
+    _eyeExamLocationController.dispose();
+    _periodNotesController.dispose();
+    _mammogramNotesController.dispose();
+    _colonoscopyNotesController.dispose();
+    _dentalNotesController.dispose();
+    _eyeExamNotesController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -148,55 +162,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         data: Theme.of(ctx).copyWith(
             colorScheme: ColorScheme.light(primary: _accentColor)),
         child: child!,
-      ),
-    );
-  }
-
-  Future<void> _showDoctorPicker() async {
-    if (_doctors.isEmpty) {
-      final result = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('No Doctors Added'),
-          content: const Text('Add a doctor first to select them here.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF501513), foregroundColor: Colors.white),
-              child: const Text('Add Doctor'),
-            ),
-          ],
-        ),
-      );
-      if (result == true && mounted) {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDoctorScreen()));
-        final list = await StorageService.getDoctors();
-        if (mounted) {
-          setState(() => _doctors = list);
-          widget.onDoctorAdded?.call();
-        }
-      }
-      return;
-    }
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _VitalDoctorPickerSheet(
-        doctors: _doctors,
-        selected: _selectedDoctor,
-        onSelect: (d) { setState(() => _selectedDoctor = d); Navigator.pop(context); },
-        onAddNew: () async {
-          Navigator.pop(context);
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDoctorScreen()));
-          final list = await StorageService.getDoctors();
-          if (mounted) {
-            setState(() => _doctors = list);
-            widget.onDoctorAdded?.call();
-          }
-        },
       ),
     );
   }
@@ -260,20 +225,30 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         recordedAt:      _recordedAt,
         category:        _category,
         eventName:       _eventNameController.text.trim(),
-        bpSystolic:      _category == 'daily' ? int.tryParse(_systolicController.text.trim()) : null,
-        bpDiastolic:     _category == 'daily' ? int.tryParse(_diastolicController.text.trim()) : null,
-        weight:          _category == 'daily' ? double.tryParse(_weightController.text.trim()) : null,
+        bpReadings:          _category == 'daily' ? [..._existingBpReadings, ..._bpReadings] : [],
+        sugarReadings:       _category == 'daily' ? [..._existingSugarReadings, ..._sugarReadings] : [],
+        cholesterolReadings: _category == 'daily' ? [..._existingCholesterolReadings, ..._cholesterolReadings] : [],
+        weightReadings:      _category == 'daily' ? [..._existingWeightReadings, ..._weightReadings] : [],
         weightUnit:      _weightUnit,
-        sugarLevel:      _category == 'daily' ? double.tryParse(_sugarController.text.trim()) : null,
         sugarUnit:       _sugarUnit,
-        cholesterol:     _category == 'daily' ? double.tryParse(_cholesterolController.text.trim()) : null,
         cholesterolUnit: _cholesterolUnit,
-        colonoscopyDate: _category != 'daily' ? _colonoscopyDate : null,
-        periodDate:      _category != 'daily' ? _periodDate : null,
-        mammogramDate:   _category != 'daily' ? _mammogramDate : null,
+        colonoscopyDate:     _category != 'daily' ? _colonoscopyDate : null,
+        colonoscopyLocation: _category != 'daily' ? _colonoscopyLocationController.text.trim() : '',
+        colonoscopyNotes:    _category != 'daily' ? _colonoscopyNotesController.text.trim() : '',
+        periodDate:          _category != 'daily' ? _periodDate : null,
+        periodNotes:         _category != 'daily' ? _periodNotesController.text.trim() : '',
+        mammogramDate:       _category != 'daily' ? _mammogramDate : null,
+        mammogramLocation:   _category != 'daily' ? _mammogramLocationController.text.trim() : '',
+        mammogramNotes:      _category != 'daily' ? _mammogramNotesController.text.trim() : '',
+        dentalDate:          _category != 'daily' ? _dentalDate : null,
+        dentalLocation:      _category != 'daily' ? _dentalLocationController.text.trim() : '',
+        dentalNotes:         _category != 'daily' ? _dentalNotesController.text.trim() : '',
+        eyeExamDate:         _category != 'daily' ? _eyeExamDate : null,
+        eyeExamLocation:     _category != 'daily' ? _eyeExamLocationController.text.trim() : '',
+        eyeExamNotes:        _category != 'daily' ? _eyeExamNotesController.text.trim() : '',
         riskLevel:       'Low',
         notes:           _notesController.text.trim(),
-        doctorId:        _category != 'daily' ? _selectedDoctor?.id : null,
+        location:        _category != 'daily' ? _locationController.text.trim() : '',
       );
 
       if (_isEditing) {
@@ -296,6 +271,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   String _formatDate(DateTime dt) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $period';
   }
 
   void _showRecommendations() {
@@ -414,347 +396,117 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     );
   }
 
-  // ── Daily fields ──────────────────────────────────────────────────────────
+  // ── Add / edit reading helpers ────────────────────────────────────────────
 
-  // ── Bulb colors (live — recomputed on every setState) ────────────────────
-
-  static const _bulbAmber = Color(0xFFF59E0B);
-
-  Color get _bpBulbColor => switch (_classifyBp()) {
-    _BpCategory.crisis   => const Color(0xFF7F1D1D),
-    _BpCategory.stage2   => const Color(0xFFEF4444),
-    _BpCategory.stage1   => const Color(0xFFF97316),
-    _BpCategory.elevated => const Color(0xFFEAB308),
-    _BpCategory.normal   => const Color(0xFF22C55E),
-    _BpCategory.low      => const Color(0xFF3B82F6),
-    _BpCategory.unknown  => _bulbAmber,
-  };
-
-  Color get _sugarBulbColor => switch (_classifySugar()) {
-    _SugarCategory.low         => const Color(0xFF3B82F6),
-    _SugarCategory.normal      => const Color(0xFF22C55E),
-    _SugarCategory.preDiabetes => const Color(0xFFEAB308),
-    _SugarCategory.diabetic    => const Color(0xFFEF4444),
-    _SugarCategory.unknown     => _bulbAmber,
-  };
-
-  Color get _cholesterolBulbColor => switch (_classifyCholesterol()) {
-    _CholesterolCategory.optimal    => const Color(0xFF22C55E),
-    _CholesterolCategory.borderline => const Color(0xFFEAB308),
-    _CholesterolCategory.high       => const Color(0xFFEF4444),
-    _CholesterolCategory.unknown    => _bulbAmber,
-  };
-
-  Color get _weightBulbColor => switch (_classifyWeight()) {
-    _WeightCategory.low     => const Color(0xFF3B82F6),
-    _WeightCategory.normal  => const Color(0xFF22C55E),
-    _WeightCategory.high    => const Color(0xFFEAB308),
-    _WeightCategory.veryHigh=> const Color(0xFFEF4444),
-    _WeightCategory.unknown => _bulbAmber,
-  };
-
-  // ── Bulb tooltips (live) ──────────────────────────────────────────────────
-
-  String get _bpTooltip => switch (_classifyBp()) {
-    _BpCategory.crisis   => 'Hypertensive Crisis',
-    _BpCategory.stage2   => 'High BP — Stage 2',
-    _BpCategory.stage1   => 'High BP — Stage 1',
-    _BpCategory.elevated => 'Elevated BP',
-    _BpCategory.normal   => 'Normal BP',
-    _BpCategory.low      => 'Low BP',
-    _BpCategory.unknown  => 'Blood pressure guide',
-  };
-
-  String get _sugarTooltip => switch (_classifySugar()) {
-    _SugarCategory.low         => 'Low Blood Sugar',
-    _SugarCategory.normal      => 'Normal Blood Sugar',
-    _SugarCategory.preDiabetes => 'Pre-Diabetes Range',
-    _SugarCategory.diabetic    => 'Diabetic Range',
-    _SugarCategory.unknown     => 'Blood sugar guide',
-  };
-
-  String get _cholesterolTooltip => switch (_classifyCholesterol()) {
-    _CholesterolCategory.optimal    => 'Optimal Cholesterol',
-    _CholesterolCategory.borderline => 'Borderline High Cholesterol',
-    _CholesterolCategory.high       => 'High Cholesterol',
-    _CholesterolCategory.unknown    => 'Cholesterol guide',
-  };
-
-  String get _weightTooltip => switch (_classifyWeight()) {
-    _WeightCategory.low      => 'Low Weight',
-    _WeightCategory.normal   => 'Healthy Weight Range',
-    _WeightCategory.high     => 'Above Average Weight',
-    _WeightCategory.veryHigh => 'High Weight',
-    _WeightCategory.unknown  => 'Weight guide',
-  };
-
-  // ── Blood pressure classification ─────────────────────────────────────────
-
-  _BpCategory _classifyBp() {
-    final sys = int.tryParse(_systolicController.text.trim());
-    final dia = int.tryParse(_diastolicController.text.trim());
-    if (sys == null && dia == null) return _BpCategory.unknown;
-    if ((sys != null && sys > 180) || (dia != null && dia > 120)) return _BpCategory.crisis;
-    if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) return _BpCategory.stage2;
-    if ((sys != null && sys >= 130) || (dia != null && dia >= 80)) return _BpCategory.stage1;
-    if (sys != null && sys >= 120 && (dia == null || dia < 80)) return _BpCategory.elevated;
-    if ((sys != null && sys < 90) || (dia != null && dia < 60)) return _BpCategory.low;
-    return _BpCategory.normal;
-  }
-
-  // ── Shared vital recommendation sheet ────────────────────────────────────────
-
-  void _showVitalInfoSheet(
-    BuildContext context, {
-    required Color color,
-    required IconData icon,
-    required String label,
-    String? reading,
-    required String detail,
-    String? learnMoreUrl,
-    String? learnMoreLabel,
-  }) {
-    showModalBottomSheet(
+  Future<void> _addBpReading(BuildContext context, {int? editIndex}) async {
+    final result = await showModalBottomSheet<BpReading>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
-                      if (reading != null)
-                        Text(reading, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(detail, style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
-            if (learnMoreUrl != null) ...[
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => launchUrl(Uri.parse(learnMoreUrl), mode: LaunchMode.externalApplication),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withValues(alpha: 0.25)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.open_in_new, size: 16, color: color),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          learnMoreLabel ?? 'Learn more',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.info_outline, size: 12, color: Colors.grey[400]),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'For informational purposes only. Not a substitute for professional medical advice.',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[400], fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      builder: (_) => _BpReadingSheet(
+        initial: editIndex != null ? _bpReadings[editIndex] : null,
+        accentColor: const Color(0xFFEF4444),
       ),
     );
+    if (result != null && mounted) {
+      setState(() {
+        if (editIndex != null) {
+          _bpReadings[editIndex] = result;
+        } else {
+          _bpReadings.add(result);
+        }
+      });
+    }
   }
 
-  // ── Blood pressure recommendation ─────────────────────────────────────────
-
-  void _showBpRecommendation(BuildContext context) {
-    final cat = _classifyBp();
-    final sys = _systolicController.text.trim();
-    final dia = _diastolicController.text.trim();
-
-    final (Color color, IconData icon, String label, String detail) = switch (cat) {
-      _BpCategory.crisis  => (const Color(0xFF7F1D1D), Icons.emergency,          'Hypertensive Crisis',          'Your reading is critically high. Seek emergency medical care immediately. Do not wait — call 911 or go to the nearest emergency room.'),
-      _BpCategory.stage2  => (const Color(0xFFEF4444), Icons.warning_rounded,     'High Blood Pressure — Stage 2','Systolic ≥ 140 or Diastolic ≥ 90 mmHg. Consult your doctor as soon as possible. Medication and significant lifestyle changes are typically required.'),
-      _BpCategory.stage1  => (const Color(0xFFF97316), Icons.warning_amber_rounded,'High Blood Pressure — Stage 1','Systolic 130–139 or Diastolic 80–89 mmHg. Discuss with your doctor. Reduce sodium, exercise regularly, limit alcohol, and manage stress.'),
-      _BpCategory.elevated=> (const Color(0xFFEAB308), Icons.trending_up,          'Elevated Blood Pressure',      'Systolic 120–129 and Diastolic < 80 mmHg. No medication needed yet, but adopt heart-healthy habits: reduce salt, increase physical activity, and maintain a healthy weight.'),
-      _BpCategory.normal  => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Normal Blood Pressure',        'Systolic < 120 and Diastolic < 80 mmHg. Great work! Keep up healthy habits — regular exercise, balanced diet, and stress management.'),
-      _BpCategory.low     => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Blood Pressure',           'Systolic < 90 or Diastolic < 60 mmHg. Consult your doctor if you have dizziness, fainting, or fatigue. Stay hydrated and rise slowly from seated or lying positions.'),
-      _BpCategory.unknown => (const Color(0xFF6B7280), Icons.info_outline,         'Blood Pressure Guide',         'Normal: < 120/80. Elevated: 120–129 systolic. High Stage 1: 130–139/80–89. High Stage 2: ≥ 140/90. Low: < 90/60. Enter your reading above for a personalised assessment.'),
-    };
-
-    final learnMoreUrl = switch (cat) {
-      _BpCategory.low                             => 'https://medlineplus.gov/lowbloodpressure.html',
-      _BpCategory.normal                          => 'https://medlineplus.gov/vitalsigns.html',
-      _BpCategory.crisis || _BpCategory.stage2 ||
-      _BpCategory.stage1 || _BpCategory.elevated  => 'https://medlineplus.gov/highbloodpressure.html',
-      _                                           => 'https://medlineplus.gov/bloodpressure.html',
-    };
-
-    final learnMoreLabel = switch (cat) {
-      _BpCategory.low                             => 'Learn more about low blood pressure — MedlinePlus',
-      _BpCategory.normal                          => 'Learn more about vital signs — MedlinePlus',
-      _BpCategory.crisis || _BpCategory.stage2 ||
-      _BpCategory.stage1 || _BpCategory.elevated  => 'Learn more about high blood pressure — MedlinePlus',
-      _                                           => 'Learn more about blood pressure — MedlinePlus',
-    };
-
-    _showVitalInfoSheet(
-      context,
-      color: color,
-      icon: icon,
-      label: label,
-      reading: (sys.isNotEmpty || dia.isNotEmpty) ? '${sys.isEmpty ? '?' : sys} / ${dia.isEmpty ? '?' : dia} mmHg' : null,
-      detail: detail,
-      learnMoreUrl: learnMoreUrl,
-      learnMoreLabel: learnMoreLabel,
+  Future<void> _addVitalReading(
+    BuildContext context,
+    List<VitalReading> list,
+    String label,
+    String unit,
+    String hint,
+    Color color, {
+    int? editIndex,
+  }) async {
+    final result = await showModalBottomSheet<VitalReading>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _VitalReadingSheet(
+        initial: editIndex != null ? list[editIndex] : null,
+        label: label,
+        unit: unit,
+        hint: hint,
+        accentColor: color,
+      ),
     );
+    if (result != null && mounted) {
+      setState(() {
+        if (editIndex != null) {
+          list[editIndex] = result;
+        } else {
+          list.add(result);
+        }
+      });
+    }
   }
 
-  // ── Sugar recommendation ──────────────────────────────────────────────────
+  // ── Daily fields (multi-reading) ──────────────────────────────────────────
 
-  _SugarCategory _classifySugar() {
-    final raw = double.tryParse(_sugarController.text.trim());
-    if (raw == null) return _SugarCategory.unknown;
-    final mgdl = _sugarUnit == 'mmol/L' ? raw * 18.0182 : raw;
-    if (mgdl < 70)  return _SugarCategory.low;
-    if (mgdl < 100) return _SugarCategory.normal;
-    if (mgdl < 126) return _SugarCategory.preDiabetes;
-    return _SugarCategory.diabetic;
+  /// Returns up to 3 past BP readings (existing saved + same-day other vitals),
+  /// newest first. Each entry is (label, time).
+  List<(String, DateTime)> get _histBp {
+    final rows = <(String, DateTime)>[];
+    // Previously saved readings on this vital record
+    for (final r in _existingBpReadings) {
+      rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
+    }
+    // Same-day readings from other vital records
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.bpReadings) {
+        rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(2).toList();
   }
 
-  void _showSugarRecommendation(BuildContext context) {
-    final cat = _classifySugar();
-    final val = _sugarController.text.trim();
-
-    final (Color color, IconData icon, String label, String detail) = switch (cat) {
-      _SugarCategory.low        => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Blood Sugar (Hypoglycemia)', 'Below 70 mg/dL. Eat 15–20 g of fast-acting carbs (fruit juice, glucose tablets). Recheck in 15 minutes. Seek care if it does not recover.'),
-      _SugarCategory.normal     => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Normal Fasting Glucose',         'Fasting glucose 70–99 mg/dL. Excellent! Maintain a balanced diet low in refined carbs, stay active, and keep a healthy weight.'),
-      _SugarCategory.preDiabetes=> (const Color(0xFFEAB308), Icons.trending_up,          'Pre-Diabetes Range',             'Fasting glucose 100–125 mg/dL. You are at risk. Losing 5–7% body weight, 150 min/week of moderate exercise, and cutting sugary drinks can often reverse this.'),
-      _SugarCategory.diabetic   => (const Color(0xFFEF4444), Icons.warning_rounded,       'Diabetic Range',                 'Fasting glucose ≥ 126 mg/dL. Consult your doctor. Medication, diet change, regular monitoring, and exercise are key to managing blood sugar.'),
-      _SugarCategory.unknown    => (const Color(0xFF6B7280), Icons.info_outline,          'Blood Sugar Guide',              'Fasting normal: 70–99 mg/dL. Pre-diabetes: 100–125. Diabetic: ≥ 126. Low (hypoglycemia): < 70. Enter your reading above for a personalised assessment.'),
-    };
-
-    _showVitalInfoSheet(
-      context,
-      color: color,
-      icon: icon,
-      label: label,
-      reading: val.isNotEmpty ? '$val $_sugarUnit (fasting)' : null,
-      detail: detail,
-      learnMoreUrl: 'https://medlineplus.gov/bloodsugar.html',
-      learnMoreLabel: 'Learn more about blood sugar — MedlinePlus',
-    );
+  List<(String, DateTime)> _histVital(
+    List<VitalReading> existingReadings,
+    List<VitalReading> Function(Vital) getter,
+    String unit,
+  ) {
+    final rows = <(String, DateTime)>[];
+    for (final r in existingReadings) {
+      rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
+    }
+    for (final v in widget.sameDayHistory) {
+      for (final r in getter(v)) {
+        rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
   }
 
-  // ── Cholesterol recommendation ────────────────────────────────────────────
-
-  _CholesterolCategory _classifyCholesterol() {
-    final raw = double.tryParse(_cholesterolController.text.trim());
-    if (raw == null) return _CholesterolCategory.unknown;
-    final mgdl = _cholesterolUnit == 'mmol/L' ? raw * 38.67 : raw;
-    if (mgdl < 200) return _CholesterolCategory.optimal;
-    if (mgdl < 240) return _CholesterolCategory.borderline;
-    return _CholesterolCategory.high;
+  String _formatDateTime(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    return '$h:$m $period';
   }
 
-  void _showCholesterolRecommendation(BuildContext context) {
-    final cat = _classifyCholesterol();
-    final val = _cholesterolController.text.trim();
-
-    final (Color color, IconData icon, String label, String detail) = switch (cat) {
-      _CholesterolCategory.optimal   => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Optimal Cholesterol',          'Total cholesterol < 200 mg/dL. Well done! Eat more fibre, healthy fats (avocado, nuts, olive oil), and stay physically active to keep it this way.'),
-      _CholesterolCategory.borderline=> (const Color(0xFFEAB308), Icons.trending_up,          'Borderline High Cholesterol',  'Total cholesterol 200–239 mg/dL. Make dietary changes: reduce saturated and trans fats, increase soluble fibre, and exercise 30 min/day. Recheck in 6 months.'),
-      _CholesterolCategory.high      => (const Color(0xFFEF4444), Icons.warning_rounded,       'High Cholesterol',             'Total cholesterol ≥ 240 mg/dL. Consult your doctor. Statin therapy may be needed alongside diet change and exercise to lower cardiovascular risk.'),
-      _CholesterolCategory.unknown   => (const Color(0xFF6B7280), Icons.info_outline,          'Cholesterol Guide',            'Optimal total cholesterol: < 200 mg/dL. Borderline high: 200–239. High: ≥ 240. LDL goal: < 100. HDL: > 60 is protective. Enter your reading for a personalised assessment.'),
-    };
-
-    _showVitalInfoSheet(
-      context,
-      color: color,
-      icon: icon,
-      label: label,
-      reading: val.isNotEmpty ? '$val $_cholesterolUnit (total)' : null,
-      detail: detail,
-      learnMoreUrl: 'https://medlineplus.gov/cholesterol.html',
-      learnMoreLabel: 'Learn more about cholesterol — MedlinePlus',
-    );
-  }
-
-  // ── Weight recommendation ─────────────────────────────────────────────────
-
-  _WeightCategory _classifyWeight() {
-    final raw = double.tryParse(_weightController.text.trim());
-    if (raw == null) return _WeightCategory.unknown;
-    // Normalise to lbs for thresholds
-    final lbs = _weightUnit == 'kg' ? raw * 2.20462 : raw;
-    if (lbs < 110) return _WeightCategory.low;
-    if (lbs <= 174) return _WeightCategory.normal;
-    if (lbs <= 239) return _WeightCategory.high;
-    return _WeightCategory.veryHigh;
-  }
-
-  void _showWeightRecommendation(BuildContext context) {
-    final cat = _classifyWeight();
-    final val = _weightController.text.trim();
-
-    final (Color color, IconData icon, String label, String detail) = switch (cat) {
-      _WeightCategory.low      => (const Color(0xFF3B82F6), Icons.arrow_downward,       'Low Weight',           'Your weight appears below average. If unintentional, consult your doctor to rule out nutritional deficiency or an underlying condition. Eat nutrient-dense foods and strength-train.'),
-      _WeightCategory.normal   => (const Color(0xFF22C55E), Icons.check_circle_outline, 'Healthy Weight Range', 'Your weight is within a typical healthy range. Maintain it with regular exercise, a balanced diet, and consistent sleep. Track trends rather than daily fluctuations.'),
-      _WeightCategory.high     => (const Color(0xFFEAB308), Icons.trending_up,          'Above Average Weight', 'Your weight is above the average healthy range. Aim for 30 min of moderate exercise 5 days a week, reduce processed food and sugary drinks, and track portion sizes.'),
-      _WeightCategory.veryHigh => (const Color(0xFFEF4444), Icons.warning_rounded,      'High Weight',          'Your weight may increase health risks such as diabetes, high BP, and joint problems. Consult your doctor for a personalised plan. Small sustainable changes make a big difference.'),
-      _WeightCategory.unknown  => (const Color(0xFF3B82F6), Icons.scale_outlined,       'Healthy Weight Tips',  'BMI = weight (kg) ÷ height (m)². Healthy BMI: 18.5–24.9. Overweight: 25–29.9. Obese: ≥ 30.\n\nWeigh yourself at the same time each day (morning, after bathroom). Aim for gradual change of 0.5–1 lb/week.'),
-    };
-
-    _showVitalInfoSheet(
-      context,
-      color: color,
-      icon: icon,
-      label: label,
-      reading: val.isNotEmpty ? '$val $_weightUnit' : null,
-      detail: '${detail}\n\nNote: These ranges are based on average adult weight. For a precise assessment, calculate your BMI using your height.',
-      learnMoreUrl: 'https://medlineplus.gov/weightcontrol.html',
-      learnMoreLabel: 'Learn more about healthy weight — MedlinePlus',
-    );
+  List<Widget> _historyRows(List<(String, DateTime)> history, Color color) {
+    if (history.isEmpty) return [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Text('Previous readings',
+            style: TextStyle(fontSize: 11, color: Colors.grey[400], fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+      ),
+      ...history.map((h) => _HistoryRow(label: h.$1, time: _formatDateTime(h.$2), accentColor: color)),
+      const Divider(height: 20, thickness: 0.5),
+    ];
   }
 
   List<Widget> _buildDailyFields(BuildContext context) => [
@@ -762,54 +514,23 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Blood Pressure',
       icon: Icons.favorite_outlined,
       iconColor: const Color(0xFFEF4444),
-      trailing: IconButton(
-        icon: Icon(Icons.lightbulb, size: 18, color: _bpBulbColor),
-        tooltip: _bpTooltip,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () => _showBpRecommendation(context),
-      ),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _systolicController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: _inputDecoration('Systolic', 'mmHg'),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 60 || n > 300) return '60–300';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text('/', style: TextStyle(fontSize: 24, color: Colors.grey[400], fontWeight: FontWeight.w300)),
-            ),
-            Expanded(
-              child: TextFormField(
-                controller: _diastolicController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: _inputDecoration('Diastolic', 'mmHg'),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 30 || n > 200) return '30–200';
-                  }
-                  return null;
-                },
-              ),
-            ),
-          ],
+        ..._bpReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _bpReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.systolic} / ${e.value.diastolic} mmHg',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFFEF4444),
+            onDelete: () => setState(() => _bpReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histBp, const Color(0xFFEF4444)),
+        _AddReadingButton(
+          label: _bpReadings.isEmpty ? 'Add BP Reading' : 'Add Another',
+          color: const Color(0xFFEF4444),
+          onPressed: () => _addBpReading(context),
         ),
-        const SizedBox(height: 8),
-        Text('e.g. 120 / 80', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
     const SizedBox(height: 16),
@@ -817,40 +538,33 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Sugar Level',
       icon: Icons.water_drop_outlined,
       iconColor: const Color(0xFFF97316),
-      trailing: IconButton(
-        icon: Icon(Icons.lightbulb, size: 18, color: _sugarBulbColor),
-        tooltip: _sugarTooltip,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () => _showSugarRecommendation(context),
+      trailing: _UnitToggle(
+        options: const ['mg/dL', 'mmol/L'],
+        selected: _sugarUnit,
+        color: const Color(0xFFF97316),
+        onChanged: (u) => setState(() => _sugarUnit = u),
       ),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _sugarController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: _inputDecoration('Blood Glucose', _sugarUnit),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final n = double.tryParse(v.trim());
-                    if (n == null || n <= 0) return 'Enter a valid value';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            _UnitToggle(
-              options: const ['mg/dL', 'mmol/L'],
-              selected: _sugarUnit,
-              color: const Color(0xFFF97316),
-              onChanged: (u) => setState(() => _sugarUnit = u),
-            ),
-          ],
+        ..._sugarReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _sugarReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_sugarUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFFF97316),
+            onDelete: () => setState(() => _sugarReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingSugarReadings, (v) => v.sugarReadings, _sugarUnit), const Color(0xFFF97316)),
+        _AddReadingButton(
+          label: _sugarReadings.isEmpty ? 'Add Sugar Reading' : 'Add Another',
+          color: const Color(0xFFF97316),
+          onPressed: () => _addVitalReading(
+            context, _sugarReadings, 'Blood Glucose', _sugarUnit, 'e.g. 95', const Color(0xFFF97316),
+          ),
         ),
+        const SizedBox(height: 4),
+        Text('Fasting normal: < 100 mg/dL', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
     const SizedBox(height: 16),
@@ -858,41 +572,32 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Cholesterol',
       icon: Icons.biotech_outlined,
       iconColor: const Color(0xFF8B5CF6),
-      trailing: IconButton(
-        icon: Icon(Icons.lightbulb, size: 18, color: _cholesterolBulbColor),
-        tooltip: _cholesterolTooltip,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () => _showCholesterolRecommendation(context),
+      trailing: _UnitToggle(
+        options: const ['mg/dL', 'mmol/L'],
+        selected: _cholesterolUnit,
+        color: const Color(0xFF8B5CF6),
+        onChanged: (u) => setState(() => _cholesterolUnit = u),
       ),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _cholesterolController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: _inputDecoration('Total Cholesterol', _cholesterolUnit),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final n = double.tryParse(v.trim());
-                    if (n == null || n <= 0) return 'Enter a valid value';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            _UnitToggle(
-              options: const ['mg/dL', 'mmol/L'],
-              selected: _cholesterolUnit,
-              color: const Color(0xFF8B5CF6),
-              onChanged: (u) => setState(() => _cholesterolUnit = u),
-            ),
-          ],
+        ..._cholesterolReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _cholesterolReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_cholesterolUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFF8B5CF6),
+            onDelete: () => setState(() => _cholesterolReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingCholesterolReadings, (v) => v.cholesterolReadings, _cholesterolUnit), const Color(0xFF8B5CF6)),
+        _AddReadingButton(
+          label: _cholesterolReadings.isEmpty ? 'Add Cholesterol Reading' : 'Add Another',
+          color: const Color(0xFF8B5CF6),
+          onPressed: () => _addVitalReading(
+            context, _cholesterolReadings, 'Total Cholesterol', _cholesterolUnit, 'e.g. 185', const Color(0xFF8B5CF6),
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text('Normal: below 200 mg/dL', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
@@ -901,50 +606,41 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       title: 'Weight',
       icon: Icons.scale_outlined,
       iconColor: const Color(0xFF3B82F6),
-      trailing: IconButton(
-        icon: Icon(Icons.lightbulb, size: 18, color: _weightBulbColor),
-        tooltip: _weightTooltip,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () => _showWeightRecommendation(context),
+      trailing: _UnitToggle(
+        options: const ['lbs', 'kg'],
+        selected: _weightUnit,
+        color: const Color(0xFF3B82F6),
+        onChanged: (u) => setState(() => _weightUnit = u),
       ),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _weightController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: _inputDecoration('Weight', _weightUnit),
-                validator: (v) {
-                  if (v != null && v.trim().isNotEmpty) {
-                    final n = double.tryParse(v.trim());
-                    if (n == null || n <= 0 || n > 500) return 'Enter a valid weight';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            _UnitToggle(
-              options: const ['kg', 'lbs'],
-              selected: _weightUnit,
-              color: const Color(0xFF3B82F6),
-              onChanged: (u) => setState(() => _weightUnit = u),
-            ),
-          ],
+        ..._weightReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _weightReadings.length - 1 - e.key;
+          return _ReadingRow(
+            label: '${e.value.value.toStringAsFixed(1)} $_weightUnit',
+            time: _formatTime(e.value.time),
+            notes: e.value.notes,
+            accentColor: const Color(0xFF3B82F6),
+            onDelete: () => setState(() => _weightReadings.removeAt(originalIndex)),
+          );
+        }),
+        ..._historyRows(_histVital(_existingWeightReadings, (v) => v.weightReadings, _weightUnit), const Color(0xFF3B82F6)),
+        _AddReadingButton(
+          label: _weightReadings.isEmpty ? 'Add Weight Reading' : 'Add Another',
+          color: const Color(0xFF3B82F6),
+          onPressed: () => _addVitalReading(
+            context, _weightReadings, 'Weight', _weightUnit, 'e.g. 155', const Color(0xFF3B82F6),
+          ),
         ),
       ],
     ),
   ];
 
-  // ── Misc fields (Period, Mammogram, Colonoscopy, Event/Procedure) ──────────
+  // ── Misc fields ───────────────────────────────────────────────────────────
 
   List<Widget> _buildMiscFields() => [
     if (_isFemale) ...[
       _SectionCard(
-        title: 'Last Period',
+        title: 'Period',
         icon: Icons.calendar_month_outlined,
         iconColor: _mauve,
         children: [
@@ -961,6 +657,15 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             },
             onClear: () => setState(() => _periodDate = null),
             formatDate: _formatDate,
+          ),
+          const SizedBox(height: 12),
+          Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _periodNotesController,
+            maxLines: 2,
+            maxLength: 300,
+            decoration: _inputDecoration('Any additional notes…', ''),
           ),
         ],
       ),
@@ -983,6 +688,25 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             },
             onClear: () => setState(() => _mammogramDate = null),
             formatDate: _formatDate,
+          ),
+          const SizedBox(height: 12),
+          Text('Location / Facility',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _mammogramLocationController,
+            maxLength: 150,
+            textCapitalization: TextCapitalization.words,
+            decoration: _inputDecoration('e.g. City Radiology Center…', ''),
+          ),
+          const SizedBox(height: 12),
+          Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _mammogramNotesController,
+            maxLines: 2,
+            maxLength: 300,
+            decoration: _inputDecoration('Any additional notes…', ''),
           ),
         ],
       ),
@@ -1007,6 +731,107 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           onClear: () => setState(() => _colonoscopyDate = null),
           formatDate: _formatDate,
         ),
+        const SizedBox(height: 12),
+        Text('Location / Facility',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _colonoscopyLocationController,
+          maxLength: 150,
+          textCapitalization: TextCapitalization.words,
+          decoration: _inputDecoration('e.g. Downtown Endoscopy Center…', ''),
+        ),
+        const SizedBox(height: 12),
+        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _colonoscopyNotesController,
+          maxLines: 2,
+          maxLength: 300,
+          decoration: _inputDecoration('Any additional notes…', ''),
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    _SectionCard(
+      title: 'Dental',
+      icon: Icons.health_and_safety_outlined,
+      iconColor: const Color(0xFF22C55E),
+      children: [
+        Text('Last dental visit date',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+        const SizedBox(height: 10),
+        _DatePickerTile(
+          date: _dentalDate,
+          hint: 'Tap to set last dental date',
+          color: const Color(0xFF22C55E),
+          onTap: () async {
+            final d = await _pickPastDate(_dentalDate, 'Dental');
+            if (d != null && mounted) setState(() => _dentalDate = d);
+          },
+          onClear: () => setState(() => _dentalDate = null),
+          formatDate: _formatDate,
+        ),
+        const SizedBox(height: 12),
+        Text('Location / Facility',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _dentalLocationController,
+          maxLength: 150,
+          textCapitalization: TextCapitalization.words,
+          decoration: _inputDecoration('e.g. Smile Dental Clinic…', ''),
+        ),
+        const SizedBox(height: 12),
+        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _dentalNotesController,
+          maxLines: 2,
+          maxLength: 300,
+          decoration: _inputDecoration('Any additional notes…', ''),
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    _SectionCard(
+      title: 'Eye Exam',
+      icon: Icons.visibility_outlined,
+      iconColor: const Color(0xFF8B5CF6),
+      children: [
+        Text('Last eye exam date',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+        const SizedBox(height: 10),
+        _DatePickerTile(
+          date: _eyeExamDate,
+          hint: 'Tap to set last eye exam date',
+          color: const Color(0xFF8B5CF6),
+          onTap: () async {
+            final d = await _pickPastDate(_eyeExamDate, 'Eye Exam');
+            if (d != null && mounted) setState(() => _eyeExamDate = d);
+          },
+          onClear: () => setState(() => _eyeExamDate = null),
+          formatDate: _formatDate,
+        ),
+        const SizedBox(height: 12),
+        Text('Location / Facility',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _eyeExamLocationController,
+          maxLength: 150,
+          textCapitalization: TextCapitalization.words,
+          decoration: _inputDecoration('e.g. Vision Care Clinic…', ''),
+        ),
+        const SizedBox(height: 12),
+        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: _eyeExamNotesController,
+          maxLines: 2,
+          maxLength: 300,
+          decoration: _inputDecoration('Any additional notes…', ''),
+        ),
       ],
     ),
     const SizedBox(height: 16),
@@ -1028,16 +853,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             return null;
           },
         ),
-        const SizedBox(height: 10),
-        Text('Doctor / Specialist',
+        const SizedBox(height: 12),
+        Text('Location / Facility',
             style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
-        _DoctorPickerTile(
-          selected: _selectedDoctor,
-          onTap: () => _showDoctorPicker(),
-          onClear: () => setState(() => _selectedDoctor = null),
+        TextFormField(
+          controller: _locationController,
+          maxLength: 150,
+          textCapitalization: TextCapitalization.words,
+          decoration: _inputDecoration('e.g. City Hospital, Downtown Clinic…', ''),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         Row(
           children: [
             Text('Event Date',
@@ -1072,7 +898,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       ],
     ),
   ];
-
 
   // ── Notes section ─────────────────────────────────────────────────────────
 
@@ -1148,7 +973,492 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   }
 }
 
-// ── Date picker tile ─────────────────────────────────────────────────────────
+// ── Reading row ───────────────────────────────────────────────────────────────
+
+// ── History row (read-only, no delete) ───────────────────────────────────────
+
+class _HistoryRow extends StatelessWidget {
+  final String label;
+  final String time;
+  final Color accentColor;
+
+  const _HistoryRow({
+    required this.label,
+    required this.time,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accentColor.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.history, size: 14, color: Colors.grey[400]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[600])),
+          ),
+          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Current-session reading row ───────────────────────────────────────────────
+
+class _ReadingRow extends StatelessWidget {
+  final String label;
+  final String time;
+  final String notes;
+  final Color accentColor;
+  final VoidCallback onDelete;
+
+  const _ReadingRow({
+    required this.label,
+    required this.time,
+    required this.notes,
+    required this.accentColor,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: accentColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notes.isNotEmpty ? '$time  ·  $notes' : time,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_outline, size: 18, color: Colors.grey[400]),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+        ),
+    );
+  }
+}
+
+// ── Add reading button ────────────────────────────────────────────────────────
+
+class _AddReadingButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _AddReadingButton({
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        icon: Icon(Icons.add, size: 16, color: color),
+        label: Text(label, style: TextStyle(color: color, fontSize: 13)),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+}
+
+// ── BP reading sheet ──────────────────────────────────────────────────────────
+
+class _BpReadingSheet extends StatefulWidget {
+  final BpReading? initial;
+  final Color accentColor;
+
+  const _BpReadingSheet({this.initial, required this.accentColor});
+
+  @override
+  State<_BpReadingSheet> createState() => _BpReadingSheetState();
+}
+
+class _BpReadingSheetState extends State<_BpReadingSheet> {
+  final _systolicCtrl  = TextEditingController();
+  final _diastolicCtrl = TextEditingController();
+  final _notesCtrl     = TextEditingController();
+  late DateTime _time;
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    _systolicCtrl.text  = init != null ? '${init.systolic}' : '';
+    _diastolicCtrl.text = init != null ? '${init.diastolic}' : '';
+    _notesCtrl.text     = init?.notes ?? '';
+    _time               = init?.time ?? DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _systolicCtrl.dispose();
+    _diastolicCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_time),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.light(primary: widget.accentColor),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _time = DateTime(_time.year, _time.month, _time.day, picked.hour, picked.minute);
+      });
+    }
+  }
+
+  String _fmt(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $period';
+  }
+
+  void _submit() {
+    final sys = int.tryParse(_systolicCtrl.text.trim());
+    final dia = int.tryParse(_diastolicCtrl.text.trim());
+    if (sys == null || dia == null || sys < 60 || sys > 300 || dia < 30 || dia > 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter valid systolic (60–300) and diastolic (30–200)')),
+      );
+      return;
+    }
+    final reading = BpReading(
+      id: widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      systolic: sys,
+      diastolic: dia,
+      time: _time,
+      notes: _notesCtrl.text.trim(),
+    );
+    Navigator.pop(context, reading);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ReadingSheetShell(
+      title: widget.initial != null ? 'Edit BP Reading' : 'Add BP Reading',
+      accentColor: widget.accentColor,
+      onSave: _submit,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _systolicCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: _sheetInput('Systolic', 'mmHg', widget.accentColor),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text('/', style: TextStyle(fontSize: 24, color: Colors.grey[400], fontWeight: FontWeight.w300)),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _diastolicCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: _sheetInput('Diastolic', 'mmHg', widget.accentColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _TimeRow(time: _fmt(_time), color: widget.accentColor, onTap: _pickTime),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _notesCtrl,
+            maxLines: 2,
+            maxLength: 200,
+            decoration: _sheetInput('Notes (optional)', '', widget.accentColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Generic vital reading sheet ───────────────────────────────────────────────
+
+class _VitalReadingSheet extends StatefulWidget {
+  final VitalReading? initial;
+  final String label;
+  final String unit;
+  final String hint;
+  final Color accentColor;
+
+  const _VitalReadingSheet({
+    this.initial,
+    required this.label,
+    required this.unit,
+    required this.hint,
+    required this.accentColor,
+  });
+
+  @override
+  State<_VitalReadingSheet> createState() => _VitalReadingSheetState();
+}
+
+class _VitalReadingSheetState extends State<_VitalReadingSheet> {
+  final _valueCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  late DateTime _time;
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    _valueCtrl.text = init != null ? init.value.toStringAsFixed(1) : '';
+    _notesCtrl.text = init?.notes ?? '';
+    _time           = init?.time ?? DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _valueCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_time),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.light(primary: widget.accentColor),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _time = DateTime(_time.year, _time.month, _time.day, picked.hour, picked.minute);
+      });
+    }
+  }
+
+  String _fmt(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $period';
+  }
+
+  void _submit() {
+    final val = double.tryParse(_valueCtrl.text.trim());
+    if (val == null || val <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Enter a valid ${widget.label.toLowerCase()} value')),
+      );
+      return;
+    }
+    final reading = VitalReading(
+      id: widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      value: val,
+      time: _time,
+      notes: _notesCtrl.text.trim(),
+    );
+    Navigator.pop(context, reading);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ReadingSheetShell(
+      title: widget.initial != null ? 'Edit ${widget.label}' : 'Add ${widget.label}',
+      accentColor: widget.accentColor,
+      onSave: _submit,
+      child: Column(
+        children: [
+          TextField(
+            controller: _valueCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: _sheetInput(widget.hint, widget.unit, widget.accentColor),
+          ),
+          const SizedBox(height: 12),
+          _TimeRow(time: _fmt(_time), color: widget.accentColor, onTap: _pickTime),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _notesCtrl,
+            maxLines: 2,
+            maxLength: 200,
+            decoration: _sheetInput('Notes (optional)', '', widget.accentColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shared shell for reading sheets ──────────────────────────────────────────
+
+class _ReadingSheetShell extends StatelessWidget {
+  final String title;
+  final Color accentColor;
+  final VoidCallback onSave;
+  final Widget child;
+
+  const _ReadingSheetShell({
+    required this.title,
+    required this.accentColor,
+    required this.onSave,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF484141))),
+          const SizedBox(height: 16),
+          child,
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              onPressed: onSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Save Reading', style: TextStyle(fontSize: 15)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Time row ──────────────────────────────────────────────────────────────────
+
+class _TimeRow extends StatelessWidget {
+  final String time;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TimeRow({required this.time, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.access_time, size: 18, color: color),
+            const SizedBox(width: 10),
+            Text(time, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+            const Spacer(),
+            Text('Tap to change', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _sheetInput(String label, String suffix, Color accentColor) {
+  return InputDecoration(
+    labelText: label,
+    suffixText: suffix.isNotEmpty ? suffix : null,
+    filled: true,
+    fillColor: const Color(0xFFF5F7FA),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.grey.shade200),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: accentColor),
+    ),
+  );
+}
+
+// ── Date picker tile ──────────────────────────────────────────────────────────
 
 class _DatePickerTile extends StatelessWidget {
   final DateTime? date;
@@ -1212,14 +1522,7 @@ class _DatePickerTile extends StatelessWidget {
   }
 }
 
-// ── BP category enum ──────────────────────────────────────────────────────────
-
-enum _BpCategory { unknown, low, normal, elevated, stage1, stage2, crisis }
-enum _SugarCategory { unknown, low, normal, preDiabetes, diabetic }
-enum _CholesterolCategory { unknown, optimal, borderline, high }
-enum _WeightCategory { unknown, low, normal, high, veryHigh }
-
-// ── Section card ─────────────────────────────────────────────────────────────
+// ── Section card ──────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -1291,15 +1594,16 @@ class _UnitToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: options.map((opt) {
         final isSelected = opt == selected;
         return GestureDetector(
           onTap: () => onChanged(opt),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.only(left: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: isSelected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -1311,7 +1615,7 @@ class _UnitToggle extends StatelessWidget {
             child: Text(
               opt,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? color : Colors.grey[500],
               ),
@@ -1466,131 +1770,6 @@ class _TipCard extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Doctor picker tile ────────────────────────────────────────────────────────
-
-class _DoctorPickerTile extends StatelessWidget {
-  final Doctor? selected;
-  final VoidCallback onTap;
-  final VoidCallback onClear;
-  const _DoctorPickerTile({required this.selected, required this.onTap, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: selected != null ? const Color(0xFF0EA5E9).withValues(alpha: 0.07) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected != null ? const Color(0xFF0EA5E9).withValues(alpha: 0.4) : Colors.grey.shade200,
-            width: selected != null ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.medical_services_outlined,
-                size: 18, color: selected != null ? const Color(0xFF0EA5E9) : Colors.grey[400]),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                selected?.fullName ?? 'Tap to select a doctor',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: selected != null ? const Color(0xFF484141) : Colors.grey[400],
-                  fontWeight: selected != null ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ),
-            if (selected != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
-              )
-            else
-              Icon(Icons.chevron_right, size: 18, color: Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Doctor picker bottom sheet ────────────────────────────────────────────────
-
-class _VitalDoctorPickerSheet extends StatelessWidget {
-  final List<Doctor> doctors;
-  final Doctor? selected;
-  final void Function(Doctor) onSelect;
-  final VoidCallback onAddNew;
-  const _VitalDoctorPickerSheet({required this.doctors, required this.selected, required this.onSelect, required this.onAddNew});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-          ),
-          const SizedBox(height: 16),
-          const Text('Select Doctor / Specialist',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF484141))),
-          const SizedBox(height: 12),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.45),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: doctors.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 48),
-              itemBuilder: (_, i) {
-                final d = doctors[i];
-                final isSelected = selected?.id == d.id;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFEFF6FF),
-                    child: Text(d.lastName.isNotEmpty ? d.lastName[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.w700)),
-                  ),
-                  title: Text(d.fullName,
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF484141))),
-                  subtitle: d.specialty.isNotEmpty
-                      ? Text(d.specialty, style: TextStyle(fontSize: 12, color: Colors.grey[500]))
-                      : null,
-                  trailing: isSelected ? const Icon(Icons.check_circle, color: Color(0xFF0EA5E9)) : null,
-                  onTap: () => onSelect(d),
-                );
-              },
-            ),
-          ),
-          const Divider(height: 24),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFFEFF6FF),
-              child: Icon(Icons.add, color: Color(0xFF0EA5E9)),
-            ),
-            title: const Text('Add New Doctor',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0EA5E9))),
-            onTap: onAddNew,
           ),
         ],
       ),

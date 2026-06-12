@@ -5,8 +5,8 @@ import '../models/prescription.dart';
 import '../models/appointment.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
-import '../models/doctor.dart';
 import '../models/allergy.dart';
+import '../models/doctor.dart';
 import '../models/insurance.dart';
 import '../services/storage_service.dart';
 import '../services/auth_service.dart';
@@ -45,7 +45,23 @@ const _pinkGradient = LinearGradient(
 class SummaryTab extends StatefulWidget {
   final void Function(int) onTabChange;
   final VoidCallback? onVitalChanged;
-  const SummaryTab({super.key, required this.onTabChange, this.onVitalChanged});
+  final VoidCallback? onAllergyChanged;
+  final VoidCallback? onPrescriptionChanged;
+  final VoidCallback? onAppointmentChanged;
+  final VoidCallback? onActivityChanged;
+  final VoidCallback? onDoctorChanged;
+  final VoidCallback? onInsuranceChanged;
+  const SummaryTab({
+    super.key,
+    required this.onTabChange,
+    this.onVitalChanged,
+    this.onAllergyChanged,
+    this.onPrescriptionChanged,
+    this.onAppointmentChanged,
+    this.onActivityChanged,
+    this.onDoctorChanged,
+    this.onInsuranceChanged,
+  });
 
   @override
   State<SummaryTab> createState() => SummaryTabState();
@@ -56,8 +72,8 @@ class SummaryTabState extends State<SummaryTab> {
   List<Appointment> _appointments = [];
   List<Vital> _vitals = [];
   List<Activity> _activities = [];
-  List<Doctor> _doctors = [];
   List<Allergy> _allergies = [];
+  List<Doctor> _doctors = [];
   List<Insurance> _insurances = [];
   String? _name;
   String? _sex;
@@ -80,8 +96,8 @@ class SummaryTabState extends State<SummaryTab> {
     List<Appointment> appointments = [];
     List<Vital> vitals = [];
     List<Activity> activities = [];
-    List<Doctor> doctors = [];
     List<Allergy> allergies = [];
+    List<Doctor> doctors = [];
     List<Insurance> insurances = [];
     String? name;
     String? sex;
@@ -92,8 +108,8 @@ class SummaryTabState extends State<SummaryTab> {
       StorageService.getAppointments().then((v) { appointments = v; }).catchError((_) {}),
       StorageService.getVitals().then((v) { vitals = v; }).catchError((_) {}),
       StorageService.getActivities().then((v) { activities = v; }).catchError((_) {}),
-      StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
       StorageService.getAllergies().then((v) { allergies = v; }).catchError((_) {}),
+      StorageService.getDoctors().then((v) { doctors = v; }).catchError((_) {}),
       StorageService.getInsurances().then((v) { insurances = v; }).catchError((_) {}),
       AuthService.getName().then((v) { name = v; }).catchError((_) {}),
       AuthService.getSex().then((v) { sex = v; }).catchError((_) {}),
@@ -116,8 +132,8 @@ class SummaryTabState extends State<SummaryTab> {
       _appointments = appointments;
       _vitals = vitals;
       _activities = activities;
-      _doctors = doctors;
       _allergies = allergies;
+      _doctors = doctors;
       _insurances = insurances;
       _name = name;
       _sex = sex;
@@ -446,103 +462,100 @@ class SummaryTabState extends State<SummaryTab> {
     return Tooltip(
       message: 'Tap to edit latest vitals',
       child: GestureDetector(
-      onTap: () async {
-        final result = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
-        );
-        if (result == true) {
-          _load();
-          widget.onVitalChanged?.call();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  _fmtDateTime(v.recordedAt),
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                      fontWeight: FontWeight.w500),
-                ),
-                const Spacer(),
-                const Icon(Icons.edit_outlined,
-                    size: 16, color: Color(0xFF501513)),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.favorite_outlined,
-                  label: 'Blood Pressure',
-                  value: v.bpDisplay,
-                  color: const Color(0xFFEF4444),
-                ),
-                const SizedBox(width: 10),
-                _VitalChip(
-                  icon: Icons.water_drop_outlined,
-                  label: 'Sugar Level',
-                  value: v.sugarDisplay,
-                  color: const Color(0xFFF97316),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _VitalChip(
-                  icon: Icons.scale_outlined,
-                  label: 'Weight',
-                  value: v.weightDisplay,
-                  color: const Color(0xFF3B82F6),
-                ),
-                const SizedBox(width: 10),
-                _VitalChip(
-                  icon: Icons.biotech_outlined,
-                  label: 'Cholesterol',
-                  value: v.cholesterolDisplay,
-                  color: const Color(0xFF8B5CF6),
-                ),
-              ],
-            ),
-            if (v.notes.isNotEmpty) ...[
-              const SizedBox(height: 10),
+        onTap: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
+          );
+          if (result == true) {
+            _load();
+            widget.onVitalChanged?.call();
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Icon(Icons.notes_outlined,
-                      size: 14, color: Colors.grey[400]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(v.notes,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey[500]),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
+                  Text(
+                    _fmtDateTime(v.recordedAt),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF501513)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _VitalChip(
+                    icon: Icons.favorite_outlined,
+                    label: 'Blood Pressure',
+                    value: v.bpDisplay,
+                    color: const Color(0xFFEF4444),
+                  ),
+                  const SizedBox(width: 10),
+                  _VitalChip(
+                    icon: Icons.water_drop_outlined,
+                    label: 'Sugar Level',
+                    value: v.sugarDisplay,
+                    color: const Color(0xFFF97316),
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _VitalChip(
+                    icon: Icons.scale_outlined,
+                    label: 'Weight',
+                    value: v.weightDisplay,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                  const SizedBox(width: 10),
+                  _VitalChip(
+                    icon: Icons.biotech_outlined,
+                    label: 'Cholesterol',
+                    value: v.cholesterolDisplay,
+                    color: const Color(0xFF8B5CF6),
+                  ),
+                ],
+              ),
+              if (v.notes.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.notes_outlined, size: 14, color: Colors.grey[400]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(v.notes,
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -574,7 +587,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddAppointmentScreen(existing: a)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onAppointmentChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -679,7 +695,10 @@ class SummaryTabState extends State<SummaryTab> {
           MaterialPageRoute(
               builder: (_) => AddPrescriptionScreen(existing: p)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onPrescriptionChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -779,100 +798,100 @@ class SummaryTabState extends State<SummaryTab> {
     final color = _activityColors[a.type] ?? const Color(0xFF22C55E);
     final icon  = _activityIcons[a.type]  ?? Icons.directions_walk;
 
-    return Tooltip(
-      message: 'Tap to edit activity',
-      child: GestureDetector(
-        onTap: () async {
-          final result = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
-          );
-          if (result == true) _load();
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => AddActivityScreen(existing: a)),
+        );
+        if (result == true) {
+          _load();
+          widget.onActivityChanged?.call();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(a.type,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Color(0xFF635A5A))),
-                        if (a.type == 'Walk') ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(a.walkType,
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: color)),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(_fmtDateTime(a.recordedAt),
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(a.displayValue,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: color)),
+                  Row(
+                    children: [
+                      Text(a.type,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Color(0xFF635A5A))),
+                      if (a.type == 'Walk') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(a.walkType,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: color)),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+                  const SizedBox(height: 2),
+                  Text(_fmtDateTime(a.recordedAt),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(a.displayValue,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: color)),
+                ),
+                const SizedBox(height: 4),
+                Icon(Icons.edit_outlined, size: 14, color: Colors.grey[400]),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -893,7 +912,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddDoctorScreen(existing: d)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onDoctorChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -958,6 +980,128 @@ class SummaryTabState extends State<SummaryTab> {
     );
   }
 
+  // ── Insurance row ──────────────────────────────────────────────────────────
+
+  Widget _buildInsuranceRow(Insurance ins) {
+    final typeColor = const {
+      'Health': Color(0xFF059669),
+      'Dental': Color(0xFF3B82F6),
+      'Vision': Color(0xFF8B5CF6),
+    }[ins.type] ?? const Color(0xFF059669);
+    final typeIcon = const {
+      'Health': Icons.health_and_safety_outlined,
+      'Dental': Icons.sentiment_satisfied_outlined,
+      'Vision': Icons.visibility_outlined,
+    }[ins.type] ?? Icons.health_and_safety_outlined;
+
+    final Color statusColor;
+    final String? statusBadge;
+
+    if (ins.isExpired) {
+      statusColor = const Color(0xFFEF4444);
+      statusBadge = 'Expired';
+    } else if (ins.isExpiringSoon) {
+      statusColor = const Color(0xFFF97316);
+      statusBadge = 'Expiring Soon';
+    } else if (ins.expirationDate != null) {
+      statusColor = typeColor;
+      statusBadge = 'Active';
+    } else {
+      statusColor = typeColor;
+      statusBadge = null;
+    }
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(builder: (_) => AddInsuranceScreen(existing: ins)),
+        );
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onInsuranceChanged?.call();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: (ins.isExpired || ins.isExpiringSoon)
+                ? statusColor.withValues(alpha: 0.3)
+                : Colors.grey.shade100,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: typeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(typeIcon, color: typeColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ins.providerName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Color(0xFF635A5A)),
+                  ),
+                  if (ins.planName.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(ins.planName,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: typeColor,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                  if (ins.memberId.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text('Member ID: ${ins.memberId}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+            if (statusBadge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(statusBadge,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor)),
+              ),
+            ],
+            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Allergy row ────────────────────────────────────────────────────────────
 
   Widget _buildAllergyRow(Allergy a) {
@@ -969,7 +1113,10 @@ class SummaryTabState extends State<SummaryTab> {
           context,
           MaterialPageRoute(builder: (_) => AddAllergyScreen(existing: a)),
         );
-        if (result == true || result == 'deleted') _load();
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onAllergyChanged?.call();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -1014,123 +1161,6 @@ class SummaryTabState extends State<SummaryTab> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Insurance row ──────────────────────────────────────────────────────────
-
-  Widget _buildInsuranceRow(Insurance ins) {
-    final typeColor = const {
-      'Health': Color(0xFF059669),
-      'Dental': Color(0xFF3B82F6),
-      'Vision': Color(0xFF8B5CF6),
-    }[ins.type] ?? const Color(0xFF059669);
-    final typeIcon = const {
-      'Health': Icons.health_and_safety_outlined,
-      'Dental': Icons.sentiment_satisfied_outlined,
-      'Vision': Icons.visibility_outlined,
-    }[ins.type] ?? Icons.health_and_safety_outlined;
-
-    final Color statusColor;
-    final String? statusBadge;
-
-    if (ins.isExpired) {
-      statusColor = const Color(0xFFEF4444);
-      statusBadge = 'Expired';
-    } else if (ins.isExpiringSoon) {
-      statusColor = const Color(0xFFF97316);
-      statusBadge = 'Expiring Soon';
-    } else if (ins.expirationDate != null) {
-      statusColor = typeColor;
-      statusBadge = 'Active';
-    } else {
-      statusColor = typeColor;
-      statusBadge = null;
-    }
-
-    return GestureDetector(
-      onTap: () async {
-        final result = await Navigator.push<dynamic>(
-          context,
-          MaterialPageRoute(builder: (_) => AddInsuranceScreen(existing: ins)),
-        );
-        if (result == true || result == 'deleted') _load();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: (ins.isExpired || ins.isExpiringSoon)
-                ? statusColor.withValues(alpha: 0.3)
-                : Colors.grey.shade100,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: typeColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(typeIcon, color: typeColor, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(ins.providerName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Color(0xFF635A5A))),
-                  if (ins.planName.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(ins.planName,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: typeColor,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                  if (ins.memberId.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text('Member ID: ${ins.memberId}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                ],
-              ),
-            ),
-            if (statusBadge != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(statusBadge,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor)),
-              ),
-            ],
             const Icon(Icons.chevron_right, color: Color(0xFFCBD5E1), size: 18),
           ],
         ),
@@ -1281,8 +1311,7 @@ class _VitalChip extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color:
-                              value == '—' ? Colors.grey[400] : color)),
+                          color: value == '—' ? Colors.grey[400] : color)),
                 ],
               ),
             ),

@@ -10,8 +10,11 @@ class BiometricService {
     try {
       final supported = await _auth.isDeviceSupported();
       if (!supported) return false;
-      // canCheckBiometrics is more reliable than getAvailableBiometrics on Android
-      return await _auth.canCheckBiometrics;
+      if (await _auth.canCheckBiometrics) return true;
+      // Fallback for iOS 15+ where canCheckBiometrics can return false
+      // even when Face ID / Touch ID hardware is present and enrolled.
+      final biometrics = await _auth.getAvailableBiometrics();
+      return biometrics.isNotEmpty;
     } catch (_) {
       return false;
     }
@@ -40,10 +43,8 @@ class BiometricService {
     try {
       final success = await _auth.authenticate(
         localizedReason: reason,
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          stickyAuth: true,
-        ),
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
       );
       return (success, null);
     } on PlatformException catch (e) {
@@ -53,15 +54,18 @@ class BiometricService {
     }
   }
 
-  static String _errorMessage(String code) => switch (code) {
-    'NotAvailable' =>
-      'Biometric authentication is not available on this device.',
-    'NotEnrolled' =>
-      'No biometrics enrolled. Set up fingerprint or face unlock in device Settings first.',
-    'LockedOut' =>
-      'Too many failed attempts. Please try again later or use your password.',
-    'PermanentlyLockedOut' =>
-      'Biometrics are permanently locked. Unlock your device with your PIN first.',
-    _ => 'Authentication error ($code). Please try again.',
-  };
+  static String _errorMessage(String code) {
+    switch (code.toLowerCase()) {
+      case 'notavailable':
+        return 'Biometric authentication is not available on this device.';
+      case 'notenrolled':
+        return 'No biometrics enrolled. Set up fingerprint or face unlock in device Settings first.';
+      case 'lockedout':
+        return 'Too many failed attempts. Please try again later or use your password.';
+      case 'permanentlylockedout':
+        return 'Biometrics are permanently locked. Unlock your device with your PIN first.';
+      default:
+        return 'Authentication error ($code). Please try again.';
+    }
+  }
 }

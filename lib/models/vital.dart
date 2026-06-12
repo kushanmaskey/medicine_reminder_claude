@@ -1,52 +1,96 @@
+import 'dart:convert';
+import 'vital_reading.dart';
+
 class Vital {
   final String id;
   final DateTime recordedAt;
   final String category; // 'daily' | 'monthly' | 'open'
-  final String eventName; // used by 'open' category
-  final int? bpSystolic;
-  final int? bpDiastolic;
-  final double? weight;
+  final String eventName;
+
+  // Daily — multiple readings per type
+  final List<BpReading> bpReadings;
+  final List<VitalReading> sugarReadings;
+  final List<VitalReading> cholesterolReadings;
+  final List<VitalReading> weightReadings;
+
+  // Units (section-level)
   final String weightUnit;
-  final double? sugarLevel;
   final String sugarUnit;
-  final double? cholesterol;
   final String cholesterolUnit;
+
+  // Misc fields
   final DateTime? colonoscopyDate;
+  final String colonoscopyLocation;
+  final String colonoscopyNotes;
   final DateTime? periodDate;
+  final String periodNotes;
   final DateTime? mammogramDate;
+  final String mammogramLocation;
+  final String mammogramNotes;
+  final DateTime? dentalDate;
+  final String dentalLocation;
+  final String dentalNotes;
+  final DateTime? eyeExamDate;
+  final String eyeExamLocation;
+  final String eyeExamNotes;
+
   final String riskLevel;
   final String notes;
   final String? doctorId;
+  final String location;
 
   Vital({
     required this.id,
     required this.recordedAt,
     this.category = 'daily',
     this.eventName = '',
-    this.bpSystolic,
-    this.bpDiastolic,
-    this.weight,
+    this.bpReadings = const [],
+    this.sugarReadings = const [],
+    this.cholesterolReadings = const [],
+    this.weightReadings = const [],
     this.weightUnit = 'lbs',
-    this.sugarLevel,
     this.sugarUnit = 'mg/dL',
-    this.cholesterol,
     this.cholesterolUnit = 'mg/dL',
     this.colonoscopyDate,
+    this.colonoscopyLocation = '',
+    this.colonoscopyNotes = '',
     this.periodDate,
+    this.periodNotes = '',
     this.mammogramDate,
+    this.mammogramLocation = '',
+    this.mammogramNotes = '',
+    this.dentalDate,
+    this.dentalLocation = '',
+    this.dentalNotes = '',
+    this.eyeExamDate,
+    this.eyeExamLocation = '',
+    this.eyeExamNotes = '',
     required this.riskLevel,
     this.notes = '',
     this.doctorId,
+    this.location = '',
   });
 
-  bool get hasBP => bpSystolic != null && bpDiastolic != null;
-  String get bpDisplay => hasBP ? '$bpSystolic/$bpDiastolic mmHg' : '—';
-  String get weightDisplay =>
-      weight != null ? '${weight!.toStringAsFixed(1)} $weightUnit' : '—';
-  String get sugarDisplay =>
-      sugarLevel != null ? '${sugarLevel!.toStringAsFixed(1)} $sugarUnit' : '—';
-  String get cholesterolDisplay =>
-      cholesterol != null ? '${cholesterol!.toStringAsFixed(1)} $cholesterolUnit' : '—';
+  // Display getters — use latest reading
+  bool get hasBP => bpReadings.isNotEmpty;
+  String get bpDisplay => hasBP
+      ? '${bpReadings.last.systolic}/${bpReadings.last.diastolic} mmHg'
+      : '—';
+
+  bool get hasWeight => weightReadings.isNotEmpty;
+  String get weightDisplay => hasWeight
+      ? '${weightReadings.last.value.toStringAsFixed(1)} $weightUnit'
+      : '—';
+
+  bool get hasSugar => sugarReadings.isNotEmpty;
+  String get sugarDisplay => hasSugar
+      ? '${sugarReadings.last.value.toStringAsFixed(1)} $sugarUnit'
+      : '—';
+
+  bool get hasCholesterol => cholesterolReadings.isNotEmpty;
+  String get cholesterolDisplay => hasCholesterol
+      ? '${cholesterolReadings.last.value.toStringAsFixed(1)} $cholesterolUnit'
+      : '—';
 
   static String _fmtDate(DateTime dt) {
     const months = [
@@ -68,20 +112,31 @@ class Vital {
         'recordedAt': recordedAt.toIso8601String(),
         'category': category,
         'eventName': eventName,
-        'bpSystolic': bpSystolic,
-        'bpDiastolic': bpDiastolic,
-        'weight': weight,
+        'bpReadings': bpReadings.map((r) => r.toJson()).toList(),
+        'sugarReadings': sugarReadings.map((r) => r.toJson()).toList(),
+        'cholesterolReadings': cholesterolReadings.map((r) => r.toJson()).toList(),
+        'weightReadings': weightReadings.map((r) => r.toJson()).toList(),
         'weightUnit': weightUnit,
-        'sugarLevel': sugarLevel,
         'sugarUnit': sugarUnit,
-        'cholesterol': cholesterol,
         'cholesterolUnit': cholesterolUnit,
         'colonoscopyDate': colonoscopyDate?.toIso8601String(),
+        if (colonoscopyLocation.isNotEmpty) 'colonoscopyLocation': colonoscopyLocation,
+        if (colonoscopyNotes.isNotEmpty) 'colonoscopyNotes': colonoscopyNotes,
         'periodDate': periodDate?.toIso8601String(),
+        if (periodNotes.isNotEmpty) 'periodNotes': periodNotes,
         'mammogramDate': mammogramDate?.toIso8601String(),
+        if (mammogramLocation.isNotEmpty) 'mammogramLocation': mammogramLocation,
+        if (mammogramNotes.isNotEmpty) 'mammogramNotes': mammogramNotes,
+        'dentalDate': dentalDate?.toIso8601String(),
+        if (dentalLocation.isNotEmpty) 'dentalLocation': dentalLocation,
+        if (dentalNotes.isNotEmpty) 'dentalNotes': dentalNotes,
+        'eyeExamDate': eyeExamDate?.toIso8601String(),
+        if (eyeExamLocation.isNotEmpty) 'eyeExamLocation': eyeExamLocation,
+        if (eyeExamNotes.isNotEmpty) 'eyeExamNotes': eyeExamNotes,
         'riskLevel': riskLevel,
         'notes': notes,
         'doctorId': doctorId,
+        if (location.isNotEmpty) 'location': location,
       };
 
   static DateTime? _tryParse(dynamic value) {
@@ -89,24 +144,126 @@ class Vital {
     try { return DateTime.parse(value as String).toLocal(); } catch (_) { return null; }
   }
 
-  factory Vital.fromJson(Map<String, dynamic> json) => Vital(
-        id: json['id'],
-        recordedAt: _tryParse(json['recordedAt']) ?? DateTime.now(),
-        category: json['category'] ?? 'daily',
-        eventName: json['eventName'] ?? '',
-        bpSystolic: json['bpSystolic'],
-        bpDiastolic: json['bpDiastolic'],
-        weight: (json['weight'] as num?)?.toDouble(),
-        weightUnit: json['weightUnit'] ?? 'lbs',
-        sugarLevel: (json['sugarLevel'] as num?)?.toDouble(),
-        sugarUnit: json['sugarUnit'] ?? 'mg/dL',
-        cholesterol: (json['cholesterol'] as num?)?.toDouble(),
-        cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
-        colonoscopyDate: _tryParse(json['colonoscopyDate']),
-        periodDate: _tryParse(json['periodDate']),
-        mammogramDate: _tryParse(json['mammogramDate']),
-        riskLevel: json['riskLevel'] ?? 'Low',
-        notes: json['notes'] ?? '',
-        doctorId: json['doctorId'] as String?,
-      );
+  factory Vital.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String;
+    final recordedAt = _tryParse(json['recordedAt']) ?? DateTime.now();
+
+    // readings_data (full multi-reading persistence) takes priority when present
+    Map<String, dynamic>? rd;
+    final rdRaw = json['readings_data'];
+    if (rdRaw != null) {
+      try {
+        rd = (rdRaw is String ? jsonDecode(rdRaw) : rdRaw) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+
+    // BP readings: readings_data > bpReadings list > legacy single-value columns
+    List<BpReading> bpReadings = [];
+    final rdBp = rd?['bp'] as List?;
+    if (rdBp != null && rdBp.isNotEmpty) {
+      bpReadings = rdBp.map((e) => BpReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['bpReadings'] != null) {
+      bpReadings = (json['bpReadings'] as List)
+          .map((e) => BpReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json['bpSystolic'] != null && json['bpDiastolic'] != null) {
+      bpReadings = [
+        BpReading(
+          id: '${id}_bp_0',
+          systolic: json['bpSystolic'] as int,
+          diastolic: json['bpDiastolic'] as int,
+          time: recordedAt,
+        )
+      ];
+    }
+
+    // Sugar readings
+    List<VitalReading> sugarReadings = [];
+    final rdSugar = rd?['sugar'] as List?;
+    if (rdSugar != null && rdSugar.isNotEmpty) {
+      sugarReadings = rdSugar.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['sugarReadings'] != null) {
+      sugarReadings = (json['sugarReadings'] as List)
+          .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json['sugarLevel'] != null) {
+      sugarReadings = [
+        VitalReading(
+          id: '${id}_sugar_0',
+          value: (json['sugarLevel'] as num).toDouble(),
+          time: recordedAt,
+        )
+      ];
+    }
+
+    // Cholesterol readings
+    List<VitalReading> cholesterolReadings = [];
+    final rdChol = rd?['cholesterol'] as List?;
+    if (rdChol != null && rdChol.isNotEmpty) {
+      cholesterolReadings = rdChol.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['cholesterolReadings'] != null) {
+      cholesterolReadings = (json['cholesterolReadings'] as List)
+          .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json['cholesterol'] != null) {
+      cholesterolReadings = [
+        VitalReading(
+          id: '${id}_chol_0',
+          value: (json['cholesterol'] as num).toDouble(),
+          time: recordedAt,
+        )
+      ];
+    }
+
+    // Weight readings
+    List<VitalReading> weightReadings = [];
+    final rdWeight = rd?['weight'] as List?;
+    if (rdWeight != null && rdWeight.isNotEmpty) {
+      weightReadings = rdWeight.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['weightReadings'] != null) {
+      weightReadings = (json['weightReadings'] as List)
+          .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json['weight'] != null) {
+      weightReadings = [
+        VitalReading(
+          id: '${id}_weight_0',
+          value: (json['weight'] as num).toDouble(),
+          time: recordedAt,
+        )
+      ];
+    }
+
+    return Vital(
+      id: id,
+      recordedAt: recordedAt,
+      category: json['category'] ?? 'daily',
+      eventName: json['eventName'] ?? '',
+      bpReadings: bpReadings,
+      sugarReadings: sugarReadings,
+      cholesterolReadings: cholesterolReadings,
+      weightReadings: weightReadings,
+      weightUnit: json['weightUnit'] ?? 'lbs',
+      sugarUnit: json['sugarUnit'] ?? 'mg/dL',
+      cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
+      colonoscopyDate: _tryParse(json['colonoscopyDate']),
+      colonoscopyLocation: json['colonoscopyLocation'] ?? '',
+      colonoscopyNotes: json['colonoscopyNotes'] ?? '',
+      periodDate: _tryParse(json['periodDate']),
+      periodNotes: json['periodNotes'] ?? '',
+      mammogramDate: _tryParse(json['mammogramDate']),
+      mammogramLocation: json['mammogramLocation'] ?? '',
+      mammogramNotes: json['mammogramNotes'] ?? '',
+      dentalDate: _tryParse(json['dentalDate']),
+      dentalLocation: json['dentalLocation'] ?? '',
+      dentalNotes: json['dentalNotes'] ?? '',
+      eyeExamDate: _tryParse(json['eyeExamDate']),
+      eyeExamLocation: json['eyeExamLocation'] ?? '',
+      eyeExamNotes: json['eyeExamNotes'] ?? '',
+      riskLevel: json['riskLevel'] ?? 'Low',
+      notes: json['notes'] ?? '',
+      doctorId: json['doctorId'] as String?,
+      location: json['location'] ?? '',
+    );
+  }
 }

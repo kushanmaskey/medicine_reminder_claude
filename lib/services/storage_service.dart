@@ -8,8 +8,8 @@ import '../models/appointment.dart';
 import '../models/appointment_alert.dart';
 import '../models/vital.dart';
 import '../models/activity.dart';
-import '../models/doctor.dart';
 import '../models/allergy.dart';
+import '../models/doctor.dart';
 import '../models/insurance.dart';
 import 'auth_service.dart';
 
@@ -321,75 +321,104 @@ class StorageService {
   }
 
   static Future<void> saveVital(Vital v) async {
-    await _db.from('vitals').insert({
-      'id': v.id,
-      'user_id': _uid,
-      'recorded_at': v.recordedAt.toUtc().toIso8601String(),
-      'category': v.category,
-      'event_name': v.eventName,
-      'bp_systolic': v.bpSystolic,
-      'bp_diastolic': v.bpDiastolic,
-      'weight': v.weight,
-      'weight_unit': v.weightUnit,
-      'sugar_level': v.sugarLevel,
-      'sugar_unit': v.sugarUnit,
-      'cholesterol': v.cholesterol,
-      'cholesterol_unit': v.cholesterolUnit,
-      'colonoscopy_date': v.colonoscopyDate?.toIso8601String(),
-      'period_date': v.periodDate?.toIso8601String(),
-      'mammogram_date': v.mammogramDate?.toIso8601String(),
-      'risk_level': v.riskLevel,
-      'notes': v.notes,
-      'doctor_id': v.doctorId,
-    });
+    final row = _vitalToRow(v, uid: _uid);
+    try {
+      await _db.from('vitals').insert(row);
+    } on PostgrestException catch (e) {
+      if (e.code == '42703' || (e.message).contains('readings_data')) {
+        row.remove('readings_data');
+        await _db.from('vitals').insert(row);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   static Future<void> updateVital(Vital v) async {
-    await _db.from('vitals').update({
-      'recorded_at': v.recordedAt.toUtc().toIso8601String(),
-      'category': v.category,
-      'event_name': v.eventName,
-      'bp_systolic': v.bpSystolic,
-      'bp_diastolic': v.bpDiastolic,
-      'weight': v.weight,
-      'weight_unit': v.weightUnit,
-      'sugar_level': v.sugarLevel,
-      'sugar_unit': v.sugarUnit,
-      'cholesterol': v.cholesterol,
-      'cholesterol_unit': v.cholesterolUnit,
-      'colonoscopy_date': v.colonoscopyDate?.toIso8601String(),
-      'period_date': v.periodDate?.toIso8601String(),
-      'mammogram_date': v.mammogramDate?.toIso8601String(),
-      'risk_level': v.riskLevel,
-      'notes': v.notes,
-      'doctor_id': v.doctorId,
-    }).eq('id', v.id).eq('user_id', _uid);
+    final row = _vitalToRow(v, uid: _uid)..remove('id')..remove('user_id');
+    try {
+      await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+    } on PostgrestException catch (e) {
+      if (e.code == '42703' || (e.message).contains('readings_data')) {
+        row.remove('readings_data');
+        await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+      } else {
+        rethrow;
+      }
+    }
   }
+
+  static Map<String, dynamic> _vitalToRow(Vital v, {required String uid}) => {
+    'id': v.id,
+    'user_id': uid,
+    'recorded_at': v.recordedAt.toUtc().toIso8601String(),
+    'category': v.category,
+    'event_name': v.eventName,
+    // Single-value columns (existing schema) — store last reading for backward compat
+    'bp_systolic': v.hasBP ? v.bpReadings.last.systolic : null,
+    'bp_diastolic': v.hasBP ? v.bpReadings.last.diastolic : null,
+    'weight': v.hasWeight ? v.weightReadings.last.value : null,
+    'weight_unit': v.weightUnit,
+    'sugar_level': v.hasSugar ? v.sugarReadings.last.value : null,
+    'sugar_unit': v.sugarUnit,
+    'cholesterol': v.hasCholesterol ? v.cholesterolReadings.last.value : null,
+    'cholesterol_unit': v.cholesterolUnit,
+    // Full multi-reading data (requires readings_data TEXT column in Supabase)
+    if (v.category == 'daily') 'readings_data': jsonEncode({
+      'bp': v.bpReadings.map((r) => r.toJson()).toList(),
+      'sugar': v.sugarReadings.map((r) => r.toJson()).toList(),
+      'cholesterol': v.cholesterolReadings.map((r) => r.toJson()).toList(),
+      'weight': v.weightReadings.map((r) => r.toJson()).toList(),
+    }),
+    // Original misc date columns (existing schema)
+    'colonoscopy_date': v.colonoscopyDate?.toIso8601String(),
+    'period_date': v.periodDate?.toIso8601String(),
+    'mammogram_date': v.mammogramDate?.toIso8601String(),
+    'risk_level': v.riskLevel,
+    'notes': v.notes,
+    'doctor_id': v.doctorId,
+  };
 
   static Future<void> deleteVital(String id) async {
     await _db.from('vitals').delete().eq('id', id).eq('user_id', _uid);
   }
 
-  static Map<String, dynamic> _vitalFromRow(Map<String, dynamic> r) => {
-    'id': r['id'],
-    'recordedAt': r['recorded_at'],
-    'category': r['category'] ?? 'daily',
-    'eventName': r['event_name'] ?? '',
-    'bpSystolic': r['bp_systolic'],
-    'bpDiastolic': r['bp_diastolic'],
-    'weight': r['weight'],
-    'weightUnit': r['weight_unit'] ?? 'lbs',
-    'sugarLevel': r['sugar_level'],
-    'sugarUnit': r['sugar_unit'] ?? 'mg/dL',
-    'cholesterol': r['cholesterol'],
-    'cholesterolUnit': r['cholesterol_unit'] ?? 'mg/dL',
-    'colonoscopyDate': r['colonoscopy_date'],
-    'periodDate': r['period_date'],
-    'mammogramDate': r['mammogram_date'],
-    'riskLevel': r['risk_level'] ?? 'Low',
-    'notes': r['notes'] ?? '',
-    'doctorId': r['doctor_id'],
-  };
+  static Map<String, dynamic> _vitalFromRow(Map<String, dynamic> r) {
+    return {
+      'id': r['id'],
+      'recordedAt': r['recorded_at'],
+      'category': r['category'] ?? 'daily',
+      'eventName': r['event_name'] ?? '',
+      // Legacy single-value columns — Vital.fromJson migrates these to reading lists
+      'bpSystolic': r['bp_systolic'],
+      'bpDiastolic': r['bp_diastolic'],
+      'weight': r['weight'],
+      'sugarLevel': r['sugar_level'],
+      'cholesterol': r['cholesterol'],
+      'weightUnit': r['weight_unit'] ?? 'lbs',
+      'sugarUnit': r['sugar_unit'] ?? 'mg/dL',
+      'cholesterolUnit': r['cholesterol_unit'] ?? 'mg/dL',
+      'colonoscopyDate': r['colonoscopy_date'],
+      'colonoscopyLocation': r['colonoscopy_location'] ?? '',
+      'colonoscopyNotes': r['colonoscopy_notes'] ?? '',
+      'periodDate': r['period_date'],
+      'periodNotes': r['period_notes'] ?? '',
+      'mammogramDate': r['mammogram_date'],
+      'mammogramLocation': r['mammogram_location'] ?? '',
+      'mammogramNotes': r['mammogram_notes'] ?? '',
+      'dentalDate': r['dental_date'],
+      'dentalLocation': r['dental_location'] ?? '',
+      'dentalNotes': r['dental_notes'] ?? '',
+      'eyeExamDate': r['eye_exam_date'],
+      'eyeExamLocation': r['eye_exam_location'] ?? '',
+      'eyeExamNotes': r['eye_exam_notes'] ?? '',
+      'riskLevel': r['risk_level'] ?? 'Low',
+      'notes': r['notes'] ?? '',
+      'doctorId': r['doctor_id'],
+      'location': r['location'] ?? '',
+      'readings_data': r['readings_data'],
+    };
+  }
 
   // ── Activities ────────────────────────────────────────────────────────────
 
@@ -502,23 +531,6 @@ class StorageService {
     await _db.from('doctors').delete().eq('id', id).eq('user_id', _uid);
   }
 
-  // ── User Consents ─────────────────────────────────────────────────────────
-
-  static Future<void> saveConsent({
-    required String email,
-    required DateTime agreedAt,
-    String termsVersion = '1.0',
-  }) async {
-    await _db.from('user_consents').insert({
-      'id': agreedAt.millisecondsSinceEpoch.toString(),
-      'user_id': _uid,
-      'email': email,
-      'agreed_at': agreedAt.toUtc().toIso8601String(),
-      'terms_version': termsVersion,
-      'agreed': true,
-    });
-  }
-
   // ── Insurance ─────────────────────────────────────────────────────────────
 
   static Future<List<Insurance>> getInsurances() async {
@@ -593,10 +605,27 @@ class StorageService {
     await _db.from('insurance').delete().eq('id', id).eq('user_id', _uid);
   }
 
-  // ── Allergies ─────────────────────────────────────────────────────────────
+  // ── User Consents ─────────────────────────────────────────────────────────
 
+  static Future<void> saveConsent({
+    required String email,
+    required DateTime agreedAt,
+    String termsVersion = '1.0',
+  }) async {
+    await _db.from('user_consents').insert({
+      'id': agreedAt.millisecondsSinceEpoch.toString(),
+      'user_id': _uid,
+      'email': email,
+      'agreed_at': agreedAt.toUtc().toIso8601String(),
+      'terms_version': termsVersion,
+      'agreed': true,
+    });
+  }
+
+  // ── Allergies (Supabase) ──────────────────────────────────────────────────
+
+  // Legacy SharedPreferences key — used only for one-time migration.
   static String get _allergiesLocalKey => 'allergies_$_uid';
-
   static Future<void> _migrateLocalAllergies() async {
     try {
       final prefs = await SharedPreferences.getInstance();
