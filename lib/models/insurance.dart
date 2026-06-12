@@ -12,6 +12,7 @@ class Insurance {
   final String copay;
   final String deductible;
   final String notes;
+  final DateTime? createdAt;
 
   Insurance({
     required this.id,
@@ -27,6 +28,7 @@ class Insurance {
     this.copay = '',
     this.deductible = '',
     this.notes = '',
+    this.createdAt,
   });
 
   bool get isExpired {

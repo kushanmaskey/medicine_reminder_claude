@@ -13,8 +13,8 @@ import '../tabs/appointments_tab.dart';
 import '../tabs/vitals_tab.dart';
 import '../tabs/activities_tab.dart';
 import '../tabs/doctors_tab.dart';
-import '../tabs/allergies_tab.dart';
 import '../tabs/insurance_tab.dart';
+import '../tabs/allergies_tab.dart';
 import 'biometric_lock_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
@@ -64,8 +64,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _vitalsKey = GlobalKey<VitalsTabState>();
   final _activitiesKey = GlobalKey<ActivitiesTabState>();
   final _doctorsKey = GlobalKey<DoctorsTabState>();
-  final _allergiesKey = GlobalKey<AllergiesTabState>();
   final _insuranceKey = GlobalKey<InsuranceTabState>();
+  final _allergiesKey = GlobalKey<AllergiesTabState>();
 
   final List<String> _titles = ['Summary', 'Doctors', 'Insurance', 'Prescriptions', 'Appointments', 'Vitals', 'Activities', 'Allergies'];
 
@@ -300,6 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_currentIndex == 7) {
       await _allergiesKey.currentState?.openAdd();
       _summaryKey.currentState?.reload();
+      setState(() {});
       return;
     }
 
@@ -490,14 +491,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.medical_services_outlined),
-            selectedIcon:
-                Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
+            selectedIcon: Icon(Icons.medical_services, color: Color(0xFF0EA5E9)),
             label: 'Doctors',
           ),
           NavigationDestination(
             icon: Icon(Icons.health_and_safety_outlined),
-            selectedIcon:
-                Icon(Icons.health_and_safety, color: Color(0xFF059669)),
+            selectedIcon: Icon(Icons.health_and_safety, color: Color(0xFF059669)),
             label: 'Insurance',
           ),
           NavigationDestination(
@@ -507,26 +506,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon:
-                Icon(Icons.calendar_month, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.calendar_month, color: Color(0xFF501513)),
             label: 'Appointments',
           ),
           NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
-            selectedIcon:
-                Icon(Icons.monitor_heart, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.monitor_heart, color: Color(0xFF501513)),
             label: 'Vitals',
           ),
           NavigationDestination(
             icon: Icon(Icons.directions_walk_outlined),
-            selectedIcon:
-                Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
+            selectedIcon: Icon(Icons.directions_walk, color: Color(0xFF22C55E)),
             label: 'Activities',
           ),
           NavigationDestination(
             icon: Icon(Icons.coronavirus_outlined),
-            selectedIcon:
-                Icon(Icons.coronavirus, color: Color(0xFFF59E0B)),
+            selectedIcon: Icon(Icons.coronavirus, color: Color(0xFFF59E0B)),
             label: 'Allergies',
           ),
         ],

@@ -189,15 +189,16 @@ class SummaryTabState extends State<SummaryTab> {
           const SizedBox(height: 16),
           _buildStatsRow(),
           const SizedBox(height: 24),
-          _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
-              onViewAll: () => widget.onTabChange(1)),
-          const SizedBox(height: 10),
-          if (_doctors.isEmpty)
-            _buildEmptyState('No doctors added',
-                'Tap + on the Doctors tab to add one')
-          else
-            ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
-          const SizedBox(height: 24),
+          if (_latestVitals.isNotEmpty) ...[
+            _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
+                onViewAll: () => widget.onTabChange(5)),
+            const SizedBox(height: 10),
+            ..._latestVitals.map((v) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildLatestVitalsCard(v),
+            )),
+            const SizedBox(height: 14),
+          ],
           _buildSectionHeader('Upcoming Appointments',
               Icons.calendar_today_outlined,
               onViewAll: () => widget.onTabChange(4)),
@@ -217,16 +218,6 @@ class SummaryTabState extends State<SummaryTab> {
           else
             ..._rxPrescriptions.take(3).map((p) => _buildPrescriptionRow(p)),
           const SizedBox(height: 24),
-          if (_latestVitals.isNotEmpty) ...[
-            _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
-                onViewAll: () => widget.onTabChange(4)),
-            const SizedBox(height: 10),
-            ..._latestVitals.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildLatestVitalsCard(v),
-            )),
-            const SizedBox(height: 24),
-          ],
           _buildSectionHeader('Recent Activities', Icons.directions_walk_outlined,
               onViewAll: () => widget.onTabChange(6)),
           const SizedBox(height: 10),
@@ -245,6 +236,15 @@ class SummaryTabState extends State<SummaryTab> {
           else
             ..._allergies.take(3).map((a) => _buildAllergyRow(a)),
           const SizedBox(height: 24),
+          _buildSectionHeader('My Doctors', Icons.medical_services_outlined,
+              onViewAll: () => widget.onTabChange(1)),
+          const SizedBox(height: 10),
+          if (_doctors.isEmpty)
+            _buildEmptyState('No doctors added',
+                'Tap + on the Doctors tab to add one')
+          else
+            ..._doctors.take(3).map((d) => _buildDoctorRow(d)),
+          const SizedBox(height: 24),
           _buildSectionHeader('Insurance', Icons.health_and_safety_outlined,
               onViewAll: () => widget.onTabChange(2)),
           const SizedBox(height: 10),
@@ -253,9 +253,9 @@ class SummaryTabState extends State<SummaryTab> {
                 'Tap + on the Insurance tab to add one')
           else
             ...[
-              _insurances.where((i) => i.type == 'Health').lastOrNull,
-              _insurances.where((i) => i.type == 'Dental').lastOrNull,
-              _insurances.where((i) => i.type == 'Vision').lastOrNull,
+              _insurances.where((i) => i.type == 'Health').firstOrNull,
+              _insurances.where((i) => i.type == 'Dental').firstOrNull,
+              _insurances.where((i) => i.type == 'Vision').firstOrNull,
             ].whereType<Insurance>().map((ins) => _buildInsuranceRow(ins)),
         ],
       ),
@@ -361,62 +361,62 @@ class SummaryTabState extends State<SummaryTab> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-        _StatCard(
-          label: 'Doctors',
-          count: _doctors.length,
-          icon: Icons.medical_services_outlined,
-          color: const Color(0xFF0EA5E9),
-          onTap: () => widget.onTabChange(1),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Insurance',
-          count: _insurances.length,
-          icon: Icons.health_and_safety_outlined,
-          color: const Color(0xFF059669),
-          onTap: () => widget.onTabChange(2),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Rx',
-          count: _rxPrescriptions.length,
-          icon: Icons.description_outlined,
-          color: const Color(0xFF3B82F6),
-          onTap: () => widget.onTabChange(3),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Appts',
-          count: _upcomingAppointments.length,
-          icon: Icons.calendar_today_outlined,
-          color: const Color(0xFF8B5CF6),
-          onTap: () => widget.onTabChange(4),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Vitals',
-          count: _vitals.where((v) => v.category == 'daily').length,
-          icon: Icons.monitor_heart_outlined,
-          color: const Color(0xFF501513),
-          onTap: () => widget.onTabChange(5),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Activity',
-          count: _dailyActivities.length,
-          icon: Icons.directions_walk_outlined,
-          color: const Color(0xFF22C55E),
-          onTap: () => widget.onTabChange(6),
-        ),
-        const SizedBox(width: 8),
-        _StatCard(
-          label: 'Allergies',
-          count: _allergies.length,
-          icon: Icons.coronavirus_outlined,
-          color: const Color(0xFFF59E0B),
-          onTap: () => widget.onTabChange(7),
-        ),
-      ],
+          _StatCard(
+            label: 'Doctors',
+            count: _doctors.length,
+            icon: Icons.medical_services_outlined,
+            color: const Color(0xFF0EA5E9),
+            onTap: () => widget.onTabChange(1),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Insurance',
+            count: _insurances.length,
+            icon: Icons.health_and_safety_outlined,
+            color: const Color(0xFF059669),
+            onTap: () => widget.onTabChange(2),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Rx',
+            count: _rxPrescriptions.length,
+            icon: Icons.description_outlined,
+            color: const Color(0xFF3B82F6),
+            onTap: () => widget.onTabChange(3),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Appts',
+            count: _upcomingAppointments.length,
+            icon: Icons.calendar_today_outlined,
+            color: const Color(0xFF8B5CF6),
+            onTap: () => widget.onTabChange(4),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Vitals',
+            count: _vitals.where((v) => v.category == 'daily').length,
+            icon: Icons.monitor_heart_outlined,
+            color: const Color(0xFF501513),
+            onTap: () => widget.onTabChange(5),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Activity',
+            count: _dailyActivities.length,
+            icon: Icons.directions_walk_outlined,
+            color: const Color(0xFF22C55E),
+            onTap: () => widget.onTabChange(6),
+          ),
+          const SizedBox(width: 8),
+          _StatCard(
+            label: 'Allergies',
+            count: _allergies.length,
+            icon: Icons.coronavirus_outlined,
+            color: const Color(0xFFF59E0B),
+            onTap: () => widget.onTabChange(7),
+          ),
+        ],
       ),
     );
   }

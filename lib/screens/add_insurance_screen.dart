@@ -270,6 +270,14 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
+  String _fmtDateTime(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final h = d.hour == 0 ? 12 : d.hour > 12 ? d.hour - 12 : d.hour;
+    final m = d.minute.toString().padLeft(2, '0');
+    final p = d.hour < 12 ? 'AM' : 'PM';
+    return '${months[d.month - 1]} ${d.day}, ${d.year}  •  $h:$m $p';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
@@ -370,6 +378,16 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
             _buildSection('Notes', [
               _buildField(_notes, 'Notes', maxLines: 3, hint: 'Additional information...'),
             ]),
+            if (isEdit && widget.existing?.createdAt != null) ...[
+              const SizedBox(height: 20),
+              _buildSection('Record Info', [
+                _buildReadOnlyField(
+                  'Date Added',
+                  _fmtDateTime(widget.existing!.createdAt!),
+                  icon: Icons.schedule_outlined,
+                ),
+              ]),
+            ],
             const SizedBox(height: 28),
             _buildSaveButton(isEdit),
           ],
@@ -516,6 +534,38 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
       validator: required
           ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
           : null,
+    );
+  }
+
+  Widget _buildReadOnlyField(String label, String value, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1E293B))),
+              ],
+            ),
+          ),
+          if (icon != null)
+            Icon(icon, size: 18, color: Colors.grey[400]),
+        ],
+      ),
     );
   }
 

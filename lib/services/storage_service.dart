@@ -538,7 +538,7 @@ class StorageService {
         .from('insurance')
         .select()
         .eq('user_id', _uid)
-        .order('created_at', ascending: true, nullsFirst: false);
+        .order('created_at', ascending: false, nullsFirst: false);
     final result = <Insurance>[];
     for (final r in rows) {
       try {
@@ -556,6 +556,9 @@ class StorageService {
           copay: r['copay'] as String? ?? '',
           deductible: r['deductible'] as String? ?? '',
           notes: r['notes'] as String? ?? '',
+          createdAt: r['created_at'] != null
+              ? DateTime.tryParse(r['created_at'] as String)
+              : null,
         ));
       } catch (_) {}
     }
@@ -623,9 +626,6 @@ class StorageService {
 
   // Legacy SharedPreferences key — used only for one-time migration.
   static String get _allergiesLocalKey => 'allergies_$_uid';
-
-  /// Migrates any allergies stored locally in SharedPreferences to Supabase,
-  /// then clears local storage. Runs silently; errors are non-fatal.
   static Future<void> _migrateLocalAllergies() async {
     try {
       final prefs = await SharedPreferences.getInstance();
