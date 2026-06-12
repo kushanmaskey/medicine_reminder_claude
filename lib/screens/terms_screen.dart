@@ -61,7 +61,7 @@ class TermsScreen extends StatelessWidget {
             number: '2',
             title: 'About the App',
             body:
-                'My Medical Wallet is a personal health organisation tool for tracking vitals, medications, appointments, activities, and healthcare providers.\n\n'
+                'My Medical Wallet is a personal health organisation tool for tracking vitals, medications, appointments, activities, healthcare providers, insurance coverage, and allergies.\n\n'
                 'The App is a personal organiser only. It is NOT a medical device, clinical system, or healthcare provider.',
           ),
           _TermsSection(
@@ -72,7 +72,9 @@ class TermsScreen extends StatelessWidget {
                 '• Email address — for account creation and login\n'
                 '• Mobile phone number — stored in your profile\n'
                 '• Full name and biological sex — to personalise your experience\n'
-                '• Personal health data — vitals, medications, appointments, activities, and doctor records you choose to enter\n\n'
+                '• Personal health data — vitals, medications, appointments, activities, and doctor records you choose to enter\n'
+                '• Insurance data — provider name, plan type, member ID / policy number, group number, coverage dates, copay, deductible, and contact info\n'
+                '• Allergy data — allergy name, reaction type, and notes\n\n'
                 'This data is NOT shared with, sold to, or disclosed to any third party for any commercial or advertising purpose.',
           ),
           _TermsSection(
@@ -83,6 +85,7 @@ class TermsScreen extends StatelessWidget {
                 '• The health data you enter is personal, self-reported information for your own reference\n'
                 '• My Medical Wallet is NOT a HIPAA-covered entity\n'
                 '• The App does not transmit your data to healthcare providers, insurers, or government agencies\n'
+                '• Insurance information (policy numbers, group numbers, member IDs) is stored solely for your personal reference and is never shared with any insurer or third party\n'
                 '• Your data is protected by Row Level Security — only you can access your records\n'
                 '• You are responsible for the accuracy of data you enter',
           ),

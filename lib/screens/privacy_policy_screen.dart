@@ -56,7 +56,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             number: '1',
             title: 'Introduction',
             body:
-                'My Medical Wallet is a personal health management app that helps you track medications, appointments, vitals, activities, and healthcare providers.\n\nThis policy explains what data we collect, how we protect it, and your rights. By using the App you agree to these practices.',
+                'My Medical Wallet is a personal health management app that helps you track medications, appointments, vitals, activities, healthcare providers, insurance coverage, and allergies.\n\nThis policy explains what data we collect, how we protect it, and your rights. By using the App you agree to these practices.',
           ),
           _PolicySection(
             number: '2',
@@ -72,6 +72,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 '• Appointments: doctor, date/time, location, notes\n'
                 '• Activities: type, distance, duration, date\n'
                 '• Doctors: name, specialty, phone, address, NPI number\n'
+                '• Insurance: provider name, plan type, member ID / policy number, group number, coverage dates, copay, deductible, customer service contact\n'
+                '• Allergies: allergy name, reaction type, notes\n'
                 '• Notes attached to any record',
           ),
           _PolicySection(
@@ -99,10 +101,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
             number: '5',
             title: 'Sensitive Health Data',
             body:
-                'The App handles sensitive health data including menstrual records, medication history, and clinical measurements. All health data is:\n\n'
+                'The App handles sensitive health data including menstrual records, medication history, clinical measurements, insurance policy details, and allergy records. All health data is:\n\n'
                 '• Never shared with any third party\n'
                 '• Never used for any purpose other than displaying it back to you\n'
                 '• Deletable by you at any time from within the App\n\n'
+                'Insurance information (policy numbers, group numbers, member IDs) is stored solely for your personal reference. It is not transmitted to insurers, employers, or any third party.\n\n'
                 'This App is a personal organiser. It is not a HIPAA-covered entity and is not intended as a medical device or clinical record system.',
           ),
           _PolicySection(
