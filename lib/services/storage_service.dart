@@ -10,6 +10,7 @@ import '../models/vital.dart';
 import '../models/activity.dart';
 import '../models/allergy.dart';
 import '../models/doctor.dart';
+import '../models/insurance.dart';
 import 'auth_service.dart';
 
 class StorageService {
@@ -528,6 +529,77 @@ class StorageService {
 
   static Future<void> deleteDoctor(String id) async {
     await _db.from('doctors').delete().eq('id', id).eq('user_id', _uid);
+  }
+
+  // ── Insurance ─────────────────────────────────────────────────────────────
+
+  static Future<List<Insurance>> getInsurances() async {
+    final rows = await _db
+        .from('insurance')
+        .select()
+        .eq('user_id', _uid)
+        .order('created_at', ascending: true, nullsFirst: false);
+    final result = <Insurance>[];
+    for (final r in rows) {
+      try {
+        result.add(Insurance(
+          id: r['id'] as String,
+          type: r['type'] as String? ?? 'Health',
+          providerName: r['provider_name'] as String,
+          planName: r['plan_name'] as String? ?? '',
+          memberId: r['member_id'] as String? ?? '',
+          groupNumber: r['group_number'] as String? ?? '',
+          effectiveDate: _tryParseDate(r['effective_date'] as String?),
+          expirationDate: _tryParseDate(r['expiration_date'] as String?),
+          phone: r['phone'] as String? ?? '',
+          website: r['website'] as String? ?? '',
+          copay: r['copay'] as String? ?? '',
+          deductible: r['deductible'] as String? ?? '',
+          notes: r['notes'] as String? ?? '',
+        ));
+      } catch (_) {}
+    }
+    return result;
+  }
+
+  static Future<void> saveInsurance(Insurance ins) async {
+    await _db.from('insurance').insert({
+      'id': ins.id,
+      'user_id': _uid,
+      'type': ins.type,
+      'provider_name': ins.providerName,
+      'plan_name': ins.planName.isEmpty ? null : ins.planName,
+      'member_id': ins.memberId.isEmpty ? null : ins.memberId,
+      'group_number': ins.groupNumber.isEmpty ? null : ins.groupNumber,
+      'effective_date': ins.effectiveDate?.toIso8601String(),
+      'expiration_date': ins.expirationDate?.toIso8601String(),
+      'phone': ins.phone.isEmpty ? null : ins.phone,
+      'website': ins.website.isEmpty ? null : ins.website,
+      'copay': ins.copay.isEmpty ? null : ins.copay,
+      'deductible': ins.deductible.isEmpty ? null : ins.deductible,
+      'notes': ins.notes.isEmpty ? null : ins.notes,
+    });
+  }
+
+  static Future<void> updateInsurance(Insurance ins) async {
+    await _db.from('insurance').update({
+      'type': ins.type,
+      'provider_name': ins.providerName,
+      'plan_name': ins.planName.isEmpty ? null : ins.planName,
+      'member_id': ins.memberId.isEmpty ? null : ins.memberId,
+      'group_number': ins.groupNumber.isEmpty ? null : ins.groupNumber,
+      'effective_date': ins.effectiveDate?.toIso8601String(),
+      'expiration_date': ins.expirationDate?.toIso8601String(),
+      'phone': ins.phone.isEmpty ? null : ins.phone,
+      'website': ins.website.isEmpty ? null : ins.website,
+      'copay': ins.copay.isEmpty ? null : ins.copay,
+      'deductible': ins.deductible.isEmpty ? null : ins.deductible,
+      'notes': ins.notes.isEmpty ? null : ins.notes,
+    }).eq('id', ins.id).eq('user_id', _uid);
+  }
+
+  static Future<void> deleteInsurance(String id) async {
+    await _db.from('insurance').delete().eq('id', id).eq('user_id', _uid);
   }
 
   // ── User Consents ─────────────────────────────────────────────────────────
