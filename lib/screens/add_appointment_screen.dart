@@ -48,6 +48,20 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     }
     _doctorController.addListener(_syncTitle);
     _loadDoctors();
+    _cleanPastAlerts();
+  }
+
+  Future<void> _cleanPastAlerts() async {
+    if (!_isEditing) return;
+    final now = DateTime.now();
+    for (final alert in widget.existing!.alerts) {
+      if (alert.scheduledAt.isBefore(now)) {
+        await StorageService.deleteAlert(alert.id);
+        await NotificationService.cancelNotification(
+            NotificationService.idFromString(alert.id));
+        if (mounted) setState(() => _removedAlertIds.add(alert.id));
+      }
+    }
   }
 
   Future<void> _loadDoctors() async {
@@ -409,10 +423,13 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Existing alerts to display (excluding removed ones)
+    // Existing alerts to display (excluding removed and past ones)
+    final now = DateTime.now();
     final existingAlerts = _isEditing
         ? widget.existing!.alerts
-            .where((a) => !_removedAlertIds.contains(a.id))
+            .where((a) =>
+                !_removedAlertIds.contains(a.id) &&
+                a.scheduledAt.isAfter(now))
             .toList()
         : <AppointmentAlert>[];
 
