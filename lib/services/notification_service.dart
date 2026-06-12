@@ -148,7 +148,14 @@ class NotificationService {
     final scheduled = tz.TZDateTime.from(scheduledDateTime, tz.local);
     if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
 
+    final soundUri = await RingtoneService.getSoundUri();
     final scheduleMode = await _resolveScheduleMode();
+
+    // Use a versioned channel ID per sound so Android doesn't reuse a
+    // previously created silent channel.
+    final channelId = soundUri == null
+        ? 'alert_v2'
+        : 'alert_v2_${soundUri.hashCode.abs()}';
 
     await _plugin.zonedSchedule(
       id,
@@ -157,12 +164,13 @@ class NotificationService {
       scheduled,
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'appointment_v2',
-          'Appointment Reminders',
-          channelDescription: 'One-time appointment reminders',
+          channelId,
+          'Appointment & Prescription Alerts',
+          channelDescription: 'One-time alerts for appointments and prescription refills',
           importance: Importance.max,
           priority: Priority.high,
           playSound: true,
+          sound: _androidSound(soundUri),
           enableVibration: true,
           visibility: NotificationVisibility.public,
         ),
