@@ -414,32 +414,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Sign-in link
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.canPop(context)
-                            ? Navigator.pop(context)
-                            : Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                                color: Colors.grey[500], fontSize: 14),
-                            children: const [
-                              TextSpan(text: 'Already have an account? '),
-                              TextSpan(
-                                text: 'Sign In',
-                                style: TextStyle(
-                                    color: Color(0xFF501513),
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                   ],
+                ),
+              ),
+            ),
+          ),
+
+          // Sign-in link — pinned outside the scroll view so it's always visible
+          Padding(
+            padding: EdgeInsets.only(
+              top: 4,
+              bottom: MediaQuery.of(context).padding.bottom + 12,
+            ),
+            child: Center(
+              child: TextButton(
+                onPressed: () => Navigator.canPop(context)
+                    ? Navigator.pop(context)
+                    : Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen())),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    children: const [
+                      TextSpan(text: 'Already have an account? '),
+                      TextSpan(
+                        text: 'Sign In',
+                        style: TextStyle(
+                            color: Color(0xFF501513),
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
