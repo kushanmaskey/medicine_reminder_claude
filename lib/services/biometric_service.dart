@@ -8,12 +8,22 @@ class BiometricService {
 
   static Future<bool> isAvailable() async {
     try {
-      final supported = await _auth.isDeviceSupported();
+      final supported = await _auth.isDeviceSupported().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => false,
+      );
       if (!supported) return false;
-      if (await _auth.canCheckBiometrics) return true;
+      final canCheck = await _auth.canCheckBiometrics.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => false,
+      );
+      if (canCheck) return true;
       // Fallback for iOS 15+ where canCheckBiometrics can return false
       // even when Face ID / Touch ID hardware is present and enrolled.
-      final biometrics = await _auth.getAvailableBiometrics();
+      final biometrics = await _auth.getAvailableBiometrics().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => [],
+      );
       return biometrics.isNotEmpty;
     } catch (_) {
       return false;
