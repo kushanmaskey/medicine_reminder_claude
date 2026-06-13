@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,11 +13,18 @@ import 'onboarding/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
-  );
-  await NotificationService.initialize();
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    ).timeout(const Duration(seconds: 10));
+  } catch (_) {}
+  try {
+    await NotificationService.initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {},
+    );
+  } catch (_) {}
   runApp(const MedicalWalletApp());
 }
 
@@ -60,11 +68,12 @@ class _SplashRouter extends StatelessWidget {
       AuthService.hasAccount(),
     ]);
     if (results[0]) {
-      final biometricEnabled = await BiometricService.isEnabled();
-      final biometricAvailable = await BiometricService.isAvailable();
-      if (biometricEnabled && biometricAvailable) {
-        return _StartupState.biometricLock;
-      }
+      try {
+        final biometricEnabled = await BiometricService.isEnabled();
+        if (biometricEnabled) {
+          return _StartupState.biometricLock;
+        }
+      } catch (_) {}
       return _StartupState.home;
     }
     return _StartupState.login;

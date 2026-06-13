@@ -357,6 +357,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
+    final biometricEnabled = await BiometricService.isEnabled();
+
+    if (biometricEnabled) {
+      // Lock the app instead of signing out — keeps the session alive so
+      // biometric can unlock it. "Use Password Instead" on the lock screen
+      // handles a true sign-out if needed.
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (_) => const BiometricLockScreen(replaceWithHome: true)),
+        (_) => false,
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
