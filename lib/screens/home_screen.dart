@@ -173,8 +173,42 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _requestNotificationPermission() async {
-    await NotificationService.requestPermission();
+    final granted = await NotificationService.requestPermission();
+    if (!granted) {
+      await _showNotificationPermissionBanner();
+      return;
+    }
+    // Check again in case the user previously denied and requestPermission
+    // returned without showing a dialog.
+    final alreadyGranted = await NotificationService.isPermissionGranted();
+    if (!alreadyGranted && mounted) {
+      await _showNotificationPermissionBanner();
+      return;
+    }
     await _rescheduleNotificationsIfNeeded();
+  }
+
+  Future<void> _showNotificationPermissionBanner() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 8),
+        backgroundColor: const Color(0xFF501513),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: const Text(
+          'Notifications are disabled. Enable them in Settings → My Medical Wallet → Notifications.',
+          style: TextStyle(color: Colors.white, fontSize: 13),
+        ),
+        action: SnackBarAction(
+          label: 'Open Settings',
+          textColor: Colors.white,
+          onPressed: () async {
+            await NotificationService.requestPermission();
+          },
+        ),
+      ),
+    );
   }
 
   // Reschedules all reminders once after the notification channel/permission fix

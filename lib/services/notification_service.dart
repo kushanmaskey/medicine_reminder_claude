@@ -26,6 +26,9 @@ class NotificationService {
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      defaultPresentAlert: true,
+      defaultPresentBadge: true,
+      defaultPresentSound: true,
     );
 
     await _plugin.initialize(
@@ -35,6 +38,25 @@ class NotificationService {
       const Duration(seconds: 4),
       onTimeout: () {},
     );
+  }
+
+  static Future<bool> isPermissionGranted() async {
+    try {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final settings = await ios.checkPermissions();
+        return settings?.isEnabled ?? false;
+      }
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
   }
 
   static Future<bool> requestPermission() async {
