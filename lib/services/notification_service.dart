@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -10,8 +11,15 @@ class NotificationService {
 
   static Future<void> initialize() async {
     tz_data.initializeTimeZones();
-    final tzInfo = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+    try {
+      final tzInfo = await FlutterTimezone.getLocalTimezone().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => throw TimeoutException('FlutterTimezone timed out'),
+      );
+      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+    } catch (_) {
+      tz.setLocalLocation(tz.UTC);
+    }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
@@ -23,6 +31,9 @@ class NotificationService {
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: (_) {},
+    ).timeout(
+      const Duration(seconds: 4),
+      onTimeout: () {},
     );
   }
 
@@ -129,7 +140,7 @@ class NotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          interruptionLevel: InterruptionLevel.timeSensitive,
+          interruptionLevel: InterruptionLevel.active,
         ),
       ),
       androidScheduleMode: scheduleMode,
@@ -170,7 +181,7 @@ class NotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          interruptionLevel: InterruptionLevel.timeSensitive,
+          interruptionLevel: InterruptionLevel.active,
         ),
       ),
       androidScheduleMode: scheduleMode,

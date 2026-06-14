@@ -109,9 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     final biometricEnabled = await BiometricService.isEnabled();
-    final biometricAvailable = await BiometricService.isAvailable();
 
-    if (biometricEnabled && biometricAvailable) {
+    if (biometricEnabled) {
       if (!mounted) return;
       final unlocked = await Navigator.push<bool>(
         context,
