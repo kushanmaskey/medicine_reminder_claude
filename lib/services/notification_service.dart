@@ -218,6 +218,67 @@ class NotificationService {
     } catch (_) {}
   }
 
+  static Future<int> getPendingCount() async {
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      return pending.length;
+    } catch (_) {
+      return -1;
+    }
+  }
+
+  /// Fires an immediate notification to test the permission + display pipeline.
+  static Future<void> showTestNotification() async {
+    await _plugin.show(
+      999999,
+      'Test Notification',
+      'If you see this, notifications are working correctly.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel',
+          'Test',
+          channelDescription: 'Test notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
+
+  /// Schedules a notification 15 seconds from now to test zonedSchedule.
+  static Future<void> scheduleTestNotification() async {
+    final scheduled = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 15));
+    final scheduleMode = await _resolveScheduleMode();
+    await _plugin.zonedSchedule(
+      999998,
+      'Scheduled Test',
+      'Scheduled 15 s ago — notifications are working.',
+      scheduled,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel',
+          'Test',
+          channelDescription: 'Test notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
   static int idFromString(String id) =>
       id.hashCode.abs() % 2147483647;
 }

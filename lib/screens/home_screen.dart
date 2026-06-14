@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
@@ -203,9 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
         action: SnackBarAction(
           label: 'Open Settings',
           textColor: Colors.white,
-          onPressed: () async {
-            await NotificationService.requestPermission();
-          },
+          onPressed: () => openAppSettings(),
         ),
       ),
     );
