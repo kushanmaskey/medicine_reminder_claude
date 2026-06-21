@@ -439,7 +439,7 @@ class StorageService {
       'walk_type': a.walkType,
       'distance': a.distance,
       'duration': a.duration,
-      'recorded_at': a.recordedAt.toIso8601String(),
+      'recorded_at': a.recordedAt.toUtc().toIso8601String(),
       'notes': a.notes,
     });
   }
@@ -450,7 +450,7 @@ class StorageService {
       'walk_type': a.walkType,
       'distance': a.distance,
       'duration': a.duration,
-      'recorded_at': a.recordedAt.toIso8601String(),
+      'recorded_at': a.recordedAt.toUtc().toIso8601String(),
       'notes': a.notes,
     }).eq('id', a.id).eq('user_id', _uid);
   }
@@ -534,35 +534,44 @@ class StorageService {
   // ── Insurance ─────────────────────────────────────────────────────────────
 
   static Future<List<Insurance>> getInsurances() async {
-    final rows = await _db
-        .from('insurance')
-        .select()
-        .eq('user_id', _uid)
-        .order('created_at', ascending: false, nullsFirst: false);
-    final result = <Insurance>[];
-    for (final r in rows) {
-      try {
-        result.add(Insurance(
-          id: r['id'] as String,
-          type: r['type'] as String? ?? 'Health',
-          providerName: r['provider_name'] as String,
-          planName: r['plan_name'] as String? ?? '',
-          memberId: r['member_id'] as String? ?? '',
-          groupNumber: r['group_number'] as String? ?? '',
-          effectiveDate: _tryParseDate(r['effective_date'] as String?),
-          expirationDate: _tryParseDate(r['expiration_date'] as String?),
-          phone: r['phone'] as String? ?? '',
-          website: r['website'] as String? ?? '',
-          copay: r['copay'] as String? ?? '',
-          deductible: r['deductible'] as String? ?? '',
-          notes: r['notes'] as String? ?? '',
-          createdAt: r['created_at'] != null
-              ? DateTime.tryParse(r['created_at'] as String)
-              : null,
-        ));
-      } catch (_) {}
+    final preCache = await _loadInsuranceCache();
+    try {
+      final rows = await _db
+          .from('insurance')
+          .select()
+          .eq('user_id', _uid)
+          .order('created_at', ascending: false, nullsFirst: false);
+      final result = <Insurance>[];
+      for (final r in rows) {
+        try {
+          result.add(Insurance(
+            id: r['id'] as String,
+            type: r['type'] as String? ?? 'Health',
+            providerName: r['provider_name'] as String,
+            planName: r['plan_name'] as String? ?? '',
+            memberId: r['member_id'] as String? ?? '',
+            groupNumber: r['group_number'] as String? ?? '',
+            effectiveDate: _tryParseDate(r['effective_date'] as String?),
+            expirationDate: _tryParseDate(r['expiration_date'] as String?),
+            phone: r['phone'] as String? ?? '',
+            website: r['website'] as String? ?? '',
+            copay: r['copay'] as String? ?? '',
+            deductible: r['deductible'] as String? ?? '',
+            notes: r['notes'] as String? ?? '',
+            createdAt: r['created_at'] != null
+                ? DateTime.tryParse(r['created_at'] as String)
+                : null,
+          ));
+        } catch (_) {}
+      }
+      if (result.isNotEmpty) {
+        await _saveInsuranceCache(result);
+        return result;
+      }
+      return preCache;
+    } catch (_) {
+      return preCache;
     }
-    return result;
   }
 
   static Future<void> saveInsurance(Insurance ins) async {
@@ -582,6 +591,9 @@ class StorageService {
       'deductible': ins.deductible.isEmpty ? null : ins.deductible,
       'notes': ins.notes.isEmpty ? null : ins.notes,
     });
+    final cached = await _loadInsuranceCache();
+    cached.insert(0, ins);
+    await _saveInsuranceCache(cached);
   }
 
   static Future<void> updateInsurance(Insurance ins) async {
@@ -599,10 +611,17 @@ class StorageService {
       'deductible': ins.deductible.isEmpty ? null : ins.deductible,
       'notes': ins.notes.isEmpty ? null : ins.notes,
     }).eq('id', ins.id).eq('user_id', _uid);
+    final cached = await _loadInsuranceCache();
+    final idx = cached.indexWhere((c) => c.id == ins.id);
+    if (idx >= 0) cached[idx] = ins;
+    await _saveInsuranceCache(cached);
   }
 
   static Future<void> deleteInsurance(String id) async {
     await _db.from('insurance').delete().eq('id', id).eq('user_id', _uid);
+    final cached = await _loadInsuranceCache();
+    cached.removeWhere((c) => c.id == id);
+    await _saveInsuranceCache(cached);
   }
 
   // ── User Consents ─────────────────────────────────────────────────────────
@@ -622,7 +641,9 @@ class StorageService {
     });
   }
 
-  // ── Allergies (Supabase) ──────────────────────────────────────────────────
+  // ── Allergies ─────────────────────────────────────────────────────────────
+
+  static String get _allergiesCacheKey => 'cache_allergies_$_uid';
 
   // Legacy SharedPreferences key — used only for one-time migration.
   static String get _allergiesLocalKey => 'allergies_$_uid';
@@ -647,25 +668,64 @@ class StorageService {
     } catch (_) {}
   }
 
+  static Future<void> _saveAllergyCache(List<Allergy> list) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _allergiesCacheKey,
+        list.map((a) => jsonEncode({'id': a.id, 'name': a.name, 'reason': a.reason, 'notes': a.notes})).toList(),
+      );
+    } catch (_) {}
+  }
+
+  static Future<List<Allergy>> _loadAllergyCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_allergiesCacheKey) ?? [];
+      return raw.map((s) {
+        final m = jsonDecode(s) as Map<String, dynamic>;
+        return Allergy(id: m['id'] as String, name: m['name'] as String, reason: m['reason'] as String?, notes: m['notes'] as String?);
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   static Future<List<Allergy>> getAllergies() async {
     await _migrateLocalAllergies();
-    final rows = await _db
-        .from('allergies')
-        .select()
-        .eq('user_id', _uid)
-        .order('created_at', ascending: true);
-    final result = <Allergy>[];
-    for (final r in rows) {
-      try {
-        result.add(Allergy(
-          id: r['id'] as String,
-          name: r['name'] as String,
-          reason: r['reason'] as String?,
-          notes: r['notes'] as String?,
-        ));
-      } catch (_) {}
+    // Load cache before any Supabase call so we don't overwrite it with a
+    // session-stale empty result before we get a chance to use it.
+    final preCache = await _loadAllergyCache();
+    try {
+      final rows = await _db
+          .from('allergies')
+          .select()
+          .eq('user_id', _uid)
+          .order('created_at', ascending: true);
+      final result = <Allergy>[];
+      for (final r in rows) {
+        try {
+          result.add(Allergy(
+            id: r['id'] as String,
+            name: r['name'] as String,
+            reason: r['reason'] as String?,
+            notes: r['notes'] as String?,
+          ));
+        } catch (_) {}
+      }
+      if (result.isNotEmpty) {
+        // Good data from Supabase — update the cache and return it.
+        await _saveAllergyCache(result);
+        return result;
+      }
+      // Supabase returned empty. On older iOS the RLS token hasn't refreshed
+      // yet at app start, so this empty is untrustworthy. Serve the cache
+      // instead; if the user truly deleted everything, deleteAllergy() will
+      // have already cleared the cache and preCache will also be empty.
+      return preCache;
+    } catch (_) {
+      return preCache;
     }
-    return result;
   }
 
   static Future<void> saveAllergy(Allergy a) async {
@@ -676,6 +736,10 @@ class StorageService {
       'reason': a.reason,
       'notes': a.notes,
     });
+    // Update cache optimistically so it reflects the new entry immediately
+    final cached = await _loadAllergyCache();
+    cached.add(a);
+    await _saveAllergyCache(cached);
   }
 
   static Future<void> updateAllergy(Allergy a) async {
@@ -684,9 +748,72 @@ class StorageService {
       'reason': a.reason,
       'notes': a.notes,
     }).eq('id', a.id).eq('user_id', _uid);
+    final cached = await _loadAllergyCache();
+    final idx = cached.indexWhere((c) => c.id == a.id);
+    if (idx >= 0) cached[idx] = a;
+    await _saveAllergyCache(cached);
   }
 
   static Future<void> deleteAllergy(String id) async {
     await _db.from('allergies').delete().eq('id', id).eq('user_id', _uid);
+    final cached = await _loadAllergyCache();
+    cached.removeWhere((c) => c.id == id);
+    await _saveAllergyCache(cached);
   }
+
+  static String get _insuranceCacheKey => 'cache_insurance_$_uid';
+
+  static Future<void> _saveInsuranceCache(List<Insurance> list) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _insuranceCacheKey,
+        list.map((ins) => jsonEncode({
+          'id': ins.id,
+          'type': ins.type,
+          'provider_name': ins.providerName,
+          'plan_name': ins.planName,
+          'member_id': ins.memberId,
+          'group_number': ins.groupNumber,
+          'effective_date': ins.effectiveDate?.toIso8601String(),
+          'expiration_date': ins.expirationDate?.toIso8601String(),
+          'phone': ins.phone,
+          'website': ins.website,
+          'copay': ins.copay,
+          'deductible': ins.deductible,
+          'notes': ins.notes,
+          'created_at': ins.createdAt?.toIso8601String(),
+        })).toList(),
+      );
+    } catch (_) {}
+  }
+
+  static Future<List<Insurance>> _loadInsuranceCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_insuranceCacheKey) ?? [];
+      return raw.map((s) {
+        final r = jsonDecode(s) as Map<String, dynamic>;
+        return Insurance(
+          id: r['id'] as String,
+          type: r['type'] as String? ?? 'Health',
+          providerName: r['provider_name'] as String,
+          planName: r['plan_name'] as String? ?? '',
+          memberId: r['member_id'] as String? ?? '',
+          groupNumber: r['group_number'] as String? ?? '',
+          effectiveDate: _tryParseDate(r['effective_date'] as String?),
+          expirationDate: _tryParseDate(r['expiration_date'] as String?),
+          phone: r['phone'] as String? ?? '',
+          website: r['website'] as String? ?? '',
+          copay: r['copay'] as String? ?? '',
+          deductible: r['deductible'] as String? ?? '',
+          notes: r['notes'] as String? ?? '',
+          createdAt: _tryParseDate(r['created_at'] as String?),
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
 }

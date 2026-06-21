@@ -10,12 +10,14 @@ class AddVitalScreen extends StatefulWidget {
   final Vital? existing;
   final String category;
   final List<Vital> sameDayHistory;
+  final DateTime? initialDate;
 
   const AddVitalScreen({
     super.key,
     this.existing,
     this.category = 'daily',
     this.sameDayHistory = const [],
+    this.initialDate,
   });
 
   @override
@@ -25,17 +27,19 @@ class AddVitalScreen extends StatefulWidget {
 class _AddVitalScreenState extends State<AddVitalScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Previously saved readings for this vital (shown as read-only history)
-  List<BpReading> _existingBpReadings          = [];
-  List<VitalReading> _existingSugarReadings    = [];
-  List<VitalReading> _existingCholesterolReadings = [];
-  List<VitalReading> _existingWeightReadings   = [];
-
-  // New readings added this session (can be deleted before saving)
+  // All readings shown in the session.
+  // Readings from widget.existing have IDs recorded in _existingReadingIds.
+  // Readings added this session each have their own independent Vital in the DB (id = reading.id).
   List<BpReading> _bpReadings          = [];
   List<VitalReading> _sugarReadings    = [];
   List<VitalReading> _cholesterolReadings = [];
   List<VitalReading> _weightReadings   = [];
+
+  // IDs of readings that came from widget.existing (not from new session Vitals)
+  final Set<String> _existingReadingIds = {};
+
+  // True once any reading has been persisted to DB this session
+  bool _hasSaved = false;
 
   // Open fields
   final _eventNameController          = TextEditingController();
@@ -98,11 +102,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     super.initState();
     if (_isEditing) {
       final e = widget.existing!;
-      // Move saved readings into history; new session starts empty
-      _existingBpReadings          = List.from(e.bpReadings);
-      _existingSugarReadings       = List.from(e.sugarReadings);
-      _existingCholesterolReadings = List.from(e.cholesterolReadings);
-      _existingWeightReadings      = List.from(e.weightReadings);
+      _bpReadings          = List.from(e.bpReadings);
+      _sugarReadings       = List.from(e.sugarReadings);
+      _cholesterolReadings = List.from(e.cholesterolReadings);
+      _weightReadings      = List.from(e.weightReadings);
+      _existingReadingIds.addAll(e.bpReadings.map((r) => r.id));
+      _existingReadingIds.addAll(e.sugarReadings.map((r) => r.id));
+      _existingReadingIds.addAll(e.cholesterolReadings.map((r) => r.id));
+      _existingReadingIds.addAll(e.weightReadings.map((r) => r.id));
       _eventNameController.text            = e.eventName;
       _locationController.text             = e.location;
       _mammogramLocationController.text    = e.mammogramLocation;
@@ -125,6 +132,16 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _colonoscopyDate = e.colonoscopyDate;
       _dentalDate      = e.dentalDate;
       _eyeExamDate     = e.eyeExamDate;
+    }
+    if (!_isEditing && widget.initialDate != null) {
+      final now = DateTime.now();
+      _recordedAt = DateTime(
+        widget.initialDate!.year,
+        widget.initialDate!.month,
+        widget.initialDate!.day,
+        now.hour,
+        now.minute,
+      );
     }
     if (_category != 'daily') {
       AuthService.getSex().then((s) { if (mounted) setState(() => _sex = s); });
@@ -225,10 +242,10 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         recordedAt:      _recordedAt,
         category:        _category,
         eventName:       _eventNameController.text.trim(),
-        bpReadings:          _category == 'daily' ? [..._existingBpReadings, ..._bpReadings] : [],
-        sugarReadings:       _category == 'daily' ? [..._existingSugarReadings, ..._sugarReadings] : [],
-        cholesterolReadings: _category == 'daily' ? [..._existingCholesterolReadings, ..._cholesterolReadings] : [],
-        weightReadings:      _category == 'daily' ? [..._existingWeightReadings, ..._weightReadings] : [],
+        bpReadings:          _category == 'daily' ? _bpReadings : [],
+        sugarReadings:       _category == 'daily' ? _sugarReadings : [],
+        cholesterolReadings: _category == 'daily' ? _cholesterolReadings : [],
+        weightReadings:      _category == 'daily' ? _weightReadings : [],
         weightUnit:      _weightUnit,
         sugarUnit:       _sugarUnit,
         cholesterolUnit: _cholesterolUnit,
@@ -266,6 +283,69 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         SnackBar(content: Text('Could not save: ${e.toString()}')),
       );
     }
+  }
+
+  Vital _makeSingleReadingVital({
+    required String id,
+    List<BpReading> bpReadings = const [],
+    List<VitalReading> sugarReadings = const [],
+    List<VitalReading> cholesterolReadings = const [],
+    List<VitalReading> weightReadings = const [],
+  }) => Vital(
+    id: id,
+    recordedAt: _recordedAt,
+    category: _category,
+    eventName: '',
+    bpReadings: bpReadings,
+    sugarReadings: sugarReadings,
+    cholesterolReadings: cholesterolReadings,
+    weightReadings: weightReadings,
+    weightUnit: _weightUnit,
+    sugarUnit: _sugarUnit,
+    cholesterolUnit: _cholesterolUnit,
+    riskLevel: 'Low',
+    notes: _notesController.text.trim(),
+  );
+
+  Future<void> _saveSingleReading(Vital vital) async {
+    try {
+      await StorageService.saveVital(vital);
+      if (mounted) {
+        setState(() => _hasSaved = true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Reading saved'),
+          duration: Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _deleteReading(String readingId) async {
+    try {
+      if (_existingReadingIds.contains(readingId)) {
+        _existingReadingIds.remove(readingId);
+        final remBp = _bpReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        final remSugar = _sugarReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        final remCholesterol = _cholesterolReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        final remWeight = _weightReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        if (remBp.isEmpty && remSugar.isEmpty && remCholesterol.isEmpty && remWeight.isEmpty) {
+          await StorageService.deleteVital(widget.existing!.id);
+        } else {
+          final e = widget.existing!;
+          await StorageService.updateVital(Vital(
+            id: e.id, recordedAt: e.recordedAt, category: e.category,
+            eventName: e.eventName, bpReadings: remBp, sugarReadings: remSugar,
+            cholesterolReadings: remCholesterol, weightReadings: remWeight,
+            weightUnit: e.weightUnit, sugarUnit: e.sugarUnit,
+            cholesterolUnit: e.cholesterolUnit, riskLevel: e.riskLevel, notes: e.notes,
+          ));
+        }
+      } else {
+        await StorageService.deleteVital(readingId);
+      }
+      if (mounted) setState(() => _hasSaved = true);
+    } catch (_) {}
   }
 
   String _formatDate(DateTime dt) {
@@ -353,7 +433,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) Navigator.pop(context, _hasSaved);
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -393,29 +478,25 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
   // ── Add / edit reading helpers ────────────────────────────────────────────
 
-  Future<void> _addBpReading(BuildContext context, {int? editIndex}) async {
+  Future<void> _addBpReading(BuildContext context) async {
     final result = await showModalBottomSheet<BpReading>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _BpReadingSheet(
-        initial: editIndex != null ? _bpReadings[editIndex] : null,
-        accentColor: const Color(0xFFEF4444),
-      ),
+      builder: (_) => const _BpReadingSheet(accentColor: Color(0xFFEF4444)),
     );
     if (result != null && mounted) {
-      setState(() {
-        if (editIndex != null) {
-          _bpReadings[editIndex] = result;
-        } else {
-          _bpReadings.add(result);
-        }
-      });
+      setState(() => _bpReadings.add(result));
+      if (_category == 'daily') {
+        await _saveSingleReading(
+            _makeSingleReadingVital(id: result.id, bpReadings: [result]));
+      }
     }
   }
 
@@ -425,61 +506,49 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     String label,
     String unit,
     String hint,
-    Color color, {
-    int? editIndex,
-  }) async {
+    Color color,
+    String type,  // 'sugar' | 'cholesterol' | 'weight'
+  ) async {
     final result = await showModalBottomSheet<VitalReading>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _VitalReadingSheet(
-        initial: editIndex != null ? list[editIndex] : null,
-        label: label,
-        unit: unit,
-        hint: hint,
-        accentColor: color,
+        label: label, unit: unit, hint: hint, accentColor: color,
       ),
     );
     if (result != null && mounted) {
-      setState(() {
-        if (editIndex != null) {
-          list[editIndex] = result;
-        } else {
-          list.add(result);
-        }
-      });
+      setState(() => list.add(result));
+      if (_category == 'daily') {
+        await _saveSingleReading(_makeSingleReadingVital(
+          id: result.id,
+          sugarReadings:       type == 'sugar'       ? [result] : [],
+          cholesterolReadings: type == 'cholesterol' ? [result] : [],
+          weightReadings:      type == 'weight'      ? [result] : [],
+        ));
+      }
     }
   }
 
   // ── Daily fields (multi-reading) ──────────────────────────────────────────
 
-  /// Returns up to 3 past BP readings (existing saved + same-day other vitals),
-  /// newest first. Each entry is (label, time).
+  /// Returns up to 3 past BP readings from OTHER vitals on the same day, newest first.
   List<(String, DateTime)> get _histBp {
     final rows = <(String, DateTime)>[];
-    // Previously saved readings on this vital record
-    for (final r in _existingBpReadings) {
-      rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
-    }
-    // Same-day readings from other vital records
     for (final v in widget.sameDayHistory) {
       for (final r in v.bpReadings) {
         rows.add(('${r.systolic} / ${r.diastolic} mmHg', r.time));
       }
     }
     rows.sort((a, b) => b.$2.compareTo(a.$2));
-    return rows.take(2).toList();
+    return rows.take(3).toList();
   }
 
   List<(String, DateTime)> _histVital(
-    List<VitalReading> existingReadings,
     List<VitalReading> Function(Vital) getter,
     String unit,
   ) {
     final rows = <(String, DateTime)>[];
-    for (final r in existingReadings) {
-      rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
-    }
     for (final v in widget.sameDayHistory) {
       for (final r in getter(v)) {
         rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
@@ -517,12 +586,16 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       children: [
         ..._bpReadings.reversed.toList().asMap().entries.map((e) {
           final originalIndex = _bpReadings.length - 1 - e.key;
+          final reading = e.value;
           return _ReadingRow(
-            label: '${e.value.systolic} / ${e.value.diastolic} mmHg',
-            time: _formatTime(e.value.time),
-            notes: e.value.notes,
+            label: '${reading.systolic} / ${reading.diastolic} mmHg',
+            time: _formatTime(reading.time),
+            notes: reading.notes,
             accentColor: const Color(0xFFEF4444),
-            onDelete: () => setState(() => _bpReadings.removeAt(originalIndex)),
+            onDelete: () async {
+              setState(() => _bpReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
           );
         }),
         ..._historyRows(_histBp, const Color(0xFFEF4444)),
@@ -547,20 +620,24 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       children: [
         ..._sugarReadings.reversed.toList().asMap().entries.map((e) {
           final originalIndex = _sugarReadings.length - 1 - e.key;
+          final reading = e.value;
           return _ReadingRow(
-            label: '${e.value.value.toStringAsFixed(1)} $_sugarUnit',
-            time: _formatTime(e.value.time),
-            notes: e.value.notes,
+            label: '${reading.value.toStringAsFixed(1)} $_sugarUnit',
+            time: _formatTime(reading.time),
+            notes: reading.notes,
             accentColor: const Color(0xFFF97316),
-            onDelete: () => setState(() => _sugarReadings.removeAt(originalIndex)),
+            onDelete: () async {
+              setState(() => _sugarReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
           );
         }),
-        ..._historyRows(_histVital(_existingSugarReadings, (v) => v.sugarReadings, _sugarUnit), const Color(0xFFF97316)),
+        ..._historyRows(_histVital((v) => v.sugarReadings, _sugarUnit), const Color(0xFFF97316)),
         _AddReadingButton(
           label: _sugarReadings.isEmpty ? 'Add Sugar Reading' : 'Add Another',
           color: const Color(0xFFF97316),
           onPressed: () => _addVitalReading(
-            context, _sugarReadings, 'Blood Glucose', _sugarUnit, 'e.g. 95', const Color(0xFFF97316),
+            context, _sugarReadings, 'Blood Glucose', _sugarUnit, 'e.g. 95', const Color(0xFFF97316), 'sugar',
           ),
         ),
         const SizedBox(height: 4),
@@ -581,20 +658,24 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       children: [
         ..._cholesterolReadings.reversed.toList().asMap().entries.map((e) {
           final originalIndex = _cholesterolReadings.length - 1 - e.key;
+          final reading = e.value;
           return _ReadingRow(
-            label: '${e.value.value.toStringAsFixed(1)} $_cholesterolUnit',
-            time: _formatTime(e.value.time),
-            notes: e.value.notes,
+            label: '${reading.value.toStringAsFixed(1)} $_cholesterolUnit',
+            time: _formatTime(reading.time),
+            notes: reading.notes,
             accentColor: const Color(0xFF8B5CF6),
-            onDelete: () => setState(() => _cholesterolReadings.removeAt(originalIndex)),
+            onDelete: () async {
+              setState(() => _cholesterolReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
           );
         }),
-        ..._historyRows(_histVital(_existingCholesterolReadings, (v) => v.cholesterolReadings, _cholesterolUnit), const Color(0xFF8B5CF6)),
+        ..._historyRows(_histVital((v) => v.cholesterolReadings, _cholesterolUnit), const Color(0xFF8B5CF6)),
         _AddReadingButton(
           label: _cholesterolReadings.isEmpty ? 'Add Cholesterol Reading' : 'Add Another',
           color: const Color(0xFF8B5CF6),
           onPressed: () => _addVitalReading(
-            context, _cholesterolReadings, 'Total Cholesterol', _cholesterolUnit, 'e.g. 185', const Color(0xFF8B5CF6),
+            context, _cholesterolReadings, 'Total Cholesterol', _cholesterolUnit, 'e.g. 185', const Color(0xFF8B5CF6), 'cholesterol',
           ),
         ),
         const SizedBox(height: 4),
@@ -615,20 +696,24 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       children: [
         ..._weightReadings.reversed.toList().asMap().entries.map((e) {
           final originalIndex = _weightReadings.length - 1 - e.key;
+          final reading = e.value;
           return _ReadingRow(
-            label: '${e.value.value.toStringAsFixed(1)} $_weightUnit',
-            time: _formatTime(e.value.time),
-            notes: e.value.notes,
+            label: '${reading.value.toStringAsFixed(1)} $_weightUnit',
+            time: _formatTime(reading.time),
+            notes: reading.notes,
             accentColor: const Color(0xFF3B82F6),
-            onDelete: () => setState(() => _weightReadings.removeAt(originalIndex)),
+            onDelete: () async {
+              setState(() => _weightReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
           );
         }),
-        ..._historyRows(_histVital(_existingWeightReadings, (v) => v.weightReadings, _weightUnit), const Color(0xFF3B82F6)),
+        ..._historyRows(_histVital((v) => v.weightReadings, _weightUnit), const Color(0xFF3B82F6)),
         _AddReadingButton(
           label: _weightReadings.isEmpty ? 'Add Weight Reading' : 'Add Another',
           color: const Color(0xFF3B82F6),
           onPressed: () => _addVitalReading(
-            context, _weightReadings, 'Weight', _weightUnit, 'e.g. 155', const Color(0xFF3B82F6),
+            context, _weightReadings, 'Weight', _weightUnit, 'e.g. 155', const Color(0xFF3B82F6), 'weight',
           ),
         ),
       ],
@@ -919,6 +1004,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   // ── Save button ───────────────────────────────────────────────────────────
 
   Widget _buildSaveButton() {
+    if (_category == 'daily') {
+      return SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context, _hasSaved),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: _accentColor),
+            foregroundColor: _accentColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text('Done', style: TextStyle(fontSize: 16)),
+        ),
+      );
+    }
     return SizedBox(
       width: double.infinity,
       height: 50,

@@ -81,14 +81,22 @@ class _AddAllergyScreenState extends State<AddAllergyScreen> {
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
     );
 
-    if (_isEditing) {
-      await StorageService.updateAllergy(allergy);
-    } else {
-      await StorageService.saveAllergy(allergy);
+    try {
+      if (_isEditing) {
+        await StorageService.updateAllergy(allergy);
+      } else {
+        await StorageService.saveAllergy(allergy);
+      }
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _saving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
-
-    if (!mounted) return;
-    Navigator.pop(context, true);
   }
 
   @override
