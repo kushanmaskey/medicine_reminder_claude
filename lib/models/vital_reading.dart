@@ -17,7 +17,7 @@ class BpReading {
         'id': id,
         'systolic': systolic,
         'diastolic': diastolic,
-        'time': time.toIso8601String(),
+        'time': time.toUtc().toIso8601String(),
         if (notes.isNotEmpty) 'notes': notes,
       };
 
@@ -46,7 +46,7 @@ class VitalReading {
   Map<String, dynamic> toJson() => {
         'id': id,
         'value': value,
-        'time': time.toIso8601String(),
+        'time': time.toUtc().toIso8601String(),
         if (notes.isNotEmpty) 'notes': notes,
       };
 
