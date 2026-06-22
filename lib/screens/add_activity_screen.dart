@@ -18,7 +18,9 @@ const _walkTypes = [
 
 class AddActivityScreen extends StatefulWidget {
   final Activity? existing;
-  const AddActivityScreen({super.key, this.existing});
+  final DateTime? initialDate;
+  final String? initialType;
+  const AddActivityScreen({super.key, this.existing, this.initialDate, this.initialType});
 
   @override
   State<AddActivityScreen> createState() => _AddActivityScreenState();
@@ -54,6 +56,18 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
       _durationController.text = e.duration?.toString() ?? '';
       _notesController.text = e.notes;
       _recordedAt = e.recordedAt;
+    } else {
+      if (widget.initialType != null) _type = widget.initialType!;
+      if (widget.initialDate != null) {
+        final now = DateTime.now();
+        _recordedAt = DateTime(
+          widget.initialDate!.year,
+          widget.initialDate!.month,
+          widget.initialDate!.day,
+          now.hour,
+          now.minute,
+        );
+      }
     }
   }
 
@@ -85,7 +99,31 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     _dismissFocus();
     if (date == null || !mounted) return;
     setState(() {
-      _recordedAt = DateTime(date.year, date.month, date.day);
+      _recordedAt = DateTime(
+        date.year, date.month, date.day,
+        _recordedAt.hour, _recordedAt.minute,
+      );
+    });
+  }
+
+  Future<void> _pickTime() async {
+    _dismissFocus();
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_recordedAt),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx)
+            .copyWith(colorScheme: ColorScheme.light(primary: _activeColor)),
+        child: child!,
+      ),
+    );
+    _dismissFocus();
+    if (time == null || !mounted) return;
+    setState(() {
+      _recordedAt = DateTime(
+        _recordedAt.year, _recordedAt.month, _recordedAt.day,
+        time.hour, time.minute,
+      );
     });
   }
 
@@ -398,33 +436,65 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                     'Jul','Aug','Sep','Oct','Nov','Dec'];
     final dateLabel =
         '${months[_recordedAt.month - 1]} ${_recordedAt.day}, ${_recordedAt.year}';
+    final h = _recordedAt.hour % 12 == 0 ? 12 : _recordedAt.hour % 12;
+    final m = _recordedAt.minute.toString().padLeft(2, '0');
+    final ampm = _recordedAt.hour < 12 ? 'AM' : 'PM';
+    final timeLabel = '${h.toString().padLeft(2, '0')}:$m $ampm';
 
     return _SectionCard(
-      title: 'Date',
+      title: 'Date & Time',
       icon: Icons.calendar_today_outlined,
       iconColor: _activeColor,
-      child: InkWell(
-        onTap: _pickDate,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, color: _activeColor, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  dateLabel,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF501513)),
-                ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: _pickDate,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, color: _activeColor, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      dateLabel,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF501513)),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+            ),
           ),
-        ),
+          Divider(height: 16, color: Colors.grey.shade100),
+          InkWell(
+            onTap: _pickTime,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time_outlined, color: _activeColor, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      timeLabel,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF501513)),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
