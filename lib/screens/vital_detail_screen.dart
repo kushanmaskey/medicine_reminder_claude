@@ -111,7 +111,7 @@ class _VitalDetailScreenState extends State<VitalDetailScreen> {
       if (group.isEmpty) continue;
 
       widgets.add(Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 8, left: 2),
+        padding: const EdgeInsets.only(top: 4, bottom: 8, left: 2, right: 2),
         child: Row(
           children: [
             Icon(icon, size: 13, color: color),
@@ -149,7 +149,6 @@ class _VitalDetailScreenState extends State<VitalDetailScreen> {
               entry: e.value,
               time: _formatTime(e.value.time),
               isLast: isLast,
-              onTap: () => _edit(e.value.vital),
             );
           }).toList(),
         ),
@@ -251,10 +250,10 @@ class _VitalDetailScreenState extends State<VitalDetailScreen> {
             ],
           ),
           actions: [
-            TextButton.icon(
+            IconButton(
               onPressed: _addEntry,
-              icon: const Icon(Icons.add, color: Color(0xFF501513), size: 18),
-              label: const Text('Add', style: TextStyle(color: Color(0xFF501513), fontSize: 13)),
+              tooltip: 'Add / Edit',
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF501513), size: 22),
             ),
           ],
         ),
@@ -331,70 +330,57 @@ class _FlatEntryRow extends StatelessWidget {
   final _FlatEntry entry;
   final String time;
   final bool isLast;
-  final VoidCallback onTap;
 
   const _FlatEntryRow({
     required this.entry,
     required this.time,
     required this.isLast,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: isLast
-                ? const BorderRadius.vertical(bottom: Radius.circular(16))
-                : BorderRadius.zero,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 68,
-                    child: Text(
-                      time,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 68,
+                child: Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: entry.color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: entry.color.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(entry.icon, size: 13, color: entry.color),
+                    const SizedBox(width: 5),
+                    Text(
+                      entry.label,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w700,
+                        color: entry.color,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: entry.color.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: entry.color.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(entry.icon, size: 13, color: entry.color),
-                        const SizedBox(width: 5),
-                        Text(
-                          entry.label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: entry.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.chevron_right, size: 16, color: Colors.grey[400]),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
         if (!isLast) Divider(height: 1, indent: 14, endIndent: 14, color: Colors.grey.shade100),

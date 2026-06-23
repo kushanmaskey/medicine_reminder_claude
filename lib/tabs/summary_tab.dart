@@ -12,7 +12,7 @@ import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../screens/add_prescription_screen.dart';
 import '../screens/add_appointment_screen.dart';
-import '../screens/add_vital_screen.dart';
+import '../screens/vital_detail_screen.dart';
 import '../screens/add_activity_screen.dart';
 import '../screens/add_doctor_screen.dart';
 import '../screens/add_allergy_screen.dart';
@@ -161,8 +161,15 @@ class SummaryTabState extends State<SummaryTab> {
     }).toList();
   }
 
-  List<Vital> get _latestVitals =>
-      _vitals.where((v) => v.category == 'daily').take(3).toList();
+  List<MapEntry<DateTime, List<Vital>>> get _vitalDayGroups {
+    final groups = <DateTime, List<Vital>>{};
+    for (final v in _vitals.where((v) => v.category == 'daily')) {
+      final day = DateTime(v.recordedAt.year, v.recordedAt.month, v.recordedAt.day);
+      groups.putIfAbsent(day, () => []).add(v);
+    }
+    final sorted = groups.entries.toList()..sort((a, b) => b.key.compareTo(a.key));
+    return sorted.take(3).toList();
+  }
 
   List<Prescription> get _rxPrescriptions =>
       _prescriptions.where((p) => !p.isOtc).toList();
@@ -189,14 +196,11 @@ class SummaryTabState extends State<SummaryTab> {
           const SizedBox(height: 16),
           _buildStatsRow(),
           const SizedBox(height: 24),
-          if (_latestVitals.isNotEmpty) ...[
+          if (_vitalDayGroups.isNotEmpty) ...[
             _buildSectionHeader('Latest Vitals', Icons.monitor_heart_outlined,
                 onViewAll: () => widget.onTabChange(5)),
             const SizedBox(height: 10),
-            ..._latestVitals.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildLatestVitalsCard(v),
-            )),
+            ..._vitalDayGroups.map((e) => _buildVitalDayCard(e.key, e.value)),
             const SizedBox(height: 14),
           ],
           _buildSectionHeader('Upcoming Appointments',
@@ -456,109 +460,124 @@ class SummaryTabState extends State<SummaryTab> {
     );
   }
 
-  // ── Latest vitals card ─────────────────────────────────────────────────────
+  // ── Vitals day card (grouped by date) ─────────────────────────────────────
 
-  Widget _buildLatestVitalsCard(Vital v) {
-    return Tooltip(
-      message: 'Tap to edit latest vitals',
-      child: GestureDetector(
-        onTap: () async {
-          final result = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (_) => AddVitalScreen(existing: v, category: v.category)),
-          );
-          if (result == true) {
-            _load();
-            widget.onVitalChanged?.call();
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+  String _dayLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (date == today) return 'Today';
+    if (date == yesterday) return 'Yesterday';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
+    final bpRows    = <(DateTime, String)>[];
+    final sugarRows = <(DateTime, String)>[];
+    final wtRows    = <(DateTime, String)>[];
+    final cholRows  = <(DateTime, String)>[];
+
+    for (final v in vitals) {
+      for (final r in v.bpReadings) {
+        bpRows.add((r.time, '${r.systolic}/${r.diastolic} mmHg'));
+      }
+      for (final r in v.sugarReadings) {
+        sugarRows.add((r.time, '${r.value.toStringAsFixed(1)} ${v.sugarUnit}'));
+      }
+      for (final r in v.weightReadings) {
+        wtRows.add((r.time, '${r.value.toStringAsFixed(1)} ${v.weightUnit}'));
+      }
+      for (final r in v.cholesterolReadings) {
+        cholRows.add((r.time, '${r.value.toStringAsFixed(1)} ${v.cholesterolUnit}'));
+      }
+    }
+    for (final list in [bpRows, sugarRows, wtRows, cholRows]) {
+      list.sort((a, b) => a.$1.compareTo(b.$1));
+    }
+
+    // Keep only the latest reading per type
+    List<(DateTime, String)> latest(List<(DateTime, String)> list) =>
+        list.isEmpty ? [] : [list.last];
+
+    final chips = <(String, IconData, Color)>[];
+    if (bpRows.isNotEmpty)    chips.add((bpRows.last.$2,    Icons.favorite_outlined,   const Color(0xFFEF4444)));
+    if (sugarRows.isNotEmpty) chips.add((sugarRows.last.$2, Icons.water_drop_outlined, const Color(0xFFF97316)));
+    if (wtRows.isNotEmpty)    chips.add((wtRows.last.$2,    Icons.scale_outlined,      const Color(0xFF3B82F6)));
+    if (cholRows.isNotEmpty)  chips.add((cholRows.last.$2,  Icons.biotech_outlined,    const Color(0xFF8B5CF6)));
+
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VitalDetailScreen(
+              date: date,
+              category: 'daily',
+              isFemale: _sex == 'Female',
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    _fmtDateTime(v.recordedAt),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF501513)),
-                ],
+        );
+        if (result == true || result == 'deleted') {
+          _load();
+          widget.onVitalChanged?.call();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Text(
+              _dayLabel(date),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF484141),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _VitalChip(
-                    icon: Icons.favorite_outlined,
-                    label: 'Blood Pressure',
-                    value: v.bpDisplay,
-                    color: const Color(0xFFEF4444),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: chips.map((c) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: c.$3.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: c.$3.withValues(alpha: 0.18)),
                   ),
-                  const SizedBox(width: 10),
-                  _VitalChip(
-                    icon: Icons.water_drop_outlined,
-                    label: 'Sugar Level',
-                    value: v.sugarDisplay,
-                    color: const Color(0xFFF97316),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(c.$2, size: 11, color: c.$3),
+                      const SizedBox(width: 4),
+                      Text(c.$1, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c.$3)),
+                    ],
                   ),
-                ],
+                )).toList(),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _VitalChip(
-                    icon: Icons.scale_outlined,
-                    label: 'Weight',
-                    value: v.weightDisplay,
-                    color: const Color(0xFF3B82F6),
-                  ),
-                  const SizedBox(width: 10),
-                  _VitalChip(
-                    icon: Icons.biotech_outlined,
-                    label: 'Cholesterol',
-                    value: v.cholesterolDisplay,
-                    color: const Color(0xFF8B5CF6),
-                  ),
-                ],
-              ),
-              if (v.notes.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.notes_outlined, size: 14, color: Colors.grey[400]),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(v.notes,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
+            ),
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey[400]),
+          ],
         ),
       ),
     );
   }
+
 
   // ── Appointment row ────────────────────────────────────────────────────────
 
@@ -1271,53 +1290,3 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _VitalChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _VitalChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w500)),
-                  Text(value,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: value == '—' ? Colors.grey[400] : color)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
