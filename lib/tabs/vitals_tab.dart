@@ -4,7 +4,6 @@ import '../models/vital.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../screens/add_vital_screen.dart';
-import '../screens/vital_detail_screen.dart';
 
 class VitalsTab extends StatefulWidget {
   final VoidCallback? onDoctorAdded;
@@ -97,14 +96,16 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   }
 
   Future<void> _openDetail(_VitalDayGroup group, String category) async {
+    final vital = group.vitals.last;
     await Navigator.push<dynamic>(
       context,
       MaterialPageRoute(
-        builder: (_) => VitalDetailScreen(
-          date: group.date,
+        builder: (_) => AddVitalScreen(
+          existing: vital,
           category: category,
-          isFemale: _sex == 'Female',
-          doctorNames: _doctorNames,
+          sameDayHistory: category == 'daily'
+              ? _sameDayHistory(vital.recordedAt, excludeId: vital.id)
+              : const [],
         ),
       ),
     );

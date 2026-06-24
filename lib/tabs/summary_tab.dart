@@ -12,7 +12,7 @@ import '../services/storage_service.dart';
 import '../services/auth_service.dart';
 import '../screens/add_prescription_screen.dart';
 import '../screens/add_appointment_screen.dart';
-import '../screens/vital_detail_screen.dart';
+import '../screens/add_vital_screen.dart';
 import '../screens/add_activity_screen.dart';
 import '../screens/add_doctor_screen.dart';
 import '../screens/add_allergy_screen.dart';
@@ -496,10 +496,6 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
       list.sort((a, b) => a.$1.compareTo(b.$1));
     }
 
-    // Keep only the latest reading per type
-    List<(DateTime, String)> latest(List<(DateTime, String)> list) =>
-        list.isEmpty ? [] : [list.last];
-
     final chips = <(String, IconData, Color)>[];
     if (bpRows.isNotEmpty)    chips.add((bpRows.last.$2,    Icons.favorite_outlined,   const Color(0xFFEF4444)));
     if (sugarRows.isNotEmpty) chips.add((sugarRows.last.$2, Icons.water_drop_outlined, const Color(0xFFF97316)));
@@ -508,13 +504,14 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
 
     return GestureDetector(
       onTap: () async {
+        final vital = vitals.last;
         final result = await Navigator.push<dynamic>(
           context,
           MaterialPageRoute(
-            builder: (_) => VitalDetailScreen(
-              date: date,
+            builder: (_) => AddVitalScreen(
+              existing: vital,
               category: 'daily',
-              isFemale: _sex == 'Female',
+              sameDayHistory: vitals.where((v) => v.id != vital.id).toList(),
             ),
           ),
         );
