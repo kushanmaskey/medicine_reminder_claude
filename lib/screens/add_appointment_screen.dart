@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/appointment.dart';
 import '../models/appointment_alert.dart';
+import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 
@@ -21,7 +22,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
   DateTime? _appointmentDate;
   TimeOfDay? _appointmentTime;
 
-  List<String> _doctorOptions = [];
+  List<Doctor> _doctorOptions = [];
 
   // Alert state
   final List<DateTime> _newAlerts = [];
@@ -55,10 +56,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       final doctors = await StorageService.getDoctors();
       if (mounted) {
         setState(() {
-          _doctorOptions = doctors
-              .map((d) => d.displayName)
-              .where((n) => n.isNotEmpty)
-              .toList();
+          _doctorOptions = doctors.where((d) => d.displayName.isNotEmpty).toList();
         });
       }
     } catch (_) {}
@@ -66,7 +64,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
 
   Future<void> _showDoctorPicker() async {
     _dismissFocus();
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showModalBottomSheet<Doctor>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -97,17 +95,24 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: _doctorOptions.length,
-              itemBuilder: (ctx, i) => ListTile(
-                leading: const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color(0xFFEFF6FF),
-                  child: Icon(Icons.person_outlined,
-                      size: 16, color: _purple),
-                ),
-                title: Text(_doctorOptions[i],
-                    style: const TextStyle(fontSize: 14)),
-                onTap: () => Navigator.pop(ctx, _doctorOptions[i]),
-              ),
+              itemBuilder: (ctx, i) {
+                final doctor = _doctorOptions[i];
+                return ListTile(
+                  leading: const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Color(0xFFEFF6FF),
+                    child: Icon(Icons.person_outlined,
+                        size: 16, color: _purple),
+                  ),
+                  title: Text(doctor.displayName,
+                      style: const TextStyle(fontSize: 14)),
+                  subtitle: doctor.fullAddress.isNotEmpty
+                      ? Text(doctor.fullAddress,
+                          style: const TextStyle(fontSize: 12))
+                      : null,
+                  onTap: () => Navigator.pop(ctx, doctor),
+                );
+              },
             ),
           ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 12),
@@ -115,7 +120,10 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
       ),
     );
     if (selected != null && mounted) {
-      _doctorController.text = selected;
+      _doctorController.text = selected.displayName;
+      if (selected.fullAddress.isNotEmpty) {
+        _locationController.text = selected.fullAddress;
+      }
       _syncTitle();
     }
   }
