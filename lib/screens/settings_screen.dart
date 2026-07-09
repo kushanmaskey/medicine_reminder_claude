@@ -5,6 +5,8 @@ import '../services/biometric_service.dart';
 import '../services/ringtone_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/purchase_service.dart';
+import 'paywall_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_screen.dart';
 
@@ -158,6 +160,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          _SectionHeader(title: 'Subscription'),
+          const SizedBox(height: 8),
+          _SubscriptionTile(),
+          const SizedBox(height: 20),
           _SectionHeader(title: 'Security'),
           const SizedBox(height: 8),
           Container(
@@ -370,6 +376,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SubscriptionTile extends StatefulWidget {
+  @override
+  State<_SubscriptionTile> createState() => _SubscriptionTileState();
+}
+
+class _SubscriptionTileState extends State<_SubscriptionTile> {
+  bool _isPremium = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final premium = await PurchaseService.isPremium();
+    if (mounted) setState(() { _isPremium = premium; _loading = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: _loading
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          : ListTile(
+              leading: Icon(
+                _isPremium ? Icons.star : Icons.star_border,
+                color: const Color(0xFF501513),
+              ),
+              title: Text(_isPremium ? 'Premium Active' : 'Upgrade to Premium'),
+              subtitle: Text(_isPremium ? 'You have full access to all features' : 'Unlock all features with a subscription'),
+              trailing: _isPremium
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : const Icon(Icons.chevron_right),
+              onTap: _isPremium ? null : () async {
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                );
+                if (result == true) _check();
+              },
+            ),
     );
   }
 }

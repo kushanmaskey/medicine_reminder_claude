@@ -11,24 +11,24 @@ class AuthService {
   static Future<String?> register(
       String email, String password, String name, String sex, String phone) async {
     try {
-      // Step 1: create the auth user
-      await _db.auth.signUp(email: email, password: password);
-
-      // Step 2: sign in to get an active session (required for RLS)
-      final signIn = await _db.auth.signInWithPassword(
+      final res = await _db.auth.signUp(
         email: email,
         password: password,
+        data: {'name': name, 'sex': sex, 'phone': phone},
+        emailRedirectTo: 'com.medreminder.medicationreminder://login-callback/',
       );
 
-      // Step 3: create profile now that auth.uid() is valid
-      if (signIn.user != null) {
+      // Email confirmation disabled — session exists, create profile now
+      if (res.session != null && res.user != null) {
         await _db.from('profiles').upsert({
-          'id': signIn.user!.id,
+          'id': res.user!.id,
           'name': name,
           'sex': sex,
           'phone': phone,
         });
       }
+      // Email confirmation enabled — session is null.
+      // Profile will be created on first login via _ensureProfile using stored metadata.
       return null;
     } on AuthException catch (e) {
       return e.message;
@@ -37,20 +37,68 @@ class AuthService {
     }
   }
 
-  static Future<bool> login(String email, String password) async {
+  /// Returns null on success, or an error message on failure.
+  static Future<String?> login(String email, String password) async {
     try {
       final res = await _db.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return res.session != null;
+      if (res.session == null) return 'Invalid email or password.';
+      await _ensureProfile(res.user!.id);
+      return null;
+    } on AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      if (msg.contains('email not confirmed') || msg.contains('not confirmed')) {
+        return 'Please verify your email before signing in. Check your inbox.';
+      }
+      return 'Invalid email or password.';
     } catch (_) {
-      return false;
+      return 'Invalid email or password.';
     }
+  }
+
+  static Future<void> _ensureProfile(String userId) async {
+    try {
+      final existing = await _db.from('profiles').select('id').eq('id', userId).maybeSingle();
+      if (existing != null) return;
+      final meta = _db.auth.currentUser?.userMetadata ?? {};
+      await _db.from('profiles').upsert({
+        'id': userId,
+        'name': meta['name'] ?? '',
+        'sex': meta['sex'] ?? 'Male',
+        'phone': meta['phone'] ?? '',
+      });
+    } catch (_) {}
   }
 
   static Future<void> logout() async {
     await _db.auth.signOut();
+  }
+
+  static Future<String?> resetPassword(String email) async {
+    try {
+      await _db.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'com.medreminder.medicationreminder://login-callback/',
+      );
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Failed to send reset email. Please try again.';
+    }
+  }
+
+  static Future<String?> updatePassword(String newPassword) async {
+    try {
+      await _db.auth.updateUser(UserAttributes(password: newPassword));
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Failed to update password. Please try again.';
+    }
   }
 
   static Future<bool> isLoggedIn() async {
