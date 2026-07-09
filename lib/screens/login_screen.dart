@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
-import 'forgot_password_screen.dart';
 
 const _gradient = LinearGradient(
   colors: [Color(0xFF501513), Color(0xFF7A2420)],
@@ -37,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
 
-    final error = await AuthService.login(
+    final success = await AuthService.login(
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -45,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (error == null) {
+    if (success) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
       if (!mounted) return;
@@ -54,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
-      setState(() => _error = error);
+      setState(() => _error = 'Invalid email or password.');
     }
   }
 
@@ -189,14 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
-                            child: const Text('Forgot Password?', style: TextStyle(color: Color(0xFF501513), fontSize: 13, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 28),
                         SizedBox(
                           width: double.infinity,
                           height: 52,

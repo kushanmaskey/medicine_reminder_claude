@@ -6,11 +6,9 @@ import 'config/supabase_config.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_service.dart';
 import 'services/notification_service.dart';
-import 'services/purchase_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/biometric_lock_screen.dart';
-import 'screens/reset_password_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 
 void main() async {
@@ -27,39 +25,11 @@ void main() async {
       onTimeout: () {},
     );
   } catch (_) {}
-  try {
-    final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
-    await PurchaseService.initialize(userId).timeout(const Duration(seconds: 10));
-  } catch (_) {}
   runApp(const MedicalWalletApp());
 }
 
-class MedicalWalletApp extends StatefulWidget {
+class MedicalWalletApp extends StatelessWidget {
   const MedicalWalletApp({super.key});
-
-  @override
-  State<MedicalWalletApp> createState() => _MedicalWalletAppState();
-}
-
-class _MedicalWalletAppState extends State<MedicalWalletApp> {
-  @override
-  void initState() {
-    super.initState();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (!mounted) return;
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
-          (_) => false,
-        );
-      } else if (data.event == AuthChangeEvent.signedIn) {
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (_) => false,
-        );
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

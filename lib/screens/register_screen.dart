@@ -38,7 +38,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _sex             = 'Male';
   int _passwordLength     = 0;
   String? _emailError;
-  String? _successMessage;
 
   @override
   void initState() {
@@ -96,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    setState(() { _emailError = null; _successMessage = null; });
+    setState(() => _emailError = null);
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedToTerms) {
       setState(() => _emailError = 'Please agree to the Terms & Conditions and Privacy Policy to continue.');
@@ -126,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!loggedIn) {
       if (mounted) {
         setState(() {
-          _successMessage = 'Account created! A verification email has been sent to $email. Please click the link to verify your account, then sign in.';
+          _emailError = 'Account created! Please check your email to confirm, then sign in.';
           _loading = false;
         });
       }
@@ -341,30 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildTermsCheckbox(),
                     const SizedBox(height: 12),
 
-                    if (_successMessage != null) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green.shade300),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _successMessage!,
-                                style: const TextStyle(color: Colors.green, fontSize: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    // Email-already-exists error
                     if (_emailError != null) ...[
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
