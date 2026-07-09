@@ -86,19 +86,11 @@ class ActivitiesTabState extends State<ActivitiesTab> {
   }
 
   Future<void> _openDetail(_TypeGroup tg, DateTime date) async {
-    if (tg.entries.length == 1) {
-      final result = await Navigator.push<dynamic>(
-        context,
-        MaterialPageRoute(builder: (_) => AddActivityScreen(existing: tg.entries.first)),
-      );
-      if (result == true || result == 'deleted') _load();
-    } else {
-      await Navigator.push<dynamic>(
-        context,
-        MaterialPageRoute(builder: (_) => ActivityDetailScreen(type: tg.type, date: date)),
-      );
-      _load();
-    }
+    await Navigator.push<dynamic>(
+      context,
+      MaterialPageRoute(builder: (_) => ActivityDetailScreen(type: tg.type, date: date)),
+    );
+    _load();
   }
 
   @override
