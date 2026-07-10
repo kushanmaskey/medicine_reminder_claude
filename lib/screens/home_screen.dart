@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
@@ -109,9 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     final biometricEnabled = await BiometricService.isEnabled();
-    final biometricAvailable = await BiometricService.isAvailable();
 
-    if (biometricEnabled && biometricAvailable) {
+    if (biometricEnabled) {
       if (!mounted) return;
       final unlocked = await Navigator.push<bool>(
         context,
@@ -174,8 +174,40 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _requestNotificationPermission() async {
-    await NotificationService.requestPermission();
+    final granted = await NotificationService.requestPermission();
+    if (!granted) {
+      await _showNotificationPermissionBanner();
+      return;
+    }
+    // Check again in case the user previously denied and requestPermission
+    // returned without showing a dialog.
+    final alreadyGranted = await NotificationService.isPermissionGranted();
+    if (!alreadyGranted && mounted) {
+      await _showNotificationPermissionBanner();
+      return;
+    }
     await _rescheduleNotificationsIfNeeded();
+  }
+
+  Future<void> _showNotificationPermissionBanner() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 8),
+        backgroundColor: const Color(0xFF501513),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: const Text(
+          'Notifications are disabled. Enable them in Settings → My Medical Wallet → Notifications.',
+          style: TextStyle(color: Colors.white, fontSize: 13),
+        ),
+        action: SnackBarAction(
+          label: 'Open Settings',
+          textColor: Colors.white,
+          onPressed: () => openAppSettings(),
+        ),
+      ),
+    );
   }
 
   // Reschedules all reminders once after the notification channel/permission fix

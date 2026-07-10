@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -10,20 +11,52 @@ class NotificationService {
 
   static Future<void> initialize() async {
     tz_data.initializeTimeZones();
-    final tzInfo = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+    try {
+      final tzInfo = await FlutterTimezone.getLocalTimezone().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => throw TimeoutException('FlutterTimezone timed out'),
+      );
+      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+    } catch (_) {
+      tz.setLocalLocation(tz.UTC);
+    }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      defaultPresentAlert: true,
+      defaultPresentBadge: true,
+      defaultPresentSound: true,
     );
 
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: (_) {},
+    ).timeout(
+      const Duration(seconds: 4),
+      onTimeout: () {},
     );
+  }
+
+  static Future<bool> isPermissionGranted() async {
+    try {
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final settings = await ios.checkPermissions();
+        return settings?.isEnabled ?? false;
+      }
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
   }
 
   static Future<bool> requestPermission() async {
@@ -129,7 +162,7 @@ class NotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          interruptionLevel: InterruptionLevel.timeSensitive,
+          interruptionLevel: InterruptionLevel.active,
         ),
       ),
       androidScheduleMode: scheduleMode,
@@ -170,7 +203,7 @@ class NotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          interruptionLevel: InterruptionLevel.timeSensitive,
+          interruptionLevel: InterruptionLevel.active,
         ),
       ),
       androidScheduleMode: scheduleMode,
@@ -183,6 +216,67 @@ class NotificationService {
     try {
       await _plugin.cancel(id);
     } catch (_) {}
+  }
+
+  static Future<int> getPendingCount() async {
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      return pending.length;
+    } catch (_) {
+      return -1;
+    }
+  }
+
+  /// Fires an immediate notification to test the permission + display pipeline.
+  static Future<void> showTestNotification() async {
+    await _plugin.show(
+      999999,
+      'Test Notification',
+      'If you see this, notifications are working correctly.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel',
+          'Test',
+          channelDescription: 'Test notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
+
+  /// Schedules a notification 15 seconds from now to test zonedSchedule.
+  static Future<void> scheduleTestNotification() async {
+    final scheduled = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 15));
+    final scheduleMode = await _resolveScheduleMode();
+    await _plugin.zonedSchedule(
+      999998,
+      'Scheduled Test',
+      'Scheduled 15 s ago — notifications are working.',
+      scheduled,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel',
+          'Test',
+          channelDescription: 'Test notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
   }
 
   static int idFromString(String id) =>

@@ -25,12 +25,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _soundName;
   bool _loading = false;
   bool _biometricEnabled = false;
+  bool? _notifPermissionGranted;
+  int _pendingCount = -1;
 
   @override
   void initState() {
     super.initState();
     _loadSoundName();
     _loadBiometricState();
+    _loadNotifDiagnostics();
+  }
+
+  Future<void> _loadNotifDiagnostics() async {
+    final granted = await NotificationService.isPermissionGranted();
+    final count = await NotificationService.getPendingCount();
+    if (mounted) setState(() { _notifPermissionGranted = granted; _pendingCount = count; });
+  }
+
+  Future<void> _sendTestNotification() async {
+    try {
+      await NotificationService.showTestNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Immediate test sent — you should see a banner now.'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendScheduledTest() async {
+    try {
+      await NotificationService.scheduleTestNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Scheduled test sent — notification will appear in 15 seconds.'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        await _loadNotifDiagnostics();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _loadBiometricState() async {
@@ -293,6 +347,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () => openAppSettings(),
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(title: 'Notification Diagnostics'),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: _notifPermissionGranted == false
+                          ? const Color(0xFFFEF2F2)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _notifPermissionGranted == false
+                          ? Icons.notifications_off_outlined
+                          : Icons.notifications_active_outlined,
+                      color: _notifPermissionGranted == false
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF3B82F6),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    _notifPermissionGranted == null
+                        ? 'Checking permission…'
+                        : _notifPermissionGranted!
+                            ? 'Permission: Granted'
+                            : 'Permission: DENIED',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: _notifPermissionGranted == false
+                          ? const Color(0xFFEF4444)
+                          : null,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Pending scheduled: ${_pendingCount < 0 ? "unknown" : _pendingCount}',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  trailing: _notifPermissionGranted == false
+                      ? TextButton(
+                          onPressed: () => openAppSettings(),
+                          child: const Text('Fix in Settings',
+                              style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.refresh, size: 18, color: Colors.grey),
+                          onPressed: _loadNotifDiagnostics,
+                          tooltip: 'Refresh',
+                        ),
+                ),
+                Divider(height: 1, indent: 72, color: Colors.grey.shade100),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      gradient: _gradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.bolt, color: Colors.white, size: 20),
+                  ),
+                  title: const Text('Send Immediate Test',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  subtitle: Text('Shows a banner right now',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  onTap: _sendTestNotification,
+                ),
+                Divider(height: 1, indent: 72, color: Colors.grey.shade100),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      gradient: _gradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.timer_outlined, color: Colors.white, size: 20),
+                  ),
+                  title: const Text('Send Scheduled Test (15s)',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  subtitle: Text('Fires via zonedSchedule in 15 seconds',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  onTap: _sendScheduledTest,
+                ),
               ],
             ),
           ),
