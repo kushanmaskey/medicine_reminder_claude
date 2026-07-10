@@ -510,6 +510,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         child: TextFormField(
           controller: _notesController,
           maxLines: 3,
+          maxLength: 500,
           decoration: _inputDecoration(
               'e.g. route, how you felt, location…', '', _activeColor),
         ),

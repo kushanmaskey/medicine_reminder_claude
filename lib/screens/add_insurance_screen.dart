@@ -368,15 +368,23 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
             _buildSection('Contact', [
               _buildField(_phone, 'Customer Service Phone',
                   hint: 'e.g. 1-800-123-4567',
-                  keyboardType: TextInputType.phone),
+                  maxLength: 20,
+                  keyboardType: TextInputType.phone,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final digits = v.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length < 7) return 'Enter a valid phone number';
+                    return null;
+                  }),
               const SizedBox(height: 12),
               _buildField(_website, 'Customer Care Website',
                   hint: 'e.g. bcbs.com',
+                  maxLength: 200,
                   keyboardType: TextInputType.url),
             ]),
             const SizedBox(height: 20),
             _buildSection('Notes', [
-              _buildField(_notes, 'Notes', maxLines: 3, hint: 'Additional information...'),
+              _buildField(_notes, 'Notes', maxLines: 3, maxLength: 500, hint: 'Additional information...'),
             ]),
             if (isEdit && widget.existing?.createdAt != null) ...[
               const SizedBox(height: 20),
@@ -513,15 +521,19 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
     bool required = false,
     String? hint,
     int maxLines = 1,
+    int maxLength = 200,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        counterText: '',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -531,9 +543,9 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         isDense: true,
       ),
-      validator: required
+      validator: validator ?? (required
           ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
-          : null,
+          : null),
     );
   }
 

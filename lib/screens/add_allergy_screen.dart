@@ -140,6 +140,7 @@ class _AddAllergyScreenState extends State<AddAllergyScreen> {
                     controller: _nameController,
                     autofocus: !_isEditing,
                     textCapitalization: TextCapitalization.words,
+                    maxLength: 100,
                     decoration: InputDecoration(
                       hintText: 'e.g. Penicillin, Peanuts, Latex',
                       filled: true,

@@ -500,7 +500,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               child: TextFormField(
                 controller: _firstNameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: _dec('First Name', Icons.person_outlined),
+                maxLength: 50,
+                decoration: _dec('First Name', Icons.person_outlined).copyWith(counterText: ''),
               ),
             ),
             const SizedBox(width: 12),
@@ -508,7 +509,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               child: TextFormField(
                 controller: _lastNameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: _dec('Last Name *', Icons.person_outlined),
+                maxLength: 50,
+                decoration: _dec('Last Name *', Icons.person_outlined).copyWith(counterText: ''),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ),
@@ -521,7 +523,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               width: 110,
               child: TextFormField(
                 controller: _credentialController,
-                decoration: _dec('Credential', Icons.workspace_premium_outlined),
+                maxLength: 20,
+                decoration: _dec('Credential', Icons.workspace_premium_outlined).copyWith(counterText: ''),
               ),
             ),
             const SizedBox(width: 12),
@@ -529,7 +532,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               child: TextFormField(
                 controller: _specialtyController,
                 textCapitalization: TextCapitalization.words,
-                decoration: _dec('Specialty', Icons.biotech_outlined),
+                maxLength: 100,
+                decoration: _dec('Specialty', Icons.biotech_outlined).copyWith(counterText: ''),
               ),
             ),
           ],
@@ -550,14 +554,29 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         TextFormField(
           controller: _phoneController,
           keyboardType: TextInputType.phone,
-          decoration: _dec('Phone Number', Icons.phone_outlined),
+          maxLength: 20,
+          decoration: _dec('Phone Number', Icons.phone_outlined).copyWith(counterText: ''),
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return null;
+            final digits = v.replaceAll(RegExp(r'\D'), '');
+            if (digits.length < 7) return 'Enter a valid phone number';
+            return null;
+          },
         ),
         if (_npiController.text.isNotEmpty || !_isEditing) ...[
           const SizedBox(height: 12),
           TextFormField(
             controller: _npiController,
             keyboardType: TextInputType.number,
-            decoration: _dec('NPI Number', Icons.tag_outlined),
+            maxLength: 10,
+            decoration: _dec('NPI Number', Icons.tag_outlined).copyWith(counterText: ''),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null;
+              if (v.trim().length != 10 || int.tryParse(v.trim()) == null) {
+                return 'NPI must be exactly 10 digits';
+              }
+              return null;
+            },
           ),
         ],
       ],
@@ -573,7 +592,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         TextFormField(
           controller: _addressController,
           textCapitalization: TextCapitalization.words,
-          decoration: _dec('Street Address', Icons.home_outlined),
+          maxLength: 200,
+          decoration: _dec('Street Address', Icons.home_outlined).copyWith(counterText: ''),
         ),
         const SizedBox(height: 12),
         Row(
@@ -583,7 +603,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
               child: TextFormField(
                 controller: _cityController,
                 textCapitalization: TextCapitalization.words,
-                decoration: _dec('City', Icons.location_city_outlined),
+                maxLength: 100,
+                decoration: _dec('City', Icons.location_city_outlined).copyWith(counterText: ''),
               ),
             ),
             const SizedBox(width: 10),
@@ -604,6 +625,12 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 10,
                 decoration: _dec('ZIP', Icons.markunread_mailbox_outlined).copyWith(counterText: ''),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final digits = v.replaceAll(RegExp(r'\D'), '');
+                  if (digits.length != 5) return 'Invalid ZIP';
+                  return null;
+                },
               ),
             ),
           ],
@@ -621,6 +648,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         TextFormField(
           controller: _notesController,
           maxLines: 3,
+          maxLength: 500,
           decoration: _dec('Additional notes (optional)', Icons.notes_outlined),
         ),
       ],

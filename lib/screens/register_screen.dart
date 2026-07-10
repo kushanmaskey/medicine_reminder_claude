@@ -227,6 +227,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _nameController,
                       keyboardType: TextInputType.name,
                       textCapitalization: TextCapitalization.words,
+                      maxLength: 100,
                       decoration:
                           _inputDecoration('Full Name', Icons.person_outline),
                       validator: (v) => (v == null || v.trim().isEmpty)
@@ -245,9 +246,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration:
                           _inputDecoration('Email', Icons.email_outlined),
-                      validator: (v) => (v == null || !v.contains('@'))
-                          ? 'Please enter a valid email address'
-                          : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Please enter your email';
+                        if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v.trim())) {
+                          return 'Please enter a valid email address';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
 

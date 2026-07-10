@@ -93,15 +93,17 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               children: [
                 TextFormField(
                   controller: _doctorController,
-                  decoration: _inputDecoration("Doctor's Name", Icons.person_outlined),
+                  maxLength: 100,
+                  decoration: _inputDecoration("Doctor's Name", Icons.person_outlined).copyWith(counterText: ''),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? "Enter doctor's name" : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _prescriptionController,
+                  maxLength: 100,
                   decoration:
-                      _inputDecoration('Prescription / Medicine Name', Icons.medication_outlined),
+                      _inputDecoration('Prescription / Medicine Name', Icons.medication_outlined).copyWith(counterText: ''),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Enter medication name' : null,
                 ),
@@ -109,6 +111,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 TextFormField(
                   controller: _instructionsController,
                   maxLines: 3,
+                  maxLength: 500,
                   decoration: _inputDecoration('Instructions', Icons.notes_outlined),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Enter instructions' : null,
