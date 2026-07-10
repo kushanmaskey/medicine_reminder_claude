@@ -42,18 +42,19 @@ class MedicalWalletApp extends StatefulWidget {
 }
 
 class _MedicalWalletAppState extends State<MedicalWalletApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (!mounted) return;
       if (data.event == AuthChangeEvent.passwordRecovery) {
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
           (_) => false,
         );
       } else if (data.event == AuthChangeEvent.signedIn) {
-        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        _navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
           (_) => false,
         );
@@ -64,6 +65,7 @@ class _MedicalWalletAppState extends State<MedicalWalletApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Medical Wallet',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
