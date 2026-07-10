@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
 
-    final success = await AuthService.login(
+    final error = await AuthService.login(
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (success) {
+    if (error == null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
       if (!mounted) return;
@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
-      setState(() => _error = 'Invalid email or password.');
+      setState(() => _error = error);
     }
   }
 
