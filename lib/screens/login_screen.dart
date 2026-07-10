@@ -115,7 +115,42 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 24),
+                  // App intro card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDF3F3),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF501513).withValues(alpha: 0.12)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF501513).withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.favorite_rounded, color: Color(0xFF501513), size: 16),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'My Medical Wallet keeps your health information organized and secure — from daily vitals and medications to appointments, activities, and allergies. One app. Your complete health story.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF4A1010),
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   const Text(
                     'Sign In',
                     style: TextStyle(
