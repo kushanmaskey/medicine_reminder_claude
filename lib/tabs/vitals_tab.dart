@@ -405,15 +405,17 @@ class _VitalDayCard extends StatelessWidget {
 
   Widget _buildDailyContent() {
     final allBp    = group.vitals.expand((v) => v.bpReadings).toList();
+    final allPulse = group.vitals.expand((v) => v.pulseReadings).toList();
     final allSugar = group.vitals.expand((v) => v.sugarReadings).toList();
     final allWeight = group.vitals.expand((v) => v.weightReadings).toList();
     final allChol  = group.vitals.expand((v) => v.cholesterolReadings).toList();
     final last = group.vitals.last;
 
-    final bpVal    = allBp.isNotEmpty ? '${allBp.last.systolic}/${allBp.last.diastolic} mmHg' : '—';
-    final sugarVal = allSugar.isNotEmpty ? '${allSugar.last.value.toStringAsFixed(1)} ${last.sugarUnit}' : '—';
+    final bpVal     = allBp.isNotEmpty ? '${allBp.last.systolic}/${allBp.last.diastolic} mmHg' : '—';
+    final pulseVal  = allPulse.isNotEmpty ? '${allPulse.last.value.toInt()} bpm' : '—';
+    final sugarVal  = allSugar.isNotEmpty ? '${allSugar.last.value.toStringAsFixed(1)} ${last.sugarUnit}' : '—';
     final weightVal = allWeight.isNotEmpty ? '${allWeight.last.value.toStringAsFixed(1)} ${last.weightUnit}' : '—';
-    final cholVal  = allChol.isNotEmpty ? '${allChol.last.value.toStringAsFixed(1)} ${last.cholesterolUnit}' : '—';
+    final cholVal   = allChol.isNotEmpty ? '${allChol.last.value.toStringAsFixed(1)} ${last.cholesterolUnit}' : '—';
 
     Color? bpBulb = allBp.isNotEmpty
         ? _bpBulbColor(allBp.last.systolic, allBp.last.diastolic) : null;
@@ -424,13 +426,15 @@ class _VitalDayCard extends StatelessWidget {
 
     return Row(
       children: [
-        _MiniVital(icon: Icons.favorite_outlined, value: bpVal, color: const Color(0xFFEF4444), count: allBp.length, bulbColor: bpBulb),
+        _MiniVital(icon: Icons.favorite_outlined,     value: bpVal,     color: const Color(0xFFEF4444), count: allBp.length,     bulbColor: bpBulb),
         const SizedBox(width: 8),
-        _MiniVital(icon: Icons.water_drop_outlined, value: sugarVal, color: const Color(0xFFF97316), count: allSugar.length, bulbColor: sugarBulb),
+        _MiniVital(icon: Icons.monitor_heart_outlined, value: pulseVal,  color: const Color(0xFFEC4899), count: allPulse.length),
         const SizedBox(width: 8),
-        _MiniVital(icon: Icons.scale_outlined, value: weightVal, color: const Color(0xFF3B82F6), count: allWeight.length),
+        _MiniVital(icon: Icons.water_drop_outlined,   value: sugarVal,  color: const Color(0xFFF97316), count: allSugar.length,  bulbColor: sugarBulb),
         const SizedBox(width: 8),
-        _MiniVital(icon: Icons.biotech_outlined, value: cholVal, color: const Color(0xFF8B5CF6), count: allChol.length, bulbColor: cholBulb),
+        _MiniVital(icon: Icons.scale_outlined,        value: weightVal, color: const Color(0xFF3B82F6), count: allWeight.length),
+        const SizedBox(width: 8),
+        _MiniVital(icon: Icons.biotech_outlined,      value: cholVal,   color: const Color(0xFF8B5CF6), count: allChol.length,   bulbColor: cholBulb),
       ],
     );
   }
