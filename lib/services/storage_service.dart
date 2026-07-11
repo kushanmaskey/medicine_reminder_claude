@@ -320,14 +320,26 @@ class StorageService {
     return rows.map((r) => Vital.fromJson(_vitalFromRow(r))).toList();
   }
 
+  static bool _isUnknownColumn(PostgrestException e) =>
+      e.code == '42703' || e.code == 'PGRST204' || e.message.contains('does not exist');
+
   static Future<void> saveVital(Vital v) async {
     final row = _vitalToRow(v, uid: _uid);
     try {
       await _db.from('vitals').insert(row);
     } on PostgrestException catch (e) {
-      if (e.code == '42703' || (e.message).contains('readings_data')) {
+      if (_isUnknownColumn(e)) {
         row.remove('readings_data');
-        await _db.from('vitals').insert(row);
+        try {
+          await _db.from('vitals').insert(row);
+        } on PostgrestException catch (e2) {
+          if (_isUnknownColumn(e2)) {
+            row.remove('pulse');
+            await _db.from('vitals').insert(row);
+          } else {
+            rethrow;
+          }
+        }
       } else {
         rethrow;
       }
@@ -339,9 +351,18 @@ class StorageService {
     try {
       await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
     } on PostgrestException catch (e) {
-      if (e.code == '42703' || (e.message).contains('readings_data')) {
+      if (_isUnknownColumn(e)) {
         row.remove('readings_data');
-        await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+        try {
+          await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+        } on PostgrestException catch (e2) {
+          if (_isUnknownColumn(e2)) {
+            row.remove('pulse');
+            await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+          } else {
+            rethrow;
+          }
+        }
       } else {
         rethrow;
       }
@@ -357,6 +378,7 @@ class StorageService {
     // Single-value columns (existing schema) — store last reading for backward compat
     'bp_systolic': v.hasBP ? v.bpReadings.last.systolic : null,
     'bp_diastolic': v.hasBP ? v.bpReadings.last.diastolic : null,
+    'pulse': v.hasPulse ? v.pulseReadings.last.value.toInt() : null,
     'weight': v.hasWeight ? v.weightReadings.last.value : null,
     'weight_unit': v.weightUnit,
     'sugar_level': v.hasSugar ? v.sugarReadings.last.value : null,
@@ -366,6 +388,7 @@ class StorageService {
     // Full multi-reading data (requires readings_data TEXT column in Supabase)
     if (v.category == 'daily') 'readings_data': jsonEncode({
       'bp': v.bpReadings.map((r) => r.toJson()).toList(),
+      'pulse': v.pulseReadings.map((r) => r.toJson()).toList(),
       'sugar': v.sugarReadings.map((r) => r.toJson()).toList(),
       'cholesterol': v.cholesterolReadings.map((r) => r.toJson()).toList(),
       'weight': v.weightReadings.map((r) => r.toJson()).toList(),
@@ -392,6 +415,7 @@ class StorageService {
       // Legacy single-value columns — Vital.fromJson migrates these to reading lists
       'bpSystolic': r['bp_systolic'],
       'bpDiastolic': r['bp_diastolic'],
+      'pulse': r['pulse'],
       'weight': r['weight'],
       'sugarLevel': r['sugar_level'],
       'cholesterol': r['cholesterol'],

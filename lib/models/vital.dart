@@ -9,6 +9,7 @@ class Vital {
 
   // Daily — multiple readings per type
   final List<BpReading> bpReadings;
+  final List<VitalReading> pulseReadings;
   final List<VitalReading> sugarReadings;
   final List<VitalReading> cholesterolReadings;
   final List<VitalReading> weightReadings;
@@ -45,6 +46,7 @@ class Vital {
     this.category = 'daily',
     this.eventName = '',
     this.bpReadings = const [],
+    this.pulseReadings = const [],
     this.sugarReadings = const [],
     this.cholesterolReadings = const [],
     this.weightReadings = const [],
@@ -75,6 +77,11 @@ class Vital {
   bool get hasBP => bpReadings.isNotEmpty;
   String get bpDisplay => hasBP
       ? '${bpReadings.last.systolic}/${bpReadings.last.diastolic} mmHg'
+      : '—';
+
+  bool get hasPulse => pulseReadings.isNotEmpty;
+  String get pulseDisplay => hasPulse
+      ? '${pulseReadings.last.value.toInt()} bpm'
       : '—';
 
   bool get hasWeight => weightReadings.isNotEmpty;
@@ -113,6 +120,7 @@ class Vital {
         'category': category,
         'eventName': eventName,
         'bpReadings': bpReadings.map((r) => r.toJson()).toList(),
+        'pulseReadings': pulseReadings.map((r) => r.toJson()).toList(),
         'sugarReadings': sugarReadings.map((r) => r.toJson()).toList(),
         'cholesterolReadings': cholesterolReadings.map((r) => r.toJson()).toList(),
         'weightReadings': weightReadings.map((r) => r.toJson()).toList(),
@@ -172,6 +180,25 @@ class Vital {
           id: '${id}_bp_0',
           systolic: json['bpSystolic'] as int,
           diastolic: json['bpDiastolic'] as int,
+          time: recordedAt,
+        )
+      ];
+    }
+
+    // Pulse readings
+    List<VitalReading> pulseReadings = [];
+    final rdPulse = rd?['pulse'] as List?;
+    if (rdPulse != null && rdPulse.isNotEmpty) {
+      pulseReadings = rdPulse.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['pulseReadings'] != null) {
+      pulseReadings = (json['pulseReadings'] as List)
+          .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json['pulse'] != null) {
+      pulseReadings = [
+        VitalReading(
+          id: '${id}_pulse_0',
+          value: (json['pulse'] as num).toDouble(),
           time: recordedAt,
         )
       ];
@@ -240,6 +267,7 @@ class Vital {
       category: json['category'] ?? 'daily',
       eventName: json['eventName'] ?? '',
       bpReadings: bpReadings,
+      pulseReadings: pulseReadings,
       sugarReadings: sugarReadings,
       cholesterolReadings: cholesterolReadings,
       weightReadings: weightReadings,
