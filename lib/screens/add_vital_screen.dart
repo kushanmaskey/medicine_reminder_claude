@@ -31,6 +31,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   // Readings from widget.existing have IDs recorded in _existingReadingIds.
   // Readings added this session each have their own independent Vital in the DB (id = reading.id).
   List<BpReading> _bpReadings          = [];
+  List<VitalReading> _pulseReadings    = [];
   List<VitalReading> _sugarReadings    = [];
   List<VitalReading> _cholesterolReadings = [];
   List<VitalReading> _weightReadings   = [];
@@ -41,6 +42,9 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   // True once any reading has been persisted to DB this session
   bool _hasSaved = false;
 
+  // Vitals saved this session so notes can be updated on Done
+  final List<Vital> _sessionSavedVitals = [];
+
   // Open fields
   final _eventNameController          = TextEditingController();
   final _locationController           = TextEditingController();
@@ -48,11 +52,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   final _colonoscopyLocationController = TextEditingController();
   final _dentalLocationController     = TextEditingController();
   final _eyeExamLocationController    = TextEditingController();
-  final _periodNotesController        = TextEditingController();
-  final _mammogramNotesController     = TextEditingController();
-  final _colonoscopyNotesController   = TextEditingController();
-  final _dentalNotesController        = TextEditingController();
-  final _eyeExamNotesController       = TextEditingController();
 
   // Shared
   final _notesController = TextEditingController();
@@ -103,10 +102,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     if (_isEditing) {
       final e = widget.existing!;
       _bpReadings          = List.from(e.bpReadings);
+      _pulseReadings       = List.from(e.pulseReadings);
       _sugarReadings       = List.from(e.sugarReadings);
       _cholesterolReadings = List.from(e.cholesterolReadings);
       _weightReadings      = List.from(e.weightReadings);
       _existingReadingIds.addAll(e.bpReadings.map((r) => r.id));
+      _existingReadingIds.addAll(e.pulseReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.sugarReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.cholesterolReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.weightReadings.map((r) => r.id));
@@ -116,11 +117,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _colonoscopyLocationController.text  = e.colonoscopyLocation;
       _dentalLocationController.text       = e.dentalLocation;
       _eyeExamLocationController.text      = e.eyeExamLocation;
-      _periodNotesController.text          = e.periodNotes;
-      _mammogramNotesController.text       = e.mammogramNotes;
-      _colonoscopyNotesController.text     = e.colonoscopyNotes;
-      _dentalNotesController.text          = e.dentalNotes;
-      _eyeExamNotesController.text         = e.eyeExamNotes;
       _notesController.text       = e.notes;
       _weightUnit      = e.weightUnit;
       _sugarUnit       = e.sugarUnit;
@@ -156,11 +152,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     _colonoscopyLocationController.dispose();
     _dentalLocationController.dispose();
     _eyeExamLocationController.dispose();
-    _periodNotesController.dispose();
-    _mammogramNotesController.dispose();
-    _colonoscopyNotesController.dispose();
-    _dentalNotesController.dispose();
-    _eyeExamNotesController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -243,6 +234,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         category:        _category,
         eventName:       _eventNameController.text.trim(),
         bpReadings:          _category == 'daily' ? _bpReadings : [],
+        pulseReadings:       _category == 'daily' ? _pulseReadings : [],
         sugarReadings:       _category == 'daily' ? _sugarReadings : [],
         cholesterolReadings: _category == 'daily' ? _cholesterolReadings : [],
         weightReadings:      _category == 'daily' ? _weightReadings : [],
@@ -251,18 +243,18 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         cholesterolUnit: _cholesterolUnit,
         colonoscopyDate:     _category != 'daily' ? _colonoscopyDate : null,
         colonoscopyLocation: _category != 'daily' ? _colonoscopyLocationController.text.trim() : '',
-        colonoscopyNotes:    _category != 'daily' ? _colonoscopyNotesController.text.trim() : '',
+        colonoscopyNotes:    '',
         periodDate:          _category != 'daily' ? _periodDate : null,
-        periodNotes:         _category != 'daily' ? _periodNotesController.text.trim() : '',
+        periodNotes:         '',
         mammogramDate:       _category != 'daily' ? _mammogramDate : null,
         mammogramLocation:   _category != 'daily' ? _mammogramLocationController.text.trim() : '',
-        mammogramNotes:      _category != 'daily' ? _mammogramNotesController.text.trim() : '',
+        mammogramNotes:      '',
         dentalDate:          _category != 'daily' ? _dentalDate : null,
         dentalLocation:      _category != 'daily' ? _dentalLocationController.text.trim() : '',
-        dentalNotes:         _category != 'daily' ? _dentalNotesController.text.trim() : '',
+        dentalNotes:         '',
         eyeExamDate:         _category != 'daily' ? _eyeExamDate : null,
         eyeExamLocation:     _category != 'daily' ? _eyeExamLocationController.text.trim() : '',
-        eyeExamNotes:        _category != 'daily' ? _eyeExamNotesController.text.trim() : '',
+        eyeExamNotes:        '',
         riskLevel:       'Low',
         notes:           _notesController.text.trim(),
         location:        _category != 'daily' ? _locationController.text.trim() : '',
@@ -288,6 +280,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   Vital _makeSingleReadingVital({
     required String id,
     List<BpReading> bpReadings = const [],
+    List<VitalReading> pulseReadings = const [],
     List<VitalReading> sugarReadings = const [],
     List<VitalReading> cholesterolReadings = const [],
     List<VitalReading> weightReadings = const [],
@@ -297,6 +290,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     category: _category,
     eventName: '',
     bpReadings: bpReadings,
+    pulseReadings: pulseReadings,
     sugarReadings: sugarReadings,
     cholesterolReadings: cholesterolReadings,
     weightReadings: weightReadings,
@@ -311,14 +305,25 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     try {
       await StorageService.saveVital(vital);
       if (mounted) {
-        setState(() => _hasSaved = true);
+        setState(() {
+          _hasSaved = true;
+          _sessionSavedVitals.add(vital);
+        });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Reading saved'),
           duration: Duration(seconds: 1),
           behavior: SnackBarBehavior.floating,
         ));
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Save error: $e'),
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
   }
 
   Future<void> _deleteReading(String readingId) async {
@@ -326,18 +331,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       if (_existingReadingIds.contains(readingId)) {
         _existingReadingIds.remove(readingId);
         final remBp = _bpReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        final remPulse = _pulseReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
         final remSugar = _sugarReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
         final remCholesterol = _cholesterolReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
         final remWeight = _weightReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
-        if (remBp.isEmpty && remSugar.isEmpty && remCholesterol.isEmpty && remWeight.isEmpty) {
+        if (remBp.isEmpty && remPulse.isEmpty && remSugar.isEmpty && remCholesterol.isEmpty && remWeight.isEmpty) {
           await StorageService.deleteVital(widget.existing!.id);
         } else {
           final e = widget.existing!;
           await StorageService.updateVital(Vital(
             id: e.id, recordedAt: e.recordedAt, category: e.category,
-            eventName: e.eventName, bpReadings: remBp, sugarReadings: remSugar,
-            cholesterolReadings: remCholesterol, weightReadings: remWeight,
-            weightUnit: e.weightUnit, sugarUnit: e.sugarUnit,
+            eventName: e.eventName, bpReadings: remBp, pulseReadings: remPulse,
+            sugarReadings: remSugar, cholesterolReadings: remCholesterol,
+            weightReadings: remWeight, weightUnit: e.weightUnit, sugarUnit: e.sugarUnit,
             cholesterolUnit: e.cholesterolUnit, riskLevel: e.riskLevel, notes: e.notes,
           ));
         }
@@ -484,6 +490,25 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   // ── Add / edit reading helpers ────────────────────────────────────────────
 
+  Future<void> _addPulseReading(BuildContext context) async {
+    final result = await showModalBottomSheet<VitalReading>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _VitalReadingSheet(
+        label: 'Pulse Rate', unit: 'bpm', hint: 'e.g. 72',
+        accentColor: Color(0xFFEC4899),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() => _pulseReadings.add(result));
+      if (_category == 'daily') {
+        await _saveSingleReading(
+            _makeSingleReadingVital(id: result.id, pulseReadings: [result]));
+      }
+    }
+  }
+
   Future<void> _addBpReading(BuildContext context) async {
     final result = await showModalBottomSheet<BpReading>(
       context: context,
@@ -544,6 +569,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     return rows.take(3).toList();
   }
 
+  List<(String, DateTime)> get _histPulse {
+    final rows = <(String, DateTime)>[];
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.pulseReadings) {
+        rows.add(('${r.value.toInt()} bpm', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
   List<(String, DateTime)> _histVital(
     List<VitalReading> Function(Vital) getter,
     String unit,
@@ -590,7 +626,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           return _ReadingRow(
             label: '${reading.systolic} / ${reading.diastolic} mmHg',
             time: _formatTime(reading.time),
-            notes: reading.notes,
+
             accentColor: const Color(0xFFEF4444),
             onDelete: () async {
               setState(() => _bpReadings.removeAt(originalIndex));
@@ -604,6 +640,35 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           color: const Color(0xFFEF4444),
           onPressed: () => _addBpReading(context),
         ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    _SectionCard(
+      title: 'Pulse',
+      icon: Icons.monitor_heart_outlined,
+      iconColor: const Color(0xFFEC4899),
+      children: [
+        ..._pulseReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _pulseReadings.length - 1 - e.key;
+          final reading = e.value;
+          return _ReadingRow(
+            label: '${reading.value.toInt()} bpm',
+            time: _formatTime(reading.time),
+            accentColor: const Color(0xFFEC4899),
+            onDelete: () async {
+              setState(() => _pulseReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
+          );
+        }),
+        ..._historyRows(_histPulse, const Color(0xFFEC4899)),
+        _AddReadingButton(
+          label: _pulseReadings.isEmpty ? 'Add Pulse Reading' : 'Add Another',
+          color: const Color(0xFFEC4899),
+          onPressed: () => _addPulseReading(context),
+        ),
+        const SizedBox(height: 4),
+        Text('Normal resting: 60–100 bpm', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
     const SizedBox(height: 16),
@@ -624,7 +689,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           return _ReadingRow(
             label: '${reading.value.toStringAsFixed(1)} $_sugarUnit',
             time: _formatTime(reading.time),
-            notes: reading.notes,
+
             accentColor: const Color(0xFFF97316),
             onDelete: () async {
               setState(() => _sugarReadings.removeAt(originalIndex));
@@ -662,7 +727,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           return _ReadingRow(
             label: '${reading.value.toStringAsFixed(1)} $_cholesterolUnit',
             time: _formatTime(reading.time),
-            notes: reading.notes,
+
             accentColor: const Color(0xFF8B5CF6),
             onDelete: () async {
               setState(() => _cholesterolReadings.removeAt(originalIndex));
@@ -700,7 +765,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           return _ReadingRow(
             label: '${reading.value.toStringAsFixed(1)} $_weightUnit',
             time: _formatTime(reading.time),
-            notes: reading.notes,
+
             accentColor: const Color(0xFF3B82F6),
             onDelete: () async {
               setState(() => _weightReadings.removeAt(originalIndex));
@@ -743,15 +808,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             onClear: () => setState(() => _periodDate = null),
             formatDate: _formatDate,
           ),
-          const SizedBox(height: 12),
-          Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _periodNotesController,
-            maxLines: 2,
-            maxLength: 300,
-            decoration: _inputDecoration('Any additional notes…', ''),
-          ),
         ],
       ),
       const SizedBox(height: 16),
@@ -783,15 +839,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             maxLength: 150,
             textCapitalization: TextCapitalization.words,
             decoration: _inputDecoration('e.g. City Radiology Center…', ''),
-          ),
-          const SizedBox(height: 12),
-          Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: _mammogramNotesController,
-            maxLines: 2,
-            maxLength: 300,
-            decoration: _inputDecoration('Any additional notes…', ''),
           ),
         ],
       ),
@@ -826,15 +873,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           textCapitalization: TextCapitalization.words,
           decoration: _inputDecoration('e.g. Downtown Endoscopy Center…', ''),
         ),
-        const SizedBox(height: 12),
-        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _colonoscopyNotesController,
-          maxLines: 2,
-          maxLength: 300,
-          decoration: _inputDecoration('Any additional notes…', ''),
-        ),
       ],
     ),
     const SizedBox(height: 16),
@@ -867,15 +905,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           textCapitalization: TextCapitalization.words,
           decoration: _inputDecoration('e.g. Smile Dental Clinic…', ''),
         ),
-        const SizedBox(height: 12),
-        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _dentalNotesController,
-          maxLines: 2,
-          maxLength: 300,
-          decoration: _inputDecoration('Any additional notes…', ''),
-        ),
       ],
     ),
     const SizedBox(height: 16),
@@ -907,15 +936,6 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           maxLength: 150,
           textCapitalization: TextCapitalization.words,
           decoration: _inputDecoration('e.g. Vision Care Clinic…', ''),
-        ),
-        const SizedBox(height: 12),
-        Text('Notes', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _eyeExamNotesController,
-          maxLines: 2,
-          maxLength: 300,
-          decoration: _inputDecoration('Any additional notes…', ''),
         ),
       ],
     ),
@@ -984,6 +1004,42 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     ),
   ];
 
+  Future<void> _doneDaily() async {
+    final notes = _notesController.text.trim();
+    // Update notes on vitals saved this session if notes changed
+    for (final v in _sessionSavedVitals) {
+      if (v.notes != notes) {
+        try {
+          await StorageService.updateVital(Vital(
+            id: v.id, recordedAt: v.recordedAt, category: v.category,
+            eventName: v.eventName, bpReadings: v.bpReadings, pulseReadings: v.pulseReadings,
+            sugarReadings: v.sugarReadings, cholesterolReadings: v.cholesterolReadings,
+            weightReadings: v.weightReadings, weightUnit: v.weightUnit,
+            sugarUnit: v.sugarUnit, cholesterolUnit: v.cholesterolUnit,
+            riskLevel: v.riskLevel, notes: notes,
+          ));
+          _hasSaved = true;
+        } catch (_) {}
+      }
+    }
+    // Update existing vital's notes when editing
+    if (_isEditing && widget.existing!.notes != notes) {
+      try {
+        final e = widget.existing!;
+        await StorageService.updateVital(Vital(
+          id: e.id, recordedAt: e.recordedAt, category: e.category,
+          eventName: e.eventName, bpReadings: _bpReadings, pulseReadings: _pulseReadings,
+          sugarReadings: _sugarReadings, cholesterolReadings: _cholesterolReadings,
+          weightReadings: _weightReadings, weightUnit: _weightUnit,
+          sugarUnit: _sugarUnit, cholesterolUnit: _cholesterolUnit,
+          riskLevel: e.riskLevel, notes: notes, doctorId: e.doctorId, location: e.location,
+        ));
+        _hasSaved = true;
+      } catch (_) {}
+    }
+    if (mounted) Navigator.pop(context, _hasSaved);
+  }
+
   // ── Notes section ─────────────────────────────────────────────────────────
 
   Widget _buildNotesSection() {
@@ -1009,13 +1065,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         width: double.infinity,
         height: 50,
         child: OutlinedButton(
-          onPressed: () => Navigator.pop(context, _hasSaved),
+          onPressed: _doneDaily,
           style: OutlinedButton.styleFrom(
             side: BorderSide(color: _accentColor),
             foregroundColor: _accentColor,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text('Done', style: TextStyle(fontSize: 16)),
+          child: const Text('Save', style: TextStyle(fontSize: 16)),
         ),
       );
     }
@@ -1118,14 +1174,12 @@ class _HistoryRow extends StatelessWidget {
 class _ReadingRow extends StatelessWidget {
   final String label;
   final String time;
-  final String notes;
   final Color accentColor;
   final VoidCallback onDelete;
 
   const _ReadingRow({
     required this.label,
     required this.time,
-    required this.notes,
     required this.accentColor,
     required this.onDelete,
   });
@@ -1157,9 +1211,8 @@ class _ReadingRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      notes.isNotEmpty ? '$time  ·  $notes' : time,
+                      time,
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -1222,7 +1275,6 @@ class _BpReadingSheet extends StatefulWidget {
 class _BpReadingSheetState extends State<_BpReadingSheet> {
   final _systolicCtrl  = TextEditingController();
   final _diastolicCtrl = TextEditingController();
-  final _notesCtrl     = TextEditingController();
   late DateTime _time;
 
   @override
@@ -1231,7 +1283,6 @@ class _BpReadingSheetState extends State<_BpReadingSheet> {
     final init = widget.initial;
     _systolicCtrl.text  = init != null ? '${init.systolic}' : '';
     _diastolicCtrl.text = init != null ? '${init.diastolic}' : '';
-    _notesCtrl.text     = init?.notes ?? '';
     _time               = init?.time ?? DateTime.now();
   }
 
@@ -1239,7 +1290,6 @@ class _BpReadingSheetState extends State<_BpReadingSheet> {
   void dispose() {
     _systolicCtrl.dispose();
     _diastolicCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -1282,7 +1332,6 @@ class _BpReadingSheetState extends State<_BpReadingSheet> {
       systolic: sys,
       diastolic: dia,
       time: _time,
-      notes: _notesCtrl.text.trim(),
     );
     Navigator.pop(context, reading);
   }
@@ -1321,13 +1370,6 @@ class _BpReadingSheetState extends State<_BpReadingSheet> {
           ),
           const SizedBox(height: 12),
           _TimeRow(time: _fmt(_time), color: widget.accentColor, onTap: _pickTime),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _notesCtrl,
-            maxLines: 2,
-            maxLength: 200,
-            decoration: _sheetInput('Notes (optional)', '', widget.accentColor),
-          ),
         ],
       ),
     );
@@ -1357,7 +1399,6 @@ class _VitalReadingSheet extends StatefulWidget {
 
 class _VitalReadingSheetState extends State<_VitalReadingSheet> {
   final _valueCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
   late DateTime _time;
 
   @override
@@ -1365,14 +1406,12 @@ class _VitalReadingSheetState extends State<_VitalReadingSheet> {
     super.initState();
     final init = widget.initial;
     _valueCtrl.text = init != null ? init.value.toStringAsFixed(1) : '';
-    _notesCtrl.text = init?.notes ?? '';
     _time           = init?.time ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _valueCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -1413,7 +1452,6 @@ class _VitalReadingSheetState extends State<_VitalReadingSheet> {
       id: widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       value: val,
       time: _time,
-      notes: _notesCtrl.text.trim(),
     );
     Navigator.pop(context, reading);
   }
@@ -1433,13 +1471,6 @@ class _VitalReadingSheetState extends State<_VitalReadingSheet> {
           ),
           const SizedBox(height: 12),
           _TimeRow(time: _fmt(_time), color: widget.accentColor, onTap: _pickTime),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _notesCtrl,
-            maxLines: 2,
-            maxLength: 200,
-            decoration: _sheetInput('Notes (optional)', '', widget.accentColor),
-          ),
         ],
       ),
     );
