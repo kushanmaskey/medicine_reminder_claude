@@ -474,6 +474,7 @@ class SummaryTabState extends State<SummaryTab> {
 
 Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
     final bpRows    = <(DateTime, String)>[];
+    final pulseRows = <(DateTime, String)>[];
     final sugarRows = <(DateTime, String)>[];
     final wtRows    = <(DateTime, String)>[];
     final cholRows  = <(DateTime, String)>[];
@@ -481,6 +482,9 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
     for (final v in vitals) {
       for (final r in v.bpReadings) {
         bpRows.add((r.time, '${r.systolic}/${r.diastolic} mmHg'));
+      }
+      for (final r in v.pulseReadings) {
+        pulseRows.add((r.time, '${r.value.toInt()} bpm'));
       }
       for (final r in v.sugarReadings) {
         sugarRows.add((r.time, '${r.value.toStringAsFixed(1)} ${v.sugarUnit}'));
@@ -492,15 +496,16 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
         cholRows.add((r.time, '${r.value.toStringAsFixed(1)} ${v.cholesterolUnit}'));
       }
     }
-    for (final list in [bpRows, sugarRows, wtRows, cholRows]) {
+    for (final list in [bpRows, pulseRows, sugarRows, wtRows, cholRows]) {
       list.sort((a, b) => a.$1.compareTo(b.$1));
     }
 
     final chips = <(String, IconData, Color)>[];
-    if (bpRows.isNotEmpty)    chips.add((bpRows.last.$2,    Icons.favorite_outlined,   const Color(0xFFEF4444)));
-    if (sugarRows.isNotEmpty) chips.add((sugarRows.last.$2, Icons.water_drop_outlined, const Color(0xFFF97316)));
-    if (wtRows.isNotEmpty)    chips.add((wtRows.last.$2,    Icons.scale_outlined,      const Color(0xFF3B82F6)));
-    if (cholRows.isNotEmpty)  chips.add((cholRows.last.$2,  Icons.biotech_outlined,    const Color(0xFF8B5CF6)));
+    if (bpRows.isNotEmpty)    chips.add((bpRows.last.$2,    Icons.favorite_outlined,      const Color(0xFFEF4444)));
+    if (pulseRows.isNotEmpty) chips.add((pulseRows.last.$2, Icons.monitor_heart_outlined,  const Color(0xFFEC4899)));
+    if (sugarRows.isNotEmpty) chips.add((sugarRows.last.$2, Icons.water_drop_outlined,     const Color(0xFFF97316)));
+    if (wtRows.isNotEmpty)    chips.add((wtRows.last.$2,    Icons.scale_outlined,          const Color(0xFF3B82F6)));
+    if (cholRows.isNotEmpty)  chips.add((cholRows.last.$2,  Icons.biotech_outlined,        const Color(0xFF8B5CF6)));
 
     return GestureDetector(
       onTap: () async {
@@ -540,7 +545,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
             Text(
               _dayLabel(date),
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF484141),
               ),
@@ -548,21 +553,21 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
             const SizedBox(width: 10),
             Expanded(
               child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
+                spacing: 4,
+                runSpacing: 3,
                 children: chips.map((c) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: c.$3.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(7),
                     border: Border.all(color: c.$3.withValues(alpha: 0.18)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(c.$2, size: 11, color: c.$3),
-                      const SizedBox(width: 4),
-                      Text(c.$1, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c.$3)),
+                      Icon(c.$2, size: 10, color: c.$3),
+                      const SizedBox(width: 3),
+                      Text(c.$1, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: c.$3)),
                     ],
                   ),
                 )).toList(),
