@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../services/purchase_service.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_screen.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -179,9 +181,31 @@ class _PaywallScreenState extends State<PaywallScreen> {
               onPressed: _purchasing ? null : _restore,
               child: const Text('Restore Purchases', style: TextStyle(color: Colors.black54)),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Subscriptions auto-renew unless cancelled at least 24 hours before the renewal date. '
+              'You can manage or cancel your subscription in your Apple ID account settings.',
+              style: TextStyle(fontSize: 11, color: Colors.grey[500], height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsScreen())),
+                  child: const Text('Terms of Use', style: TextStyle(fontSize: 12, color: Color(0xFF501513), decoration: TextDecoration.underline)),
+                ),
+                const Text('  ·  ', style: TextStyle(fontSize: 12, color: Colors.black38)),
+                GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+                  child: const Text('Privacy Policy', style: TextStyle(fontSize: 12, color: Color(0xFF501513), decoration: TextDecoration.underline)),
+                ),
+              ],
+            ),
           ] else
             const Text('Unable to load subscription options. Please try again later.'),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
         ],
       ),
     );
