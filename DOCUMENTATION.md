@@ -734,7 +734,33 @@ Scrollable privacy policy document covering data collection, encryption, RLS sec
 ### `TermsScreen`
 **File:** `lib/screens/terms_screen.dart`
 
-Scrollable Terms of Use document covering acceptance, user responsibilities, liability limitations, and termination.
+**Version:** 1.1 — Effective July 19, 2026
+
+Scrollable Terms & Conditions document with 16 sections:
+
+| # | Section | Key Content |
+|---|---|---|
+| 1 | Acceptance of Terms | Consent recorded with email, timestamp |
+| 2 | About the App | Personal organiser only — NOT a medical device |
+| 3 | Personal Information We Collect | Email, name, sex, phone, health data, insurance data, allergies |
+| 4 | Non-HIPAA Personal Health Data | App is NOT a HIPAA-covered entity; user data not transmitted to providers |
+| 5 | **Data Security & Breach Disclaimer** | No guarantee of absolute security; NOT liable for hacking, breaches, or unauthorized access beyond reasonable control |
+| 6 | No Medical Advice | App provides no diagnosis, treatment, or medical recommendations |
+| 7 | No Sale of User Data | Data never sold, shared with advertisers, or used for AI training |
+| 8 | User Responsibilities | Password security, no account sharing, lawful use only |
+| 9 | Account Termination | 30-day data deletion on request |
+| 10 | Disclaimer of Warranties | App provided "as is" — no guarantee of uptime, accuracy, or data security |
+| 11 | **Limitation of Liability** | Developer NOT liable for breaches, hacking, data loss, third-party outages; liability capped at $0 for free app |
+| 12 | **Indemnification** | User indemnifies developer against claims arising from misuse, violations, or credential failure |
+| 13 | **Governing Law & Dispute Resolution** | Florida law; binding arbitration (AAA); class action waiver |
+| 14 | Changes to Terms | Continued use = acceptance of updated Terms |
+| 15 | Contact | medicalwallet473@gmail.com |
+
+> **Key legal protections added (v1.1):**
+> - Section 5 explicitly disclaims liability for data breaches, hacking, and cyberattacks
+> - Section 11 caps liability at $0 for free app usage
+> - Section 12 indemnification clause protects developer from user-initiated claims
+> - Section 13 requires binding arbitration and waives class action rights
 
 ---
 
@@ -1173,6 +1199,9 @@ HomeScreen init
 | Data Scope | Non-HIPAA basic health information (not EMR/EHR medical records) |
 | Third-Party Sharing | None — data is never sold or shared with advertisers |
 | App Store | Standard Apple EULA, Privacy Policy linked in paywall and App Store listing |
+| Liability Disclaimer | Developer not liable for breaches, hacking, or unauthorized access (Terms §5, §11) |
+| Indemnification | Users indemnify developer against claims from misuse or credential failure (Terms §12) |
+| Governing Law | Florida state law; binding arbitration; class action waiver (Terms §13) |
 
 ---
 

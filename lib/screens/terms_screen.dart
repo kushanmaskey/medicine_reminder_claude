@@ -91,6 +91,23 @@ class TermsScreen extends StatelessWidget {
           ),
           _TermsSection(
             number: '5',
+            title: 'Data Security & Breach Disclaimer',
+            body:
+                'We take reasonable technical measures to protect your data, including:\n\n'
+                '• Encrypted HTTPS transmission for all data in transit\n'
+                '• Row Level Security (RLS) so only you can access your records\n'
+                '• Secure authentication via Supabase Auth\n\n'
+                'HOWEVER, YOU ACKNOWLEDGE AND AGREE THAT:\n\n'
+                '• No method of electronic storage or internet transmission is 100% secure\n'
+                '• We cannot guarantee absolute security of your data\n'
+                '• We are NOT liable for unauthorized access to your data by third parties, hackers, cybercriminals, or any other unauthorized persons beyond our reasonable control\n'
+                '• We are NOT liable for data breaches resulting from circumstances outside our control, including but not limited to: attacks on our third-party infrastructure providers, zero-day exploits, or your own failure to protect your login credentials\n'
+                '• We are NOT liable for any loss, theft, corruption, or unauthorized disclosure of your personal or health data caused by security incidents\n'
+                '• In the event of a data breach affecting your information, we will notify you as required by applicable law\n\n'
+                'You use the App and store your data at your own risk. If you do not accept this risk, do not use the App.',
+          ),
+          _TermsSection(
+            number: '7',
             title: 'No Medical Advice or Recommendations',
             body:
                 'THE APP DOES NOT PROVIDE MEDICAL ADVICE, DIAGNOSIS, OR TREATMENT RECOMMENDATIONS.\n\n'
@@ -102,7 +119,7 @@ class TermsScreen extends StatelessWidget {
                 'Always consult a qualified healthcare professional before making any medical decision. In an emergency, call 911 immediately.',
           ),
           _TermsSection(
-            number: '6',
+            number: '8',
             title: 'No Sale of User Data',
             body:
                 'We do not and will not:\n\n'
@@ -112,7 +129,7 @@ class TermsScreen extends StatelessWidget {
                 '• Provide your data to insurance companies or employers',
           ),
           _TermsSection(
-            number: '7',
+            number: '9',
             title: 'User Responsibilities',
             body:
                 'You agree to:\n\n'
@@ -121,35 +138,70 @@ class TermsScreen extends StatelessWidget {
                 '• Not share your account with others\n'
                 '• Not use the App for any unlawful purpose\n'
                 '• Not attempt to access another user\'s data\n'
-                '• Notify us immediately of any suspected unauthorised access',
+                '• Notify us immediately of any suspected unauthorised access\n\n'
+                'You are solely responsible for maintaining the confidentiality of your login credentials. Any activity that occurs under your account is your responsibility.',
           ),
           _TermsSection(
-            number: '8',
+            number: '10',
             title: 'Account Termination',
             body:
                 'You may delete your account at any time by contacting medicalwallet473@gmail.com. All personal data will be permanently deleted within 30 days of your request.\n\n'
                 'We reserve the right to suspend accounts that violate these Terms.',
           ),
           _TermsSection(
-            number: '9',
+            number: '11',
             title: 'Disclaimer of Warranties',
             body:
-                'The App is provided "as is" without warranties of any kind. We do not guarantee the App will be error-free, uninterrupted, or that health reference information is complete or current.',
+                'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:\n\n'
+                '• Implied warranties of merchantability or fitness for a particular purpose\n'
+                '• Warranties that the App will be uninterrupted, error-free, or free of viruses\n'
+                '• Warranties regarding the accuracy, completeness, or timeliness of any health information\n'
+                '• Warranties that your data will be free from loss, corruption, or unauthorized access\n'
+                '• Warranties of security against hacking, cyberattacks, or data breaches\n\n'
+                'You use the App entirely at your own risk.',
           ),
           _TermsSection(
-            number: '10',
+            number: '12',
             title: 'Limitation of Liability',
             body:
-                'To the maximum extent permitted by law, My Medical Wallet shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including reliance on any health information displayed.',
+                'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE DEVELOPER OF MY MEDICAL WALLET, AND ANY OF ITS OFFICERS, EMPLOYEES, OR AGENTS, SHALL NOT BE LIABLE FOR:\n\n'
+                '• Any data breach, hacking, cyberattack, or unauthorized access to your personal, health, or insurance data\n'
+                '• Any loss, theft, corruption, or unauthorized disclosure of your stored data\n'
+                '• Any indirect, incidental, special, consequential, or punitive damages\n'
+                '• Any damages arising from your reliance on health information displayed in the App\n'
+                '• Any damages resulting from interruption, suspension, or termination of the App\n'
+                '• Any damages caused by third-party services (including Supabase, Apple, or Google) that the App relies upon\n'
+                '• Any loss of data due to device failure, software bugs, or service outages\n\n'
+                'IN NO EVENT SHALL OUR TOTAL CUMULATIVE LIABILITY TO YOU EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID FOR THE APP IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR (B) ZERO DOLLARS (US \$0.00) IF THE APP WAS FREE.\n\n'
+                'Some jurisdictions do not allow the exclusion of certain warranties or limitation of liability, so some of the above may not apply to you.',
           ),
           _TermsSection(
-            number: '11',
+            number: '13',
+            title: 'Indemnification',
+            body:
+                'You agree to indemnify, defend, and hold harmless the developer of My Medical Wallet and any of its officers, employees, or agents from and against any and all claims, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or related to:\n\n'
+                '• Your use or misuse of the App\n'
+                '• Your violation of these Terms\n'
+                '• Your violation of any applicable law or regulation\n'
+                '• Any data you enter into the App\n'
+                '• Your failure to keep your login credentials secure',
+          ),
+          _TermsSection(
+            number: '14',
+            title: 'Governing Law & Dispute Resolution',
+            body:
+                'These Terms are governed by the laws of the State of Florida, United States, without regard to its conflict of law provisions.\n\n'
+                'Any dispute arising out of or relating to these Terms or the App shall first be attempted to be resolved through good-faith negotiation. If unresolved, disputes shall be submitted to binding arbitration under the rules of the American Arbitration Association (AAA), conducted in English.\n\n'
+                'YOU WAIVE ANY RIGHT TO A JURY TRIAL OR TO PARTICIPATE IN A CLASS ACTION LAWSUIT IN CONNECTION WITH YOUR USE OF THE APP.',
+          ),
+          _TermsSection(
+            number: '15',
             title: 'Changes to These Terms',
             body:
                 'We may update these Terms from time to time. The version number and effective date will be updated accordingly. Continued use of the App after changes constitutes acceptance of the revised Terms.',
           ),
           _TermsSection(
-            number: '12',
+            number: '16',
             title: 'Contact',
             body: 'For questions about these Terms:\n\nmedicalwallet473@gmail.com',
           ),
@@ -187,7 +239,7 @@ class _TermsHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Effective June 1, 2026  •  Version 1.0',
+            'Effective July 19, 2026  •  Version 1.1',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.75),
               fontSize: 12,
