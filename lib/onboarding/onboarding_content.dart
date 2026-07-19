@@ -12,6 +12,31 @@ class OnboardingPage {
 
 const List<OnboardingPage> kOnboardingPages = [
   OnboardingPage(
+    emoji: '💙',
+    title: 'Your Health, Always at Hand',
+    body:
+        'After 50, life comes with more doctors, more medications, more appointments — '
+        'and more to remember.\n\n'
+        'My Medical Wallet is your personal health companion. It keeps your medications, '
+        'prescriptions, doctors, vitals, allergies, and appointments organized in one '
+        'secure place.\n\n'
+        'Next time you walk into a clinic or emergency room and a doctor asks "what '
+        'medications are you on?" or "do you have any allergies?" — you\'ll have the '
+        'answer in seconds, right on your phone.',
+  ),
+  OnboardingPage(
+    emoji: '🗂️',
+    title: 'Everything You Need, All in One App',
+    body:
+        '💊  Medications & Prescriptions — track every pill, dosage, and refill date\n\n'
+        '🩺  Doctors — your full care team, always accessible\n\n'
+        '📅  Appointments — reminders so you never miss a visit\n\n'
+        '❤️  Vitals — blood pressure, pulse, sugar, weight, cholesterol\n\n'
+        '🏃  Activities — log your daily walks and exercise\n\n'
+        '⚠️  Allergies — critical info ready when it matters most\n\n'
+        'No more paper notes. No more forgotten details.',
+  ),
+  OnboardingPage(
     emoji: '👋',
     title: 'Welcome to My Medical Wallet',
     body:
