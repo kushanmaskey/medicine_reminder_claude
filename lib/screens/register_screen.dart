@@ -345,6 +345,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildTermsCheckbox(),
                     const SizedBox(height: 12),
 
+                    // Legal disclaimer notice
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFD5A8)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.5),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Important: ',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                  const TextSpan(
+                                    text: 'My Medical Wallet is not liable for data breaches, hacking, or unauthorized access. '
+                                        'This app does not provide medical advice. '
+                                        'See ',
+                                  ),
+                                  TextSpan(
+                                    text: 'Terms & Conditions',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Color(0xFF92400E),
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => const TermsScreen()),
+                                          ),
+                                  ),
+                                  const TextSpan(text: ' §5, §11, §12 for full details.'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
                     // Email-already-exists error
                     if (_emailError != null) ...[
                       Container(
@@ -513,7 +563,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
                           ),
                   ),
-                  const TextSpan(text: '. I understand this app is a personal health organiser and does not provide medical advice.'),
+                  const TextSpan(
+                    text: '. This includes the Disclaimer of Liability and Data Security terms. '
+                        'This app is a personal health organiser and does not provide medical advice.',
+                  ),
                 ],
               ),
             ),
