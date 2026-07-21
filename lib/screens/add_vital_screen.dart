@@ -284,22 +284,38 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     List<VitalReading> sugarReadings = const [],
     List<VitalReading> cholesterolReadings = const [],
     List<VitalReading> weightReadings = const [],
-  }) => Vital(
-    id: id,
-    recordedAt: _recordedAt,
-    category: _category,
-    eventName: '',
-    bpReadings: bpReadings,
-    pulseReadings: pulseReadings,
-    sugarReadings: sugarReadings,
-    cholesterolReadings: cholesterolReadings,
-    weightReadings: weightReadings,
-    weightUnit: _weightUnit,
-    sugarUnit: _sugarUnit,
-    cholesterolUnit: _cholesterolUnit,
-    riskLevel: 'Low',
-    notes: _notesController.text.trim(),
-  );
+  }) {
+    final readingTime = bpReadings.isNotEmpty ? bpReadings.first.time
+        : pulseReadings.isNotEmpty ? pulseReadings.first.time
+        : sugarReadings.isNotEmpty ? sugarReadings.first.time
+        : cholesterolReadings.isNotEmpty ? cholesterolReadings.first.time
+        : weightReadings.isNotEmpty ? weightReadings.first.time
+        : DateTime.now();
+
+    // Keep the existing record's DATE for correct day grouping, but use the
+    // reading's actual TIME so fallback display shows the right entry time.
+    final recordedAt = _isEditing
+        ? DateTime(_recordedAt.year, _recordedAt.month, _recordedAt.day,
+                   readingTime.hour, readingTime.minute, readingTime.second)
+        : readingTime;
+
+    return Vital(
+      id: id,
+      recordedAt: recordedAt,
+      category: _category,
+      eventName: '',
+      bpReadings: bpReadings,
+      pulseReadings: pulseReadings,
+      sugarReadings: sugarReadings,
+      cholesterolReadings: cholesterolReadings,
+      weightReadings: weightReadings,
+      weightUnit: _weightUnit,
+      sugarUnit: _sugarUnit,
+      cholesterolUnit: _cholesterolUnit,
+      riskLevel: 'Low',
+      notes: _notesController.text.trim(),
+    );
+  }
 
   Future<void> _saveSingleReading(Vital vital) async {
     try {

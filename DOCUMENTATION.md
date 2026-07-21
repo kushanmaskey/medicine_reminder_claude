@@ -1137,6 +1137,26 @@ StorageService.saveVital(v)
 
 ---
 
+### Vital Reading Time Accuracy
+
+Each reading (BP, Pulse, Sugar, Cholesterol, Weight) is saved as a separate `Vital` row. The `Vital.recordedAt` is used for day-grouping and as a fallback time when `readings_data` is unavailable.
+
+**Fix in `_makeSingleReadingVital` (`lib/screens/add_vital_screen.dart`):**
+
+- **New mode**: `recordedAt` = reading's full timestamp → correct time even in fallback
+- **Edit mode**: `recordedAt` = existing record's **date** + reading's actual **time** → stays grouped under original day AND shows correct entry time
+
+```dart
+final recordedAt = _isEditing
+    ? DateTime(_recordedAt.year, _recordedAt.month, _recordedAt.day,
+               readingTime.hour, readingTime.minute, readingTime.second)
+    : readingTime;
+```
+
+Applies to all 5 types: BP, Pulse, Sugar, Cholesterol, Weight.
+
+---
+
 ### NPI Doctor Lookup
 
 ```
