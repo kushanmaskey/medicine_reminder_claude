@@ -32,32 +32,9 @@ od       = ImageDraw.Draw(overlay)
 
 WHITE = (255, 255, 255, 255)
 
-# ── Calendar outline ──────────────────────────────────────────────────────
-CAL_L   = 80     # left edge
-CAL_R   = 944    # right edge
-CAL_T   = 145    # top edge
-CAL_B   = 910    # bottom edge
-CAL_RAD = 72     # corner radius of calendar box
-STROKE  = 16     # outline thickness (thinner = smaller number)
-
-od.rounded_rectangle([CAL_L, CAL_T, CAL_R, CAL_B], radius=CAL_RAD, outline=WHITE, width=STROKE)
-
-# ── Header divider line ───────────────────────────────────────────────────
-HEADER_LINE_Y = CAL_T + 120   # distance from top of calendar to the divider line
-od.line([(CAL_L + STROKE, HEADER_LINE_Y), (CAL_R - STROKE, HEADER_LINE_Y)], fill=WHITE, width=STROKE)
-
-# ── Binding rings ─────────────────────────────────────────────────────────
-RING_W = 42   # ring width
-RING_H = 74   # ring height
-for rx in [CAL_L + 240, CAL_R - 240]:
-    od.ellipse(
-        [rx - RING_W // 2, CAL_T - RING_H // 2, rx + RING_W // 2, CAL_T + RING_H // 2],
-        outline=WHITE, width=STROKE - 4,
-    )
-
 # ── Heart ─────────────────────────────────────────────────────────────────
 HEART_CX    = SIZE // 2                              # horizontal centre
-HEART_CY    = (CAL_T + CAL_B) // 2                  # vertical centre of full calendar box
+HEART_CY    = SIZE // 2                              # vertical centre of icon
 HEART_SCALE = 285                                    # size of heart — increase to make bigger
 
 heart_pts = []
