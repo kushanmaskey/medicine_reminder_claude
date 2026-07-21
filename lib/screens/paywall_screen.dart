@@ -17,7 +17,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool _purchasing = false;
   Package? _selectedPackage;
 
-  static const _primary = Color(0xFF501513);
+  static const _primary = Color(0xFFFF6B6B);
 
   @override
   void initState() {
@@ -194,12 +194,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
               children: [
                 GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermsScreen())),
-                  child: const Text('Terms of Use', style: TextStyle(fontSize: 12, color: Color(0xFF501513), decoration: TextDecoration.underline)),
+                  child: const Text('Terms of Use', style: TextStyle(fontSize: 12, color: Color(0xFFFF6B6B), decoration: TextDecoration.underline)),
                 ),
                 const Text('  ·  ', style: TextStyle(fontSize: 12, color: Colors.black38)),
                 GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
-                  child: const Text('Privacy Policy', style: TextStyle(fontSize: 12, color: Color(0xFF501513), decoration: TextDecoration.underline)),
+                  child: const Text('Privacy Policy', style: TextStyle(fontSize: 12, color: Color(0xFFFF6B6B), decoration: TextDecoration.underline)),
                 ),
               ],
             ),

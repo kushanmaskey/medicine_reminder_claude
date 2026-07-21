@@ -8,7 +8,7 @@ const _activityTypes = [
   (type: 'Run',       icon: Icons.directions_run,   color: Color(0xFFF97316)),
   (type: 'Exercise',  icon: Icons.fitness_center,   color: Color(0xFF3B82F6)),
   (type: 'Yoga',      icon: Icons.self_improvement, color: Color(0xFF8B5CF6)),
-  (type: 'Meditation',icon: Icons.spa,              color: Color(0xFF501513)),
+  (type: 'Meditation',icon: Icons.spa,              color: Color(0xFFFF6B6B)),
 ];
 
 const _walkTypes = [
@@ -462,7 +462,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                       style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF501513)),
+                          color: Color(0xFFFF6B6B)),
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.grey),
@@ -486,7 +486,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                       style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF501513)),
+                          color: Color(0xFFFF6B6B)),
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.grey),
@@ -592,7 +592,7 @@ class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.icon,
-    this.iconColor = const Color(0xFF501513),
+    this.iconColor = const Color(0xFFFF6B6B),
     required this.child,
   });
 

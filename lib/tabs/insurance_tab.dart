@@ -3,7 +3,7 @@ import '../models/insurance.dart';
 import '../services/storage_service.dart';
 import '../screens/add_insurance_screen.dart';
 
-const _primary = Color(0xFF501513);
+const _primary = Color(0xFFFF6B6B);
 const _accent = Color(0xFF059669);
 
 const _types = ['Health', 'Dental', 'Vision'];

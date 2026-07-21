@@ -9,7 +9,7 @@ import 'terms_screen.dart';
 import 'privacy_policy_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -436,7 +436,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           boxShadow: _canSubmit
                               ? [
                                   BoxShadow(
-                                    color: const Color(0xFF501513)
+                                    color: const Color(0xFFFF6B6B)
                                         .withValues(alpha: 0.4),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
@@ -495,7 +495,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextSpan(
                         text: 'Sign In',
                         style: TextStyle(
-                            color: Color(0xFF501513),
+                            color: Color(0xFFFF6B6B),
                             fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -522,7 +522,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             height: 24,
             child: Checkbox(
               value: _agreedToTerms,
-              activeColor: const Color(0xFF501513),
+              activeColor: const Color(0xFFFF6B6B),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
               onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
             ),
@@ -537,10 +537,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextSpan(
                     text: 'Terms & Conditions',
                     style: const TextStyle(
-                      color: Color(0xFF501513),
+                      color: Color(0xFFFF6B6B),
                       fontWeight: FontWeight.w600,
                       decoration: TextDecoration.underline,
-                      decorationColor: Color(0xFF501513),
+                      decorationColor: Color(0xFFFF6B6B),
                     ),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () => Navigator.push(
@@ -552,10 +552,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextSpan(
                     text: 'Privacy Policy',
                     style: const TextStyle(
-                      color: Color(0xFF501513),
+                      color: Color(0xFFFF6B6B),
                       fontWeight: FontWeight.w600,
                       decoration: TextDecoration.underline,
-                      decorationColor: Color(0xFF501513),
+                      decorationColor: Color(0xFFFF6B6B),
                     ),
                     recognizer: TapGestureRecognizer()
                       ..onTap = () => Navigator.push(
@@ -639,8 +639,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── Sex selector ───────────────────────────────────────────────────────────
 
   Widget _buildSexSelector() {
-    const teal = Color(0xFF501513);
-    const pink = Color(0xFF7A2420);
+    const teal = Color(0xFFFF6B6B);
+    const pink = Color(0xFFFF8C42);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,7 +688,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF501513)),
+      prefixIcon: Icon(icon, color: const Color(0xFFFF6B6B)),
       filled: true,
       fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(
@@ -702,7 +702,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide:
-            const BorderSide(color: Color(0xFF501513), width: 1.5),
+            const BorderSide(color: Color(0xFFFF6B6B), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

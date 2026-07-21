@@ -720,7 +720,7 @@ class _AlertRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: isDone ? Colors.grey[400] : const Color(0xFF501513),
+                    color: isDone ? Colors.grey[400] : const Color(0xFFFF6B6B),
                     decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -834,7 +834,7 @@ class _PickerTile extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: hasValue
-                            ? const Color(0xFF501513)
+                            ? const Color(0xFFFF6B6B)
                             : Colors.grey[400],
                       ),
                     ),

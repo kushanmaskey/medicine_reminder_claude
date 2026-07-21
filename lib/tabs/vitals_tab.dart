@@ -178,11 +178,11 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       child: TabBar(
         controller: _tabController!,
         labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFF501513),
+        unselectedLabelColor: const Color(0xFFFF6B6B),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
         indicator: BoxDecoration(
-          color: const Color(0xFF501513),
+          color: const Color(0xFFFF6B6B),
           borderRadius: BorderRadius.circular(20),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
@@ -356,7 +356,7 @@ class _VitalDayCard extends StatelessWidget {
                         category == 'daily'
                             ? Icons.monitor_heart
                             : Icons.event_note_outlined,
-                        color: const Color(0xFF501513),
+                        color: const Color(0xFFFF6B6B),
                         size: 17,
                       ),
                     ),
@@ -375,7 +375,7 @@ class _VitalDayCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF501513).withValues(alpha: 0.08),
+                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -383,7 +383,7 @@ class _VitalDayCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF501513),
+                            color: Color(0xFFFF6B6B),
                           ),
                         ),
                       ),

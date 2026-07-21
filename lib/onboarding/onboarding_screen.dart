@@ -14,7 +14,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
 
-  static const _accent = Color(0xFF501513);
+  static const _accent = Color(0xFFFF6B6B);
 
   @override
   void dispose() {

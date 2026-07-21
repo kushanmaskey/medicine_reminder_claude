@@ -75,8 +75,8 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   bool get _isEditing => widget.existing != null;
   String get _category => widget.category;
 
-  static const _teal = Color(0xFF501513);
-  static const _mauve = Color(0xFF7A2420);
+  static const _teal = Color(0xFFFF6B6B);
+  static const _mauve = Color(0xFFFF8C42);
   static const _blue = Color(0xFF3B82F6);
 
   Color get _accentColor {
@@ -1681,7 +1681,7 @@ class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.icon,
-    this.iconColor = const Color(0xFF501513),
+    this.iconColor = const Color(0xFFFF6B6B),
     required this.children,
     this.trailing,
   });
@@ -1814,7 +1814,7 @@ const _monthlyTips = <_Tip>[
     icon: '🗓️', title: 'Menstrual Cycle',
     body: 'A normal cycle is 21–35 days. Track duration and flow each month. '
         'See a doctor for cycles outside that range, heavy bleeding, or severe pain.',
-    color: Color(0xFF7A2420),
+    color: Color(0xFFFF8C42),
     url: null,
   ),
   (

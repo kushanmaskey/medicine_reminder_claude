@@ -3,7 +3,7 @@ import '../models/insurance.dart';
 import '../services/storage_service.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -176,7 +176,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
       lastDate: DateTime(2100),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: const Color(0xFF501513)),
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: const Color(0xFFFF6B6B)),
         ),
         child: child!,
       ),
@@ -411,7 +411,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF501513).withValues(alpha: 0.4),
+            color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -496,7 +496,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF501513), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.5),
         ),
         labelStyle: const TextStyle(fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -537,7 +537,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF501513), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.5),
         ),
         labelStyle: const TextStyle(fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

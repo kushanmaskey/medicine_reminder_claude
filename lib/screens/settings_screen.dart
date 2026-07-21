@@ -11,7 +11,7 @@ import 'paywall_screen.dart';
 import 'terms_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -133,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Notification sound updated to "${result['name'] ?? 'Custom'}"'),
-          backgroundColor: const Color(0xFF501513),
+          backgroundColor: const Color(0xFFFF6B6B),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -151,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Notification sound reset to system default'),
-          backgroundColor: const Color(0xFF501513),
+          backgroundColor: const Color(0xFFFF6B6B),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -257,7 +257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(color: Colors.grey[600], fontSize: 13),
               ),
               value: _biometricEnabled,
-              activeColor: const Color(0xFF501513),
+              activeColor: const Color(0xFFFF6B6B),
               onChanged: _toggleBiometric,
             ),
           ),
@@ -307,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Color(0xFF501513)),
+                                  color: Color(0xFFFF6B6B)),
                             )
                           : const Icon(Icons.chevron_right,
                               color: Color(0xFF94A3B8)))
