@@ -1,8 +1,8 @@
 # My Medical Wallet — Developer Documentation
 
 **App Name:** My Medical Wallet  
-**Package:** com.medreminder.medication_reminder  
-**Version:** 1.0.1+2010  
+**Package:** com.mymedicalwallet.app  
+**Version:** 1.0.1+2013  
 **Platform:** Flutter (iOS + Android)  
 **Backend:** Supabase (PostgreSQL + Auth)  
 **Target Audience:** Adults 50+ managing medications, doctors, vitals, and appointments
@@ -121,7 +121,7 @@ Initialized in `lib/main.dart` with a 10-second timeout on startup.
 ### App Entry Point
 **File:** `lib/main.dart`
 
-- **`MedicalWalletApp`** — Root widget. Sets Material 3 theme with seed color `#501513`.
+- **`MedicalWalletApp`** — Root widget. Sets Material 3 theme with seed color `#FF6B6B`.
 - **`_SplashRouter`** — Determines which screen to show on launch.
 - **`_resolve()`** — Startup logic:
   1. Check `onboarding_done` in SharedPreferences → show `OnboardingScreen` if false
@@ -1229,12 +1229,52 @@ HomeScreen init
 
 | Color | Hex | Usage |
 |---|---|---|
-| Primary | `#501513` | App bar, buttons, primary actions |
-| Secondary | `#7A2420` | Gradient end, accents |
+| Primary | `#FF6B6B` | App bar, buttons, primary actions (coral) |
+| Secondary | `#FF8C42` | Gradient end, accents (orange) |
 | Blue | `#3B82F6` | Appointments, info |
 | Purple | `#8B5CF6` | Activities |
 | Green | `#22C55E` | Success, healthy indicators |
 | Orange | `#F97316` | Warnings, alerts |
 | Pink | `#EC4899` | Pulse vital |
 | Red | `#EF4444` | Errors, expired |
-| Gradient | `#501513 → #7A2420` | Top-left to bottom-right on cards |
+| Gradient | `#FF6B6B → #FF8C42` | Top-left to bottom-right on cards |
+
+---
+
+## 14. App Icon
+
+**Source script:** `generate_icon.py` (requires Pillow)  
+**Master icon:** `assets/icons/app_icon.png` (1024×1024)  
+**Adaptive foreground:** `assets/icons/app_icon_foreground.png` (padded, for Android circle mask)
+
+Design: coral-to-orange gradient background, white heart with ECG pulse line.
+
+To regenerate icons after changes:
+```bash
+python3 generate_icon.py
+flutter pub run flutter_launcher_icons
+```
+
+---
+
+## 15. Android Package Name
+
+**Package:** `com.mymedicalwallet.app`  
+**Changed from:** `com.medreminder.medication_reminder` (was taken on Google Play)  
+**MainActivity location:** `android/app/src/main/kotlin/com/mymedicalwallet/app/MainActivity.kt`
+
+---
+
+## 16. Google Play & App Store
+
+| Platform | Status |
+|---|---|
+| iOS (TestFlight) | Build 2012 uploaded |
+| Android (Google Play) | Closed testing — in review |
+
+**Play Store assets location:** `images/`
+- `play_store_icon_512.png` — 512×512 store icon
+- `play_store_feature_graphic.png` — 1024×500 feature graphic
+- `screenshot_*.png` — phone, 7-inch, and 10-inch tablet screenshots
+
+**Privacy policy:** `docs/privacy-policy.html` (hosted on GitHub Pages)
