@@ -1,4 +1,4 @@
-package com.medreminder.medication_reminder
+package com.mymedicalwallet.app
 
 import android.app.Activity
 import android.content.Intent

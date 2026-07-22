@@ -70,7 +70,7 @@ class _MedicalWalletAppState extends State<MedicalWalletApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF501513),
+          seedColor: const Color(0xFFFF6B6B),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -120,7 +120,7 @@ class _SplashRouter extends StatelessWidget {
           return const Scaffold(
             backgroundColor: Colors.white,
             body: Center(
-              child: CircularProgressIndicator(color: Color(0xFF501513)),
+              child: CircularProgressIndicator(color: Color(0xFFFF6B6B)),
             ),
           );
         }

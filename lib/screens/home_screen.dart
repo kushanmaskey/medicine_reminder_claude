@@ -23,14 +23,14 @@ import 'settings_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_activity_screen.dart';
 
-const _gradientColors = [Color(0xFF501513), Color(0xFF7A2420)];
+const _gradientColors = [Color(0xFFFF6B6B), Color(0xFFFF8C42)];
 
 const _defaultAvatarDefs = [
-  (bg: Color(0xFF501513), icon: Icons.person),
+  (bg: Color(0xFFFF6B6B), icon: Icons.person),
   (bg: Color(0xFF3B82F6), icon: Icons.face),
   (bg: Color(0xFF8B5CF6), icon: Icons.sentiment_satisfied),
   (bg: Color(0xFFEF4444), icon: Icons.local_hospital),
-  (bg: Color(0xFF7A2420), icon: Icons.favorite),
+  (bg: Color(0xFFFF8C42), icon: Icons.favorite),
   (bg: Color(0xFFF59E0B), icon: Icons.star),
   (bg: Color(0xFF22C55E), icon: Icons.self_improvement),
   (bg: Color(0xFF14B8A6), icon: Icons.emoji_nature),
@@ -163,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF501513),
+              backgroundColor: const Color(0xFFFF6B6B),
               foregroundColor: Colors.white,
             ),
             child: const Text('Sign In'),
@@ -194,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 8),
-        backgroundColor: const Color(0xFF501513),
+        backgroundColor: const Color(0xFFFF6B6B),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: const Text(
@@ -529,12 +529,12 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i == 0) _summaryKey.currentState?.reload();
         },
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF501513).withValues(alpha: 0.12),
+        indicatorColor: const Color(0xFFFF6B6B).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.dashboard, color: Color(0xFFFF6B6B)),
             label: 'Summary',
           ),
           NavigationDestination(
@@ -549,17 +549,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.description_outlined),
-            selectedIcon: Icon(Icons.description, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.description, color: Color(0xFFFF6B6B)),
             label: 'Prescriptions',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_month, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.calendar_month, color: Color(0xFFFF6B6B)),
             label: 'Appointments',
           ),
           NavigationDestination(
             icon: Icon(Icons.monitor_heart_outlined),
-            selectedIcon: Icon(Icons.monitor_heart, color: Color(0xFF501513)),
+            selectedIcon: Icon(Icons.monitor_heart, color: Color(0xFFFF6B6B)),
             label: 'Vitals',
           ),
           NavigationDestination(
@@ -595,7 +595,7 @@ class _GradientFAB extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF501513).withValues(alpha: 0.45),
+            color: const Color(0xFFFF6B6B).withValues(alpha: 0.45),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),

@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -158,7 +158,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         decoration: BoxDecoration(
                           gradient: _gradient,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [BoxShadow(color: const Color(0xFF501513).withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                          boxShadow: [BoxShadow(color: const Color(0xFFFF6B6B).withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
                         ),
                         child: ElevatedButton(
                           onPressed: _loading ? null : _submit,
@@ -237,12 +237,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF501513)),
+      prefixIcon: Icon(icon, color: const Color(0xFFFF6B6B)),
       filled: true,
       fillColor: const Color(0xFFF8FFFE),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade200)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF501513), width: 1.5)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.5)),
       errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.red)),
       focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.red)),
     );

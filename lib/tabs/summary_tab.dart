@@ -19,8 +19,8 @@ import '../screens/add_allergy_screen.dart';
 import '../screens/add_insurance_screen.dart';
 
 const _defaultAvatarBgs = [
-  Color(0xFF501513), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
-  Color(0xFF7A2420), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
+  Color(0xFFFF6B6B), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEF4444),
+  Color(0xFFFF8C42), Color(0xFFF59E0B), Color(0xFF22C55E), Color(0xFF14B8A6),
   Color(0xFFF97316), Color(0xFF6366F1), Color(0xFF84CC16), Color(0xFF0EA5E9),
 ];
 
@@ -31,13 +31,13 @@ const _defaultAvatarIcons = [
 ];
 
 const _tealGradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
 
 const _pinkGradient = LinearGradient(
-  colors: [Color(0xFF7A2420), Color(0xFF9333EA)],
+  colors: [Color(0xFFFF8C42), Color(0xFF9333EA)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -183,12 +183,12 @@ class SummaryTabState extends State<SummaryTab> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF501513)));
+          child: CircularProgressIndicator(color: Color(0xFFFF6B6B)));
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: const Color(0xFF501513),
+      color: const Color(0xFFFF6B6B),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
@@ -301,7 +301,7 @@ class SummaryTabState extends State<SummaryTab> {
       _sex == 'Female' ? _pinkGradient : _tealGradient;
 
   Color get _greetingShadowColor =>
-      _sex == 'Female' ? const Color(0xFF7A2420) : const Color(0xFF501513);
+      _sex == 'Female' ? const Color(0xFFFF8C42) : const Color(0xFFFF6B6B);
 
   Widget _buildGreetingCard() {
     final displayName = (_name != null && _name!.isNotEmpty) ? _name! : 'User';
@@ -401,7 +401,7 @@ class SummaryTabState extends State<SummaryTab> {
             label: 'Vitals',
             count: _vitals.where((v) => v.category == 'daily').length,
             icon: Icons.monitor_heart_outlined,
-            color: const Color(0xFF501513),
+            color: const Color(0xFFFF6B6B),
             onTap: () => widget.onTabChange(5),
           ),
           const SizedBox(width: 8),
@@ -804,7 +804,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
     'Run':        Color(0xFFF97316),
     'Exercise':   Color(0xFF3B82F6),
     'Yoga':       Color(0xFF8B5CF6),
-    'Meditation': Color(0xFF501513),
+    'Meditation': Color(0xFFFF6B6B),
   };
 
   static const _activityIcons = {

@@ -6,7 +6,7 @@ import 'login_screen.dart';
 import 'home_screen.dart';
 
 const _gradient = LinearGradient(
-  colors: [Color(0xFF501513), Color(0xFF7A2420)],
+  colors: [Color(0xFFFF6B6B), Color(0xFFFF8C42)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );
@@ -96,7 +96,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF501513).withValues(alpha: 0.35),
+                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.35),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -128,7 +128,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
               ),
               const SizedBox(height: 48),
               if (_authenticating)
-                const CircularProgressIndicator(color: Color(0xFF501513))
+                const CircularProgressIndicator(color: Color(0xFFFF6B6B))
               else ...[
                 if (_errorMessage != null) ...[
                   Container(
@@ -161,7 +161,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF501513).withValues(alpha: 0.4),
+                          color: const Color(0xFFFF6B6B).withValues(alpha: 0.4),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
