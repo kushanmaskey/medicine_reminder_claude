@@ -39,8 +39,8 @@ class PurchaseService {
 
   static Future<bool> purchasePackage(Package package) async {
     try {
-      final info = await Purchases.purchasePackage(package);
-      return info.entitlements.active.containsKey(RevenueCatConfig.entitlementId);
+      final result = await Purchases.purchasePackage(package);
+      return result.customerInfo.entitlements.active.containsKey(RevenueCatConfig.entitlementId);
     } catch (e) {
       if (e is PurchasesErrorCode && e == PurchasesErrorCode.purchaseCancelledError) {
         return false;
