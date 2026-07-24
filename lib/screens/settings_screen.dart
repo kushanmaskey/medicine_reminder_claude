@@ -214,12 +214,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          if (!isAndroid) ...[
-            _SectionHeader(title: 'Subscription'),
-            const SizedBox(height: 8),
-            _SubscriptionTile(),
-            const SizedBox(height: 24),
-          ],
+          _SectionHeader(title: 'Subscription'),
+          const SizedBox(height: 8),
+          _SubscriptionTile(),
+          const SizedBox(height: 24),
           _SectionHeader(title: 'Security'),
           const SizedBox(height: 8),
           Container(
