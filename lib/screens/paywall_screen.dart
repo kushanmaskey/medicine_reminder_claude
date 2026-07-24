@@ -26,6 +26,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Future<void> _loadOfferings() async {
+    setState(() => _loading = true);
     final offerings = await PurchaseService.getOfferings();
     if (mounted) {
       setState(() {
@@ -203,8 +204,24 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 ),
               ],
             ),
-          ] else
-            const Text('Unable to load subscription options. Please try again later.'),
+          ] else ...[
+            const Text(
+              'Unable to load subscription options.',
+              style: TextStyle(color: Colors.black54),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loading ? null : _loadOfferings,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Try Again'),
+            ),
+          ],
           const SizedBox(height: 32),
         ],
       ),
