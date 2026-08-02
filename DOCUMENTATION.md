@@ -1265,12 +1265,14 @@ flutter pub run flutter_launcher_icons
 
 ---
 
-## 16. Google Play & App Store
+## 16. App Store & Google Play
 
-| Platform | Status |
-|---|---|
-| iOS (TestFlight) | Build 2012 uploaded |
-| Android (Google Play) | Closed testing — in review |
+### Submission Status
+
+| Platform | Version | Build | Status |
+|---|---|---|---|
+| iOS (App Store) | 1.0.2 | 2017 | Waiting for Review |
+| Android (Google Play) | — | — | Closed testing |
 
 **Play Store assets location:** `images/`
 - `play_store_icon_512.png` — 512×512 store icon
@@ -1278,3 +1280,122 @@ flutter pub run flutter_launcher_icons
 - `screenshot_*.png` — phone, 7-inch, and 10-inch tablet screenshots
 
 **Privacy policy:** `docs/privacy-policy.html` (hosted on GitHub Pages)
+
+---
+
+## 17. RevenueCat — In-App Subscriptions
+
+RevenueCat is the subscription management layer. It does **not** process payments — Apple and Google handle the actual payments. RevenueCat reads subscription status from their APIs and exposes it to the app.
+
+**File:** `lib/config/revenue_cat_config.dart`
+
+| Constant | Value |
+|---|---|
+| `apiKeyIos` | `appl_aWvNokDRpEuDLhoQplnYxIlWiyE` |
+| `apiKeyAndroid` | `goog_LNeRhhgtwmRuDuGIABUSCdnqsKB` |
+| `entitlementId` | `premium` |
+| `monthlyProductId` | `com.medreminder.medication_reminder.premium.monthly` |
+| `yearlyProductId` | `com.medreminder.medication_reminder.premium.yearly` |
+
+### Subscription Products
+
+| Product | Type | Trial |
+|---|---|---|
+| MMW Premium Monthly | Auto-renewable | None |
+| MMW Premium Yearly | Auto-renewable | 1 month free |
+
+### Money Flow
+
+```
+User subscribes in app
+        │
+        ▼
+Apple App Store / Google Play
+(processes payment, takes 15–30% cut)
+        │
+        ▼
+Developer's Apple / Google account
+(receives net revenue, pays out monthly)
+        │
+        ▼
+RevenueCat reads subscription status via API
+(never handles money — management layer only)
+```
+
+---
+
+## 18. Apple App Store — Payments & Tax Setup
+
+Access: **App Store Connect → Business → Agreements, Tax, and Banking**
+
+### Agreements
+
+| Type | Status | Effective |
+|---|---|---|
+| Free Apps Agreement | Active | Jun 23, 2026 – Jun 12, 2027 |
+| Paid Apps Agreement | Processing → Active | Aug 2, 2026 – Jun 12, 2027 |
+
+> The Paid Apps Agreement must be active for subscription revenue to be paid out. Tax and Banking sections only appear after this agreement is signed.
+
+### Bank Account
+
+| Field | Value |
+|---|---|
+| Bank | Bank of America |
+| Account ending | 8712 |
+| Currency | USD |
+| Status | Processing → Active (within 1 business day) |
+
+### Tax Form
+
+| Field | Value |
+|---|---|
+| Form | U.S. Form W-9 |
+| Type | Individual / Sole Proprietor |
+| Name | Kushan Maskey |
+| TIN Type | SSN |
+| Date Submitted | Aug 2, 2026 |
+| Status | Active |
+
+### Payout Schedule
+
+Apple pays out monthly, approximately 30 days after the end of each fiscal month. View earnings at:
+**App Store Connect → Payments and Financial Reports**
+
+---
+
+## 19. Google Play — Payments Setup
+
+Access: **Google Play Console → Developer account → View payments profile** → redirects to **pay.google.com**
+
+### Payment Profile
+
+| Field | Value |
+|---|---|
+| Profile ID | 6612-8241-8623 |
+| Account type | Individual |
+| Legal name | Kushan Maskey |
+| Country | United States (US) |
+
+### Bank Account (Payout)
+
+| Field | Value |
+|---|---|
+| Bank | Checking account |
+| Account ending | 712 |
+| Name | Kushan Maskey |
+| Status | **Verification pending** |
+
+#### Completing Bank Verification
+
+Google sends **two small test deposits** (e.g. $0.12 and $0.34) to the checking account within 1–3 business days. Once they appear:
+
+1. Go to **pay.google.com → Payment methods**
+2. Click **Verify** on the checking account (712)
+3. Enter the two exact deposit amounts
+4. Account becomes active for payouts
+
+### Payout Schedule
+
+Google pays out monthly when the balance exceeds the minimum threshold (~$1). View earnings at:
+**Google Play Console → Download reports → Financial**
