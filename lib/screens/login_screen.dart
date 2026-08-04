@@ -288,34 +288,37 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const RegisterScreen()),
-                          ),
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                  color: Colors.grey[500], fontSize: 14),
-                              children: const [
-                                TextSpan(text: "Don't have an account? "),
-                                TextSpan(
-                                  text: 'Register',
-                                  style: TextStyle(
-                                    color: Color(0xFFFF6B6B),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                ),
+                child: RichText(
+                  text: TextSpan(
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    children: const [
+                      TextSpan(text: "Don't have an account? "),
+                      TextSpan(
+                        text: 'Register',
+                        style: TextStyle(
+                          color: Color(0xFFFF6B6B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
