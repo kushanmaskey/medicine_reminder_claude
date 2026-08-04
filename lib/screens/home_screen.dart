@@ -52,7 +52,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   String? _avatarType;
   int? _avatarIndex;
@@ -75,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _requestNotificationPermission();
     _loadAvatar();
     StorageService.decrementPillsIfNeeded();
@@ -83,11 +84,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sessionTimer?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkSessionOnResume();
+    }
+  }
+
+  Future<void> _checkSessionOnResume() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loginMs = prefs.getInt('session_login_time');
+    if (loginMs == null) {
+      _expireSession();
+      return;
+    }
+    final elapsed = DateTime.now().difference(
+      DateTime.fromMillisecondsSinceEpoch(loginMs),
+    );
+    if (elapsed >= _sessionDuration) {
+      _sessionTimer?.cancel();
+      _expireSession();
+    }
+  }
+
   Future<void> _startSessionTimer() async {
+    _sessionTimer?.cancel();
     final prefs = await SharedPreferences.getInstance();
     final loginMs = prefs.getInt('session_login_time');
     if (loginMs == null) return;
@@ -97,12 +123,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final remaining = _sessionDuration - elapsed;
 
     if (remaining <= Duration.zero) {
-      // Already expired — sign out immediately
       _expireSession();
       return;
     }
 
     _sessionTimer = Timer(remaining, _expireSession);
+  }
+
+  void _resetSessionTimer() {
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
+    });
+    _startSessionTimer();
   }
 
   Future<void> _expireSession() async {
@@ -151,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Session Expired'),
         content: const Text(
-          'For your security, you have been signed out after 1 hour. Please sign in again to continue.',
+          'Your session has expired after 1 hour of inactivity.\n\nDon\'t worry — your data is safe and secure. Please sign in again to continue.',
         ),
         actions: [
           ElevatedButton(
@@ -441,7 +473,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Listener(
+      onPointerDown: (_) => _resetSessionTimer(),
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -577,6 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: _currentIndex == 0
           ? null
           : _GradientFAB(onPressed: _openAddScreen),
+    ),
     );
   }
 }
