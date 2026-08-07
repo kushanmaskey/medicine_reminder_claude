@@ -27,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController     = TextEditingController();
   final _emailController    = TextEditingController();
-  final _phoneController    = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController  = TextEditingController();
 
@@ -42,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    for (final c in [_nameController, _emailController, _phoneController, _confirmController]) {
+    for (final c in [_nameController, _emailController, _confirmController]) {
       c.addListener(_onFieldChanged);
     }
     _passwordController.addListener(() {
@@ -56,7 +55,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_loading || !_agreedToTerms) return false;
     if (_nameController.text.trim().isEmpty) return false;
     if (_emailController.text.trim().isEmpty) return false;
-    if (_phoneController.text.trim().isEmpty) return false;
     if (_passwordController.text.isEmpty) return false;
     if (_confirmController.text.isEmpty) return false;
     return true;
@@ -64,12 +62,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    for (final c in [_nameController, _emailController, _phoneController, _confirmController]) {
+    for (final c in [_nameController, _emailController, _confirmController]) {
       c.removeListener(_onFieldChanged);
     }
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -111,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _passwordController.text,
       _nameController.text.trim(),
       _sex,
-      _phoneController.text.trim(),
+      '',
     );
 
     if (error != null) {
@@ -250,25 +247,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         if (v == null || v.trim().isEmpty) return 'Please enter your email';
                         if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v.trim())) {
                           return 'Please enter a valid email address';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: _inputDecoration(
-                          'Mobile Phone Number', Icons.phone_outlined),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter your mobile phone number';
-                        }
-                        final digits = v.replaceAll(RegExp(r'\D'), '');
-                        if (digits.length < 7) {
-                          return 'Please enter a valid phone number';
                         }
                         return null;
                       },
