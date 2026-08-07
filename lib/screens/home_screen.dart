@@ -100,7 +100,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     final loginMs = prefs.getInt('session_login_time');
     if (loginMs == null) {
-      _expireSession();
+      // No timestamp means session just started (e.g. via registration or
+      // app restart with valid Supabase session) — start fresh 1-hour window
+      await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
+      _startSessionTimer();
       return;
     }
     final elapsed = DateTime.now().difference(
@@ -116,7 +119,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _sessionTimer?.cancel();
     final prefs = await SharedPreferences.getInstance();
     final loginMs = prefs.getInt('session_login_time');
-    if (loginMs == null) return;
+    if (loginMs == null) {
+      // No timestamp — set it now so the 1-hour window starts from this moment
+      await prefs.setInt('session_login_time', DateTime.now().millisecondsSinceEpoch);
+      _sessionTimer = Timer(_sessionDuration, _expireSession);
+      return;
+    }
 
     final loginTime = DateTime.fromMillisecondsSinceEpoch(loginMs);
     final elapsed = DateTime.now().difference(loginTime);
