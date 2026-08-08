@@ -69,38 +69,38 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: const BoxDecoration(
               gradient: _gradient,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(28),
-                bottomRight: Radius.circular(28),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
             padding: EdgeInsets.fromLTRB(
-                28, MediaQuery.of(context).padding.top + 16, 28, 20),
+                20, MediaQuery.of(context).padding.top + 12, 20, 14),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(9),
                     child: Image.asset(
                       'assets/icons/app_icon.png',
-                      width: 44,
-                      height: 44,
+                      width: 33,
+                      height: 33,
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Medical Wallet',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.3,
                       ),
@@ -117,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Your health, always in hand.',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                   ],
