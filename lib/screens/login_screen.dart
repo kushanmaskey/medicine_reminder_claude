@@ -63,120 +63,94 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Gradient header
+          // Compact gradient header
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: _gradient,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(36),
-                bottomRight: Radius.circular(36),
+                bottomLeft: Radius.circular(28),
+                bottomRight: Radius.circular(28),
               ),
             ),
             padding: EdgeInsets.fromLTRB(
-                28, MediaQuery.of(context).padding.top + 36, 28, 40),
-            child: Column(
+                28, MediaQuery.of(context).padding.top + 16, 28, 20),
+            child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
                       'assets/icons/app_icon.png',
-                      width: 90,
-                      height: 90,
+                      width: 44,
+                      height: 44,
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Medical Wallet',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Your health, always in hand.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 14,
-                  ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Medical Wallet',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    Text(
+                      'Your health, always in hand.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          // Form
+          // Form — centered vertically
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  // App intro card
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDF3F3),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFF6B6B).withValues(alpha: 0.12)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.favorite_rounded, color: Color(0xFFFF6B6B), size: 16),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'My Medical Wallet keeps your health information organized and secure — from daily vitals and medications to appointments, activities, and allergies. One app. Your complete health story.',
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Sign In',
                             style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF4A1010),
-                              height: 1.5,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFF6B6B),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Sign In',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFF6B6B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Welcome back',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 14)),
-                  const SizedBox(height: 28),
+                          const SizedBox(height: 4),
+                          Text('Welcome back',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+                          const SizedBox(height: 28),
                   Form(
                     key: _formKey,
                     child: Column(
@@ -317,6 +291,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+        );
+        },
+      ),
+    ),
         ],
       ),
     );
