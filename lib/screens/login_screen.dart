@@ -215,28 +215,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                          ),
-                          child: RichText(
-                            text: TextSpan(
-                              style: TextStyle(color: Colors.grey[500], fontSize: 15),
-                              children: const [
-                                TextSpan(text: "Don't have an account? "),
-                                TextSpan(
-                                  text: 'Register',
-                                  style: TextStyle(
-                                    color: Color(0xFFFF6B6B),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
@@ -281,6 +259,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          ),
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                              children: const [
+                                TextSpan(text: "Don't have an account? "),
+                                TextSpan(
+                                  text: 'Register',
+                                  style: TextStyle(
+                                    color: Color(0xFFFF6B6B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
