@@ -61,13 +61,13 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   String _cholesterolUnit = 'mg/dL';
   DateTime _recordedAt    = DateTime.now();
 
-  // Misc fields
-  DateTime? _periodDate;
-  DateTime? _mammogramDate;
-  DateTime? _colonoscopyDate;
-  bool _hasEventDate = false;
-  DateTime? _dentalDate;
-  DateTime? _eyeExamDate;
+  // Misc fields — lists to support multiple dates per section
+  List<DateTime> _periodDates     = [];
+  List<DateTime> _mammogramDates  = [];
+  List<DateTime> _colonoscopyDates = [];
+  List<DateTime> _dentalDates     = [];
+  List<DateTime> _eyeExamDates    = [];
+  List<DateTime> _eventDates      = [];
   String? _sex;
 
   bool _saving = false;
@@ -122,12 +122,12 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _sugarUnit       = e.sugarUnit;
       _cholesterolUnit = e.cholesterolUnit;
       _recordedAt      = e.recordedAt;
-      _hasEventDate    = e.category != 'daily';
-      _periodDate      = e.periodDate;
-      _mammogramDate   = e.mammogramDate;
-      _colonoscopyDate = e.colonoscopyDate;
-      _dentalDate      = e.dentalDate;
-      _eyeExamDate     = e.eyeExamDate;
+      _periodDates      = List.from(e.periodDates);
+      _mammogramDates   = List.from(e.mammogramDates);
+      _colonoscopyDates = List.from(e.colonoscopyDates);
+      _dentalDates      = List.from(e.dentalDates);
+      _eyeExamDates     = List.from(e.eyeExamDates);
+      _eventDates       = List.from(e.eventDates);
     }
     if (!_isEditing && widget.initialDate != null) {
       final now = DateTime.now();
@@ -220,17 +220,15 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   Future<void> _save() async {
     try {
       if (_formKey.currentState?.validate() != true) return;
-      if (_category != 'daily' && _eventNameController.text.trim().isNotEmpty && !_hasEventDate) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a date for the event / procedure')),
-        );
-        return;
-      }
       setState(() => _saving = true);
+
+      final effectiveDate = _eventDates.isNotEmpty
+          ? _eventDates.last
+          : _recordedAt;
 
       final vital = Vital(
         id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        recordedAt:      _recordedAt,
+        recordedAt:      effectiveDate,
         category:        _category,
         eventName:       _eventNameController.text.trim(),
         bpReadings:          _category == 'daily' ? _bpReadings : [],
@@ -241,20 +239,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         weightUnit:      _weightUnit,
         sugarUnit:       _sugarUnit,
         cholesterolUnit: _cholesterolUnit,
-        colonoscopyDate:     _category != 'daily' ? _colonoscopyDate : null,
+        colonoscopyDates:    _category != 'daily' ? _colonoscopyDates : [],
         colonoscopyLocation: _category != 'daily' ? _colonoscopyLocationController.text.trim() : '',
         colonoscopyNotes:    '',
-        periodDate:          _category != 'daily' ? _periodDate : null,
+        periodDates:         _category != 'daily' ? _periodDates : [],
         periodNotes:         '',
-        mammogramDate:       _category != 'daily' ? _mammogramDate : null,
+        mammogramDates:      _category != 'daily' ? _mammogramDates : [],
         mammogramLocation:   _category != 'daily' ? _mammogramLocationController.text.trim() : '',
         mammogramNotes:      '',
-        dentalDate:          _category != 'daily' ? _dentalDate : null,
+        dentalDates:         _category != 'daily' ? _dentalDates : [],
         dentalLocation:      _category != 'daily' ? _dentalLocationController.text.trim() : '',
         dentalNotes:         '',
-        eyeExamDate:         _category != 'daily' ? _eyeExamDate : null,
+        eyeExamDates:        _category != 'daily' ? _eyeExamDates : [],
         eyeExamLocation:     _category != 'daily' ? _eyeExamLocationController.text.trim() : '',
         eyeExamNotes:        '',
+        eventDates:          _category != 'daily' ? _eventDates : [],
         riskLevel:       'Low',
         notes:           _notesController.text.trim(),
         location:        _category != 'daily' ? _locationController.text.trim() : '',
@@ -801,7 +800,123 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     ),
   ];
 
+  // Silently saves MISC date lists to DB without blocking the UI.
+  Future<void> _autoSaveMiscDates() async {
+    if (!_isEditing) return;
+    try {
+      final vital = Vital(
+        id: widget.existing!.id,
+        recordedAt: _recordedAt,
+        category: _category,
+        eventName: _eventNameController.text.trim(),
+        bpReadings: [],
+        pulseReadings: [],
+        sugarReadings: [],
+        cholesterolReadings: [],
+        weightReadings: [],
+        weightUnit: _weightUnit,
+        sugarUnit: _sugarUnit,
+        cholesterolUnit: _cholesterolUnit,
+        colonoscopyDates: _colonoscopyDates,
+        colonoscopyLocation: _colonoscopyLocationController.text.trim(),
+        colonoscopyNotes: '',
+        periodDates: _periodDates,
+        periodNotes: '',
+        mammogramDates: _mammogramDates,
+        mammogramLocation: _mammogramLocationController.text.trim(),
+        mammogramNotes: '',
+        dentalDates: _dentalDates,
+        dentalLocation: _dentalLocationController.text.trim(),
+        dentalNotes: '',
+        eyeExamDates: _eyeExamDates,
+        eyeExamLocation: _eyeExamLocationController.text.trim(),
+        eyeExamNotes: '',
+        riskLevel: 'Low',
+        notes: _notesController.text.trim(),
+        location: _locationController.text.trim(),
+      );
+      await StorageService.updateVital(vital);
+      if (mounted) setState(() => _hasSaved = true);
+    } catch (_) {}
+  }
+
   // ── Misc fields ───────────────────────────────────────────────────────────
+
+  // Builds a list of date tiles for a multi-date section plus an "Add date" button.
+  List<Widget> _multiDateTiles({
+    required List<DateTime> dates,
+    required String label,
+    required Color color,
+    required String emptyHint,
+    required void Function(int index, DateTime updated) onUpdate,
+    required void Function(int index) onRemove,
+    required void Function(DateTime added) onAdd,
+  }) {
+    final tiles = <Widget>[];
+    if (dates.isEmpty) {
+      tiles.add(_DatePickerTile(
+        date: null,
+        hint: emptyHint,
+        color: color,
+        onTap: () async {
+          final d = await _pickPastDate(null, label);
+          if (d != null && mounted) {
+            onAdd(d);
+            _autoSaveMiscDates();
+          }
+        },
+        onClear: () {},
+        formatDate: _formatDate,
+      ));
+    } else {
+      // Show at most the 3 most recent dates, newest first.
+      final startIdx = dates.length > 3 ? dates.length - 3 : 0;
+      for (int i = dates.length - 1; i >= startIdx; i--) {
+        final idx = i;
+        tiles.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _DatePickerTile(
+            date: dates[idx],
+            hint: emptyHint,
+            color: color,
+            onTap: () async {
+              final d = await _pickPastDate(dates[idx], label);
+              if (d != null && mounted) {
+                onUpdate(idx, d);
+                _autoSaveMiscDates();
+              }
+            },
+            onClear: () {
+              onRemove(idx);
+              _autoSaveMiscDates();
+            },
+            formatDate: _formatDate,
+          ),
+        ));
+      }
+      tiles.add(Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () async {
+            final d = await _pickPastDate(null, label);
+            if (d != null && mounted) {
+              onAdd(d);
+              _autoSaveMiscDates();
+            }
+          },
+          icon: Icon(Icons.add, size: 15, color: color),
+          label: Text('Add another date',
+              style: TextStyle(fontSize: 13, color: color)),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ));
+    }
+    return tiles;
+  }
 
   List<Widget> _buildMiscFields() => [
     if (_isFemale) ...[
@@ -810,19 +925,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         icon: Icons.calendar_month_outlined,
         iconColor: _mauve,
         children: [
-          Text('Last menstrual period start date',
+          Text('Menstrual period dates',
               style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           const SizedBox(height: 10),
-          _DatePickerTile(
-            date: _periodDate,
-            hint: 'Tap to set last period date',
+          ..._multiDateTiles(
+            dates: _periodDates,
+            label: 'Period',
             color: _mauve,
-            onTap: () async {
-              final d = await _pickPastDate(_periodDate, 'Period');
-              if (d != null && mounted) setState(() => _periodDate = d);
-            },
-            onClear: () => setState(() => _periodDate = null),
-            formatDate: _formatDate,
+            emptyHint: 'Tap to set period date',
+            onUpdate: (i, d) => setState(() { _periodDates[i] = d; _periodDates.sort((a, b) => a.compareTo(b)); }),
+            onRemove: (i) => setState(() => _periodDates.removeAt(i)),
+            onAdd: (d) => setState(() { _periodDates.add(d); _periodDates.sort((a, b) => a.compareTo(b)); }),
           ),
         ],
       ),
@@ -832,23 +945,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         icon: Icons.medical_information_outlined,
         iconColor: _mauve,
         children: [
-          Text('Last mammogram screening date',
+          Text('Mammogram screening dates',
               style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           const SizedBox(height: 10),
-          _DatePickerTile(
-            date: _mammogramDate,
-            hint: 'Tap to set last mammogram date',
+          ..._multiDateTiles(
+            dates: _mammogramDates,
+            label: 'Mammogram',
             color: _mauve,
-            onTap: () async {
-              final d = await _pickPastDate(_mammogramDate, 'Mammogram');
-              if (d != null && mounted) setState(() => _mammogramDate = d);
-            },
-            onClear: () => setState(() => _mammogramDate = null),
-            formatDate: _formatDate,
+            emptyHint: 'Tap to set mammogram date',
+            onUpdate: (i, d) => setState(() { _mammogramDates[i] = d; _mammogramDates.sort((a, b) => a.compareTo(b)); }),
+            onRemove: (i) => setState(() => _mammogramDates.removeAt(i)),
+            onAdd: (d) => setState(() { _mammogramDates.add(d); _mammogramDates.sort((a, b) => a.compareTo(b)); }),
           ),
           const SizedBox(height: 12),
           Text('Location / Facility',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+              style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           TextFormField(
             controller: _mammogramLocationController,
@@ -865,23 +976,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.biotech_outlined,
       iconColor: const Color(0xFF0EA5E9),
       children: [
-        Text('Last colonoscopy date',
+        Text('Colonoscopy dates',
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         const SizedBox(height: 10),
-        _DatePickerTile(
-          date: _colonoscopyDate,
-          hint: 'Tap to set last colonoscopy date',
+        ..._multiDateTiles(
+          dates: _colonoscopyDates,
+          label: 'Colonoscopy',
           color: const Color(0xFF0EA5E9),
-          onTap: () async {
-            final d = await _pickPastDate(_colonoscopyDate, 'Colonoscopy');
-            if (d != null && mounted) setState(() => _colonoscopyDate = d);
-          },
-          onClear: () => setState(() => _colonoscopyDate = null),
-          formatDate: _formatDate,
+          emptyHint: 'Tap to set colonoscopy date',
+          onUpdate: (i, d) => setState(() { _colonoscopyDates[i] = d; _colonoscopyDates.sort((a, b) => a.compareTo(b)); }),
+          onRemove: (i) => setState(() => _colonoscopyDates.removeAt(i)),
+          onAdd: (d) => setState(() { _colonoscopyDates.add(d); _colonoscopyDates.sort((a, b) => a.compareTo(b)); }),
         ),
         const SizedBox(height: 12),
         Text('Location / Facility',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextFormField(
           controller: _colonoscopyLocationController,
@@ -897,23 +1006,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.health_and_safety_outlined,
       iconColor: const Color(0xFF22C55E),
       children: [
-        Text('Last dental visit date',
+        Text('Dental visit dates',
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         const SizedBox(height: 10),
-        _DatePickerTile(
-          date: _dentalDate,
-          hint: 'Tap to set last dental date',
+        ..._multiDateTiles(
+          dates: _dentalDates,
+          label: 'Dental',
           color: const Color(0xFF22C55E),
-          onTap: () async {
-            final d = await _pickPastDate(_dentalDate, 'Dental');
-            if (d != null && mounted) setState(() => _dentalDate = d);
-          },
-          onClear: () => setState(() => _dentalDate = null),
-          formatDate: _formatDate,
+          emptyHint: 'Tap to set dental date',
+          onUpdate: (i, d) => setState(() { _dentalDates[i] = d; _dentalDates.sort((a, b) => a.compareTo(b)); }),
+          onRemove: (i) => setState(() => _dentalDates.removeAt(i)),
+          onAdd: (d) => setState(() { _dentalDates.add(d); _dentalDates.sort((a, b) => a.compareTo(b)); }),
         ),
         const SizedBox(height: 12),
         Text('Location / Facility',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextFormField(
           controller: _dentalLocationController,
@@ -929,23 +1036,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       icon: Icons.visibility_outlined,
       iconColor: const Color(0xFF8B5CF6),
       children: [
-        Text('Last eye exam date',
+        Text('Eye exam dates',
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         const SizedBox(height: 10),
-        _DatePickerTile(
-          date: _eyeExamDate,
-          hint: 'Tap to set last eye exam date',
+        ..._multiDateTiles(
+          dates: _eyeExamDates,
+          label: 'Eye Exam',
           color: const Color(0xFF8B5CF6),
-          onTap: () async {
-            final d = await _pickPastDate(_eyeExamDate, 'Eye Exam');
-            if (d != null && mounted) setState(() => _eyeExamDate = d);
-          },
-          onClear: () => setState(() => _eyeExamDate = null),
-          formatDate: _formatDate,
+          emptyHint: 'Tap to set eye exam date',
+          onUpdate: (i, d) => setState(() { _eyeExamDates[i] = d; _eyeExamDates.sort((a, b) => a.compareTo(b)); }),
+          onRemove: (i) => setState(() => _eyeExamDates.removeAt(i)),
+          onAdd: (d) => setState(() { _eyeExamDates.add(d); _eyeExamDates.sort((a, b) => a.compareTo(b)); }),
         ),
         const SizedBox(height: 12),
         Text('Location / Facility',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextFormField(
           controller: _eyeExamLocationController,
@@ -964,11 +1069,18 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         TextFormField(
           controller: _eventNameController,
           maxLength: 100,
-          decoration: _inputDecoration('e.g. Eye Exam, Dental, Physiotherapy…', ''),
+          decoration: _inputDecoration(
+            _isFemale
+                ? 'e.g. Physiotherapy, Pap Smear, Screenings…'
+                : 'e.g. Physiotherapy, Screenings…',
+            '',
+          ),
           onChanged: (_) => setState(() {}),
           validator: (v) {
-            final hasDate = _periodDate != null || _mammogramDate != null || _colonoscopyDate != null;
-            if (!hasDate && (v == null || v.trim().isEmpty)) {
+            final hasAnyDate = _periodDates.isNotEmpty || _mammogramDates.isNotEmpty ||
+                _colonoscopyDates.isNotEmpty || _dentalDates.isNotEmpty ||
+                _eyeExamDates.isNotEmpty || _eventDates.isNotEmpty;
+            if (!hasAnyDate && (v == null || v.trim().isEmpty)) {
               return 'Enter an event name or select a date above';
             }
             return null;
@@ -976,7 +1088,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         ),
         const SizedBox(height: 12),
         Text('Location / Facility',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         TextFormField(
           controller: _locationController,
@@ -985,37 +1097,21 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           decoration: _inputDecoration('e.g. City Hospital, Downtown Clinic…', ''),
         ),
         const SizedBox(height: 4),
-        Row(
-          children: [
-            Text('Event Date',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-            if (_eventNameController.text.trim().isNotEmpty)
-              Text(' *', style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600)),
-            if (_eventNameController.text.trim().isEmpty)
-              Text(' (optional)', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-          ],
-        ),
+        Text('Event Dates',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
-        _DatePickerTile(
-          date: _hasEventDate ? _recordedAt : null,
-          hint: 'Tap to set event date',
+        ..._multiDateTiles(
+          dates: _eventDates,
+          label: 'Event',
           color: _blue,
-          onTap: () async {
-            final d = await _pickAnyDate(_recordedAt, 'Event');
-            if (d != null && mounted) setState(() { _recordedAt = d; _hasEventDate = true; });
-          },
-          onClear: () => setState(() { _recordedAt = DateTime.now(); _hasEventDate = false; }),
-          formatDate: _formatDate,
+          emptyHint: 'Tap to set event date',
+          onUpdate: (i, d) => setState(() { _eventDates[i] = d; _eventDates.sort((a, b) => a.compareTo(b)); }),
+          onRemove: (i) => setState(() => _eventDates.removeAt(i)),
+          onAdd: (d) => setState(() { _eventDates.add(d); _eventDates.sort((a, b) => a.compareTo(b)); }),
         ),
-        if (_eventNameController.text.trim().isNotEmpty && !_hasEventDate) ...[
-          const SizedBox(height: 4),
-          const Text('Date is required when an event name is entered',
-              style: TextStyle(fontSize: 11, color: Colors.red)),
-        ] else ...[
-          const SizedBox(height: 4),
-          Text('When the event or procedure took place',
-              style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-        ],
+        const SizedBox(height: 4),
+        Text('When the event or procedure took place',
+            style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
   ];
@@ -1115,12 +1211,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, String suffix) {
+  InputDecoration _inputDecoration(String hint, String suffix) {
     return InputDecoration(
-      labelText: label,
+      hintText: hint,
+      hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
       suffixText: suffix.isNotEmpty ? suffix : null,
       filled: true,
       fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -1700,15 +1798,15 @@ class _SectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: iconColor),
+              Icon(icon, size: 18, color: iconColor),
               const SizedBox(width: 8),
               Text(
                 title.toUpperCase(),
                 style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey[500],
-                    letterSpacing: 0.6),
+                    color: Colors.grey[700],
+                    letterSpacing: 0.5),
               ),
               if (trailing != null) ...[
                 const Spacer(),

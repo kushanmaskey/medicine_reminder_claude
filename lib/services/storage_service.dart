@@ -323,50 +323,51 @@ class StorageService {
   static bool _isUnknownColumn(PostgrestException e) =>
       e.code == '42703' || e.code == 'PGRST204' || e.message.contains('does not exist');
 
-  static Future<void> saveVital(Vital v) async {
-    final row = _vitalToRow(v, uid: _uid);
+  // Encodes a list of dates as a JSON array string, or null if empty.
+  static String? _dateListJson(List<DateTime> dates) {
+    if (dates.isEmpty) return null;
+    return jsonEncode(dates.map((d) => d.toUtc().toIso8601String()).toList());
+  }
+
+  static Future<void> _insertWithFallback(Map<String, dynamic> row) async {
     try {
       await _db.from('vitals').insert(row);
     } on PostgrestException catch (e) {
-      if (_isUnknownColumn(e)) {
-        row.remove('readings_data');
-        try {
-          await _db.from('vitals').insert(row);
-        } on PostgrestException catch (e2) {
-          if (_isUnknownColumn(e2)) {
-            row.remove('pulse');
-            await _db.from('vitals').insert(row);
-          } else {
-            rethrow;
-          }
-        }
-      } else {
-        rethrow;
+      if (!_isUnknownColumn(e)) rethrow;
+      row.remove('readings_data');
+      try {
+        await _db.from('vitals').insert(row);
+      } on PostgrestException catch (e2) {
+        if (!_isUnknownColumn(e2)) rethrow;
+        row.remove('pulse');
+        await _db.from('vitals').insert(row);
       }
     }
   }
 
-  static Future<void> updateVital(Vital v) async {
-    final row = _vitalToRow(v, uid: _uid)..remove('id')..remove('user_id');
+  static Future<void> _updateWithFallback(Map<String, dynamic> row, String id) async {
     try {
-      await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
+      await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
     } on PostgrestException catch (e) {
-      if (_isUnknownColumn(e)) {
-        row.remove('readings_data');
-        try {
-          await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
-        } on PostgrestException catch (e2) {
-          if (_isUnknownColumn(e2)) {
-            row.remove('pulse');
-            await _db.from('vitals').update(row).eq('id', v.id).eq('user_id', _uid);
-          } else {
-            rethrow;
-          }
-        }
-      } else {
-        rethrow;
+      if (!_isUnknownColumn(e)) rethrow;
+      row.remove('readings_data');
+      try {
+        await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
+      } on PostgrestException catch (e2) {
+        if (!_isUnknownColumn(e2)) rethrow;
+        row.remove('pulse');
+        await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
       }
     }
+  }
+
+  static Future<void> saveVital(Vital v) async {
+    await _insertWithFallback(_vitalToRow(v, uid: _uid));
+  }
+
+  static Future<void> updateVital(Vital v) async {
+    final row = _vitalToRow(v, uid: _uid)..remove('id')..remove('user_id');
+    await _updateWithFallback(row, v.id);
   }
 
   static Map<String, dynamic> _vitalToRow(Vital v, {required String uid}) => {
@@ -393,10 +394,25 @@ class StorageService {
       'cholesterol': v.cholesterolReadings.map((r) => r.toJson()).toList(),
       'weight': v.weightReadings.map((r) => r.toJson()).toList(),
     }),
-    // Original misc date columns (existing schema)
-    'colonoscopy_date': v.colonoscopyDate?.toIso8601String(),
-    'period_date': v.periodDate?.toIso8601String(),
-    'mammogram_date': v.mammogramDate?.toIso8601String(),
+    // Misc date columns — stored as JSON arrays so all history is retained.
+    // These are TEXT columns in the schema, so they accept any string value.
+    // Backward-compat: the parser handles both a single ISO string and a JSON array.
+    'colonoscopy_date':     _dateListJson(v.colonoscopyDates),
+    'colonoscopy_location': v.colonoscopyLocation,
+    'colonoscopy_notes':    v.colonoscopyNotes,
+    'period_date':          _dateListJson(v.periodDates),
+    'period_notes':         v.periodNotes,
+    'mammogram_date':       _dateListJson(v.mammogramDates),
+    'mammogram_location':   v.mammogramLocation,
+    'mammogram_notes':      v.mammogramNotes,
+    'dental_date':          _dateListJson(v.dentalDates),
+    'dental_location':      v.dentalLocation,
+    'dental_notes':         v.dentalNotes,
+    'eye_exam_date':        _dateListJson(v.eyeExamDates),
+    'eye_exam_location':    v.eyeExamLocation,
+    'eye_exam_notes':       v.eyeExamNotes,
+    'event_dates':          _dateListJson(v.eventDates),
+    'location':             v.location,
     'risk_level': v.riskLevel,
     'notes': v.notes,
     'doctor_id': v.doctorId,
@@ -436,6 +452,7 @@ class StorageService {
       'eyeExamDate': r['eye_exam_date'],
       'eyeExamLocation': r['eye_exam_location'] ?? '',
       'eyeExamNotes': r['eye_exam_notes'] ?? '',
+      'eventDates': r['event_dates'],
       'riskLevel': r['risk_level'] ?? 'Low',
       'notes': r['notes'] ?? '',
       'doctorId': r['doctor_id'],

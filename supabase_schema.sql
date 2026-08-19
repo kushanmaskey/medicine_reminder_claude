@@ -63,12 +63,25 @@ create table if not exists vitals (
   sugar_unit        text default 'mg/dL',
   cholesterol       double precision,
   cholesterol_unit  text default 'mg/dL',
-  colonoscopy_date  text,
-  period_date       text,
-  mammogram_date    text,
-  risk_level        text not null default 'Low',
-  notes             text not null default '',
-  created_at        timestamptz default now()
+  colonoscopy_date     text,
+  colonoscopy_location text not null default '',
+  colonoscopy_notes    text not null default '',
+  period_date          text,
+  period_notes         text not null default '',
+  mammogram_date       text,
+  mammogram_location   text not null default '',
+  mammogram_notes      text not null default '',
+  dental_date          text,
+  dental_location      text not null default '',
+  dental_notes         text not null default '',
+  eye_exam_date        text,
+  eye_exam_location    text not null default '',
+  eye_exam_notes       text not null default '',
+  event_dates          text,
+  location             text not null default '',
+  risk_level           text not null default 'Low',
+  notes                text not null default '',
+  created_at           timestamptz default now()
 );
 
 -- Activities
@@ -278,4 +291,20 @@ ALTER TABLE user_consents ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "user_consents_all" ON user_consents FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Migration: misc location/notes/date columns on vitals
+ALTER TABLE vitals
+  ADD COLUMN IF NOT EXISTS colonoscopy_location text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS colonoscopy_notes    text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS period_notes         text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS mammogram_location   text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS mammogram_notes      text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dental_date          text,
+  ADD COLUMN IF NOT EXISTS dental_location      text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS dental_notes         text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS eye_exam_date        text,
+  ADD COLUMN IF NOT EXISTS eye_exam_location    text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS eye_exam_notes       text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS event_dates          text,
+  ADD COLUMN IF NOT EXISTS location             text NOT NULL DEFAULT '';
 
