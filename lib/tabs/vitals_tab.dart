@@ -7,7 +7,9 @@ import '../screens/add_vital_screen.dart';
 
 class VitalsTab extends StatefulWidget {
   final VoidCallback? onDoctorAdded;
-  const VitalsTab({super.key, this.onDoctorAdded});
+  // isMisc: whether the Misc sub-tab is active; hasMiscRecords: whether any misc entry exists
+  final void Function(bool isMisc, bool hasMiscRecords)? onSubTabChanged;
+  const VitalsTab({super.key, this.onDoctorAdded, this.onSubTabChanged});
 
   @override
   State<VitalsTab> createState() => VitalsTabState();
@@ -19,6 +21,9 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   Map<String, String> _doctorNames = {};
   bool _loading = true;
   String? _sex;
+  // Prevents re-triggering auto-navigation when returning from the detail screen.
+  // Reset when the user leaves the Misc sub-tab so the next visit auto-opens again.
+  bool _miscAutoNavigated = false;
 
   List<String> get _tabs => ['Daily', 'Misc'];
 
@@ -57,6 +62,21 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
     if (_tabController == null || _tabController!.length != 2) {
       _tabController?.dispose();
       _tabController = TabController(length: 2, vsync: this);
+      _tabController!.addListener(() {
+        if (!_tabController!.indexIsChanging) {
+          final isMisc = _tabController!.index == 1;
+          final miscVitals = _filteredMisc();
+          widget.onSubTabChanged?.call(isMisc, miscVitals.isNotEmpty);
+          if (!isMisc) {
+            _miscAutoNavigated = false;
+          } else if (!_miscAutoNavigated && miscVitals.isNotEmpty) {
+            _miscAutoNavigated = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _openMiscRecord(miscVitals.first);
+            });
+          }
+        }
+      });
     }
 
     setState(() {
@@ -93,6 +113,25 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       return true;
     }
     return false;
+  }
+
+  Future<void> _openMiscRecord(Vital vital) async {
+    await Navigator.push<dynamic>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddVitalScreen(
+          existing: vital,
+          category: 'open',
+          sameDayHistory: const [],
+        ),
+      ),
+    );
+    _load();
+    // Return to Daily tab after the user closes the form so there is
+    // no awkward blank Misc tab visible when they come back.
+    if (mounted && _tabController != null) {
+      _tabController!.animateTo(0);
+    }
   }
 
   Future<void> _openDetail(_VitalDayGroup group, String category) async {
@@ -143,6 +182,27 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
     if (_loading || _tabController == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final miscVitals = _filteredMisc();
+    // When a record exists the tab listener auto-navigates to AddVitalScreen.
+    // Show _MiscDetailInline as the background while that push is pending,
+    // or as the view the user returns to after pressing Back.
+    Widget miscWidget;
+    if (miscVitals.isEmpty) {
+      miscWidget = _VitalsListView(
+        groups: const [],
+        category: 'open',
+        isFemale: _sex == 'Female',
+        doctorNames: _doctorNames,
+        onTapGroup: (_) {},
+        onRefresh: _load,
+      );
+    } else {
+      // Auto-navigation fires on the next frame (tab listener → _openMiscRecord).
+      // Show blank white so the intermediate card never appears.
+      miscWidget = const ColoredBox(color: Colors.white);
+    }
+
     return Column(
       children: [
         _buildTabBar(),
@@ -156,14 +216,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
                 onTapGroup: (g) => _openDetail(g, 'daily'),
                 onRefresh: _load,
               ),
-              _VitalsListView(
-                groups: _groupByDay(_filteredMisc()),
-                category: 'open',
-                isFemale: _sex == 'Female',
-                doctorNames: _doctorNames,
-                onTapGroup: (g) => _openDetail(g, 'open'),
-                onRefresh: _load,
-              ),
+              miscWidget,
             ],
           ),
         ),
@@ -462,6 +515,200 @@ class _VitalDayCard extends StatelessWidget {
         ),
         child: Text(l, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF3B82F6))),
       )).toList(),
+    );
+  }
+}
+
+// ── Misc single-entry inline detail ─────────────────────────────────────────
+
+class _MiscDetailInline extends StatelessWidget {
+  final Vital vital;
+  final bool isFemale;
+  final Map<String, String> doctorNames;
+  final VoidCallback onEdit;
+  final Future<void> Function() onRefresh;
+
+  const _MiscDetailInline({
+    required this.vital,
+    required this.isFemale,
+    required this.doctorNames,
+    required this.onEdit,
+    required this.onRefresh,
+  });
+
+  String _fmt(DateTime dt) {
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${m[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  // Returns at most the 3 most recent dates (list is sorted oldest→newest).
+  List<DateTime> _recent3(List<DateTime> dates) =>
+      dates.length > 3 ? dates.sublist(dates.length - 3) : dates;
+
+  Widget _section(String title, IconData icon, List<Widget> rows) {
+    final visible = rows.whereType<_DetailRow>().any((r) => r.value.isNotEmpty);
+    if (!visible) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon, size: 14, color: const Color(0xFFFF6B6B)),
+            const SizedBox(width: 6),
+            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFFF6B6B))),
+          ]),
+          const SizedBox(height: 8),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final docName = vital.doctorId != null ? doctorNames[vital.doctorId!] : null;
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade100),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: const Icon(Icons.event_note_outlined, color: Color(0xFFFF6B6B), size: 17),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vital.eventName.isNotEmpty ? vital.eventName : 'Misc Record',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF635A5A)),
+                      ),
+                      Text(_fmt(vital.recordedAt),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 15),
+                  label: const Text('Edit', style: TextStyle(fontSize: 13)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFFF6B6B),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Event / general info
+          if (vital.eventDates.isNotEmpty || vital.location.isNotEmpty)
+            _section('Event', Icons.place_outlined, [
+              ..._recent3(vital.eventDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Location', vital.location),
+            ]),
+
+          // Colonoscopy
+          if (vital.colonoscopyDates.isNotEmpty)
+            _section('Colonoscopy', Icons.medical_services_outlined, [
+              ..._recent3(vital.colonoscopyDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Location', vital.colonoscopyLocation),
+              _DetailRow('Notes', vital.colonoscopyNotes),
+            ]),
+
+          // Dental
+          if (vital.dentalDates.isNotEmpty)
+            _section('Dental', Icons.local_hospital_outlined, [
+              ..._recent3(vital.dentalDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Location', vital.dentalLocation),
+              _DetailRow('Notes', vital.dentalNotes),
+            ]),
+
+          // Eye Exam
+          if (vital.eyeExamDates.isNotEmpty)
+            _section('Eye Exam', Icons.visibility_outlined, [
+              ..._recent3(vital.eyeExamDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Location', vital.eyeExamLocation),
+              _DetailRow('Notes', vital.eyeExamNotes),
+            ]),
+
+          // Period (female only)
+          if (isFemale && vital.periodDates.isNotEmpty)
+            _section('Period', Icons.calendar_today_outlined, [
+              ..._recent3(vital.periodDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Notes', vital.periodNotes),
+            ]),
+
+          // Mammogram (female only)
+          if (isFemale && vital.mammogramDates.isNotEmpty)
+            _section('Mammogram', Icons.health_and_safety_outlined, [
+              ..._recent3(vital.mammogramDates).map((d) => _DetailRow('Date', _fmt(d))),
+              _DetailRow('Location', vital.mammogramLocation),
+              _DetailRow('Notes', vital.mammogramNotes),
+            ]),
+
+          // General notes / doctor / risk
+          if (vital.notes.isNotEmpty || docName != null || vital.riskLevel != 'Low')
+            _section('Additional Info', Icons.info_outline, [
+              if (docName != null) _DetailRow('Doctor', docName),
+              _DetailRow('Risk Level', vital.riskLevel != 'Low' ? vital.riskLevel : ''),
+              _DetailRow('Notes', vital.notes),
+            ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 88,
+            child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF635A5A))),
+          ),
+        ],
+      ),
     );
   }
 }

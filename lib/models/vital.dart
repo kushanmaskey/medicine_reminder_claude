@@ -19,21 +19,22 @@ class Vital {
   final String sugarUnit;
   final String cholesterolUnit;
 
-  // Misc fields
-  final DateTime? colonoscopyDate;
+  // Misc fields — lists to support multiple dates per section
+  final List<DateTime> colonoscopyDates;
   final String colonoscopyLocation;
   final String colonoscopyNotes;
-  final DateTime? periodDate;
+  final List<DateTime> periodDates;
   final String periodNotes;
-  final DateTime? mammogramDate;
+  final List<DateTime> mammogramDates;
   final String mammogramLocation;
   final String mammogramNotes;
-  final DateTime? dentalDate;
+  final List<DateTime> dentalDates;
   final String dentalLocation;
   final String dentalNotes;
-  final DateTime? eyeExamDate;
+  final List<DateTime> eyeExamDates;
   final String eyeExamLocation;
   final String eyeExamNotes;
+  final List<DateTime> eventDates;
 
   final String riskLevel;
   final String notes;
@@ -53,25 +54,33 @@ class Vital {
     this.weightUnit = 'lbs',
     this.sugarUnit = 'mg/dL',
     this.cholesterolUnit = 'mg/dL',
-    this.colonoscopyDate,
+    this.colonoscopyDates = const [],
     this.colonoscopyLocation = '',
     this.colonoscopyNotes = '',
-    this.periodDate,
+    this.periodDates = const [],
     this.periodNotes = '',
-    this.mammogramDate,
+    this.mammogramDates = const [],
     this.mammogramLocation = '',
     this.mammogramNotes = '',
-    this.dentalDate,
+    this.dentalDates = const [],
     this.dentalLocation = '',
     this.dentalNotes = '',
-    this.eyeExamDate,
+    this.eyeExamDates = const [],
     this.eyeExamLocation = '',
     this.eyeExamNotes = '',
+    this.eventDates = const [],
     required this.riskLevel,
     this.notes = '',
     this.doctorId,
     this.location = '',
   });
+
+  // Single-date computed getters — most recent date in each list
+  DateTime? get colonoscopyDate => colonoscopyDates.isNotEmpty ? colonoscopyDates.last : null;
+  DateTime? get periodDate => periodDates.isNotEmpty ? periodDates.last : null;
+  DateTime? get mammogramDate => mammogramDates.isNotEmpty ? mammogramDates.last : null;
+  DateTime? get dentalDate => dentalDates.isNotEmpty ? dentalDates.last : null;
+  DateTime? get eyeExamDate => eyeExamDates.isNotEmpty ? eyeExamDates.last : null;
 
   // Display getters — use latest reading
   bool get hasBP => bpReadings.isNotEmpty;
@@ -141,6 +150,7 @@ class Vital {
         'eyeExamDate': eyeExamDate?.toIso8601String(),
         if (eyeExamLocation.isNotEmpty) 'eyeExamLocation': eyeExamLocation,
         if (eyeExamNotes.isNotEmpty) 'eyeExamNotes': eyeExamNotes,
+        'eventDates': eventDates.map((d) => d.toIso8601String()).toList(),
         'riskLevel': riskLevel,
         'notes': notes,
         'doctorId': doctorId,
@@ -150,6 +160,25 @@ class Vital {
   static DateTime? _tryParse(dynamic value) {
     if (value == null) return null;
     try { return DateTime.parse(value as String).toLocal(); } catch (_) { return null; }
+  }
+
+  // Parses a date column that may contain either a single ISO string (old format)
+  // or a JSON array of ISO strings (new format for multi-date history).
+  static List<DateTime> _parseDateList(
+      Map<String, dynamic> json, String singleKey, [String? _unused]) {
+    final raw = json[singleKey];
+    if (raw == null) return [];
+    if (raw is String && raw.isNotEmpty) {
+      if (raw.startsWith('[')) {
+        try {
+          final list = jsonDecode(raw) as List;
+          return list.map((e) => _tryParse(e)).whereType<DateTime>().toList();
+        } catch (_) {}
+      }
+      final single = _tryParse(raw);
+      return single != null ? [single] : [];
+    }
+    return [];
   }
 
   factory Vital.fromJson(Map<String, dynamic> json) {
@@ -274,20 +303,21 @@ class Vital {
       weightUnit: json['weightUnit'] ?? 'lbs',
       sugarUnit: json['sugarUnit'] ?? 'mg/dL',
       cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
-      colonoscopyDate: _tryParse(json['colonoscopyDate']),
+      colonoscopyDates: _parseDateList(json, 'colonoscopyDate'),
       colonoscopyLocation: json['colonoscopyLocation'] ?? '',
       colonoscopyNotes: json['colonoscopyNotes'] ?? '',
-      periodDate: _tryParse(json['periodDate']),
+      periodDates: _parseDateList(json, 'periodDate'),
       periodNotes: json['periodNotes'] ?? '',
-      mammogramDate: _tryParse(json['mammogramDate']),
+      mammogramDates: _parseDateList(json, 'mammogramDate'),
       mammogramLocation: json['mammogramLocation'] ?? '',
       mammogramNotes: json['mammogramNotes'] ?? '',
-      dentalDate: _tryParse(json['dentalDate']),
+      dentalDates: _parseDateList(json, 'dentalDate'),
       dentalLocation: json['dentalLocation'] ?? '',
       dentalNotes: json['dentalNotes'] ?? '',
-      eyeExamDate: _tryParse(json['eyeExamDate']),
+      eyeExamDates: _parseDateList(json, 'eyeExamDate'),
       eyeExamLocation: json['eyeExamLocation'] ?? '',
       eyeExamNotes: json['eyeExamNotes'] ?? '',
+      eventDates: _parseDateList(json, 'eventDates'),
       riskLevel: json['riskLevel'] ?? 'Low',
       notes: json['notes'] ?? '',
       doctorId: json['doctorId'] as String?,
