@@ -13,7 +13,7 @@ class EncryptionService {
 
   static const _rawKey = String.fromEnvironment(
     'FIELD_ENCRYPTION_KEY',
-    defaultValue: 'MedWallet!Dev#Key2024$Secure@32Ch',
+    defaultValue: r'MedWallet!Dev#Key2024$Secure@32Ch',
   );
 
   static late final Encrypter _encrypter;
