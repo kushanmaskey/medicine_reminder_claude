@@ -141,7 +141,7 @@ class NotificationService {
 
     final scheduleMode = await _resolveScheduleMode();
 
-    await _plugin.zonedSchedule(
+    Future<void> doSchedule() => _plugin.zonedSchedule(
       id,
       title,
       body,
@@ -170,6 +170,17 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+
+    try {
+      await doSchedule();
+    } catch (e) {
+      if (e.toString().contains('Missing type parameter')) {
+        await _plugin.cancelAll();
+        await doSchedule();
+      } else {
+        rethrow;
+      }
+    }
   }
 
   static Future<void> scheduleOnceNotification({
@@ -190,7 +201,7 @@ class NotificationService {
         ? 'alert_v2'
         : 'alert_v2_${soundUri.hashCode.abs()}';
 
-    await _plugin.zonedSchedule(
+    Future<void> doSchedule() => _plugin.zonedSchedule(
       id,
       title,
       body,
@@ -218,6 +229,17 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
+
+    try {
+      await doSchedule();
+    } catch (e) {
+      if (e.toString().contains('Missing type parameter')) {
+        await _plugin.cancelAll();
+        await doSchedule();
+      } else {
+        rethrow;
+      }
+    }
   }
 
   static Future<void> cancelNotification(int id) async {
