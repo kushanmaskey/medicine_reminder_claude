@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import 'home_screen.dart';
 
 const _gradient = LinearGradient(
@@ -74,33 +75,33 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             padding: EdgeInsets.fromLTRB(
-                20, MediaQuery.of(context).padding.top + 12, 20, 14),
+                20, MediaQuery.of(context).padding.top + 24, 20, 28),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(18),
                     child: Image.asset(
                       'assets/icons/app_icon.png',
-                      width: 33,
-                      height: 33,
+                      width: 66,
+                      height: 66,
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 16),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -108,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Medical Wallet',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.3,
                       ),
@@ -117,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Your health, always in hand.',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 10,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -192,6 +193,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           validator: (v) => (v == null || v.length < 6)
                               ? 'Min 6 characters'
                               : null,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(color: Color(0xFFFF6B6B), fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ),
                         ),
                         if (_error != null) ...[
                           const SizedBox(height: 12),

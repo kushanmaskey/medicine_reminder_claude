@@ -7,7 +7,8 @@ import '../screens/add_vital_screen.dart';
 
 class VitalsTab extends StatefulWidget {
   final VoidCallback? onDoctorAdded;
-  const VitalsTab({super.key, this.onDoctorAdded});
+  final void Function(bool isMisc, bool hasMiscRecords)? onSubTabChanged;
+  const VitalsTab({super.key, this.onDoctorAdded, this.onSubTabChanged});
 
   @override
   State<VitalsTab> createState() => VitalsTabState();
@@ -24,6 +25,12 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
   String get _currentCategory =>
       _tabController != null && _tabController!.index == 1 ? 'open' : 'daily';
+
+  void _notifySubTab() {
+    final isMisc = _tabController?.index == 1;
+    final hasMisc = _vitals.any((v) => v.category == 'open');
+    widget.onSubTabChanged?.call(isMisc, hasMisc);
+  }
 
   @override
   void initState() {
@@ -56,7 +63,10 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
     if (_tabController == null || _tabController!.length != 2) {
       _tabController?.dispose();
-      _tabController = TabController(length: 2, vsync: this);
+      _tabController = TabController(length: 2, vsync: this)
+        ..addListener(() {
+          if (!_tabController!.indexIsChanging) _notifySubTab();
+        });
     }
 
     setState(() {
@@ -65,6 +75,8 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       _doctorNames = {for (final d in doctors) d.id: d.fullName};
       _loading = false;
     });
+
+    _notifySubTab();
   }
 
   void reload() => _load();

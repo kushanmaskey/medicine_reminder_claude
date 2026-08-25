@@ -54,6 +54,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  bool _vitalsOnMisc = false;
+  bool _vitalsHasMiscRecords = false;
   String? _avatarType;
   int? _avatarIndex;
   Uint8List? _avatarImageBytes;
@@ -559,7 +561,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           InsuranceTab(key: _insuranceKey, onChanged: () => _summaryKey.currentState?.reload()),
           PrescriptionsTab(key: _prescriptionsKey),
           AppointmentsTab(key: _appointmentsKey),
-          VitalsTab(key: _vitalsKey, onDoctorAdded: () => _doctorsKey.currentState?.reload()),
+          VitalsTab(
+            key: _vitalsKey,
+            onDoctorAdded: () => _doctorsKey.currentState?.reload(),
+            onSubTabChanged: (isMisc, hasMisc) => setState(() {
+              _vitalsOnMisc = isMisc;
+              _vitalsHasMiscRecords = hasMisc;
+            }),
+          ),
           ActivitiesTab(key: _activitiesKey),
           AllergiesTab(key: _allergiesKey),
         ],
@@ -616,7 +625,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      floatingActionButton: _currentIndex == 0
+      // Hide FAB on MISC tab only when a record already exists (user edits via the Edit button).
+      // When no misc record exists yet, keep FAB so user can create the first one.
+      floatingActionButton: (_currentIndex == 0 || (_currentIndex == 5 && _vitalsOnMisc && _vitalsHasMiscRecords))
           ? null
           : _GradientFAB(onPressed: _openAddScreen),
     ),
