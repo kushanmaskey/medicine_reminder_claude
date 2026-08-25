@@ -2,7 +2,7 @@
 
 **App Name:** My Medical Wallet  
 **Package:** com.mymedicalwallet.app  
-**Version:** 1.0.1+2013  
+**Version:** 1.0.7+2022  
 **Platform:** Flutter (iOS + Android)  
 **Backend:** Supabase (PostgreSQL + Auth)  
 **Target Audience:** Adults 50+ managing medications, doctors, vitals, and appointments
@@ -49,6 +49,7 @@ lib/
 ├── services/
 │   ├── auth_service.dart
 │   ├── biometric_service.dart
+│   ├── encryption_service.dart
 │   ├── notification_service.dart
 │   ├── ringtone_service.dart
 │   └── storage_service.dart
@@ -100,6 +101,7 @@ lib/
 | `shared_preferences` | ^2.3.3 | Local key-value storage |
 | `permission_handler` | ^11.3.1 | Runtime OS permission requests |
 | `crypto` | ^3.0.7 | Hashing strings for notification IDs |
+| `encrypt` | ^5.0.3 | AES-256 field-level encryption for sensitive data |
 | `http` | ^1.2.0 | HTTP client for NPI API lookup |
 | `url_launcher` | ^6.3.0 | Open URLs in browser |
 | `cupertino_icons` | ^1.0.8 | iOS-style icons |
@@ -111,12 +113,34 @@ lib/
 ### Supabase
 **File:** `lib/config/supabase_config.dart`
 
-```
-URL:      https://umunppclpmlmjpwpqosf.supabase.co
-Anon Key: (JWT token — safe to expose, RLS enforces security)
+Two separate Supabase projects, switched via `--dart-define=ENV=production` at build time:
+
+| Environment | Project ID | When Used |
+|---|---|---|
+| Development | `umunppclpmlmjpwpqosf` | Local testing, emulator builds |
+| Production | `bqkondmchcbqabjicdfo` | Release APK/AAB, App Store/Play Store builds |
+
+```bash
+# Dev (default)
+flutter run
+
+# Production build
+flutter build apk --dart-define=ENV=production
+flutter build appbundle --dart-define=ENV=production
 ```
 
 Initialized in `lib/main.dart` with a 10-second timeout on startup.
+
+### Encryption Key
+Sensitive insurance fields are encrypted with AES-256. The key is injected at build time:
+
+```bash
+flutter build appbundle \
+  --dart-define=ENV=production \
+  --dart-define=FIELD_ENCRYPTION_KEY=<your-32-char-key>
+```
+
+If `FIELD_ENCRYPTION_KEY` is not provided, a fixed dev default is used (`MedWallet!Dev#Key2024$Secure@32Ch`). Never deploy a production build without a custom key.
 
 ### App Entry Point
 **File:** `lib/main.dart`
@@ -258,14 +282,26 @@ Initialized in `lib/main.dart` with a 10-second timeout on startup.
 | weightUnit | String | `'lbs'` or `'kg'` |
 | sugarUnit | String | `'mg/dL'` or `'mmol/L'` |
 | cholesterolUnit | String | `'mg/dL'` or `'mmol/L'` |
-| colonoscopyDate | DateTime? | Colonoscopy date |
-| periodDate | DateTime? | Menstrual period date (female) |
-| mammogramDate | DateTime? | Mammogram date (female) |
-| dentalDate | DateTime? | Dental checkup date |
-| eyeExamDate | DateTime? | Eye exam date |
-| notes | String? | General notes |
+| colonoscopyDates | List\<DateTime\> | All colonoscopy dates (multi-date) |
+| colonoscopyLocation | String | Location/clinic for colonoscopy |
+| colonoscopyNotes | String | Notes for colonoscopy |
+| periodDates | List\<DateTime\> | Menstrual period dates (female, multi-date) |
+| periodNotes | String | Notes for period |
+| mammogramDates | List\<DateTime\> | Mammogram dates (female, multi-date) |
+| mammogramLocation | String | Location/clinic for mammogram |
+| mammogramNotes | String | Notes for mammogram |
+| dentalDates | List\<DateTime\> | Dental checkup dates (multi-date) |
+| dentalLocation | String | Location/clinic for dental |
+| dentalNotes | String | Notes for dental |
+| eyeExamDates | List\<DateTime\> | Eye exam dates (multi-date) |
+| eyeExamLocation | String | Location/clinic for eye exam |
+| eyeExamNotes | String | Notes for eye exam |
+| eventDates | List\<DateTime\> | Event/procedure dates (multi-date) |
+| eventName | String | Name of custom event/procedure |
+| location | String | Location for event/procedure |
+| riskLevel | String | Color-coded risk level |
+| notes | String | General notes |
 | doctorId | String? | Linked doctor |
-| riskLevel | String? | Color-coded risk level |
 
 **Getters:**
 - `hasPulse`, `hasBp`, `hasSugar`, `hasCholesterol`, `hasWeight`
@@ -274,6 +310,8 @@ Initialized in `lib/main.dart` with a 10-second timeout on startup.
 - `weightDisplay`, `sugarDisplay`, `cholesterolDisplay`
 
 **Schema migration:** Reads from `readings_data` JSON column first, falls back to legacy individual columns.
+
+> **Multi-date design:** All misc health event date fields changed from single `DateTime?` to `List<DateTime>` in v1.0.7. Stored as JSON arrays in TEXT columns. `_parseDateList()` handles empty/null values safely.
 
 ---
 
@@ -403,6 +441,25 @@ Handles Face ID / Touch ID / fingerprint authentication via `local_auth`.
 
 ---
 
+### `EncryptionService`
+**File:** `lib/services/encryption_service.dart`
+
+AES-256-CBC encryption for sensitive fields stored in Supabase. Applied to insurance fields: `member_id`, `group_number`, `copay`, `deductible`.
+
+| Method | Returns | Description |
+|---|---|---|
+| `initialize()` | `void` | Initializes AES encrypter from `FIELD_ENCRYPTION_KEY` build define |
+| `encrypt(plainText)` | `String` | Encrypts text; returns `enc:<iv_b64>:<cipher_b64>` |
+| `decrypt(value)` | `String` | Decrypts `enc:...` values; returns plain text unchanged if not prefixed |
+
+**Encrypted format:** `enc:<base64_iv>:<base64_ciphertext>`
+
+**Backward compatibility:** Values not prefixed with `enc:` are returned unchanged. This means existing plain-text records display correctly until they are re-saved, at which point they will be encrypted.
+
+**Key source:** `String.fromEnvironment('FIELD_ENCRYPTION_KEY')` with a fixed dev default. A raw string literal (`r'...'`) is used to prevent Dart from interpreting `$` as interpolation.
+
+---
+
 ### `NotificationService`
 **File:** `lib/services/notification_service.dart`
 
@@ -415,15 +472,18 @@ Schedules local push notifications using `flutter_local_notifications`.
 | `scheduleDailyNotification(id, title, body, time)` | `void` | Schedules a recurring daily notification |
 | `scheduleOnceNotification(id, title, body, dateTime)` | `void` | Schedules a one-time notification |
 | `cancelNotification(id)` | `void` | Cancels a scheduled notification by ID |
+| `showTestNotification()` | `void` | Fires an immediate test notification |
+| `scheduleTestNotification()` | `void` | Schedules a test notification 15 seconds from now |
 | `idFromString(id)` | `int` | Hashes a string UUID to a valid integer notification ID |
 
 **Android Notification Channels:**
 - `med_reminder_v2` or `med_v2_{soundHash}` — Medication reminders
-- `appointment_v2` — Appointment reminders
+- `alert_v2` or `alert_v2_{soundHash}` — Appointment/prescription one-time alerts
 
 **Notes:**
 - Uses `TZDateTime` for timezone-aware scheduling
 - Falls back to inexact scheduling if exact alarm permission is not granted
+- **Self-healing "Missing type parameter" fix:** Both `scheduleDailyNotification()` and `scheduleOnceNotification()` wrap `zonedSchedule` in try-catch. If the error message contains `"Missing type parameter"` (caused by stale SharedPreferences notification data from an older plugin version), `_plugin.cancelAll()` wipes the corrupt cache and the schedule is retried. This happens at most once per affected device and is transparent to the user.
 
 ---
 
@@ -519,6 +579,8 @@ All CRUD operations for health data via Supabase PostgREST.
 | `deleteInsurance(id)` | `void` | Deletes insurance record |
 
 > **Caching:** Insurance records are cached locally in SharedPreferences for performance.
+>
+> **Encryption:** `saveInsurance()` and `updateInsurance()` encrypt `member_id`, `group_number`, `copay`, and `deductible` via `EncryptionService.encrypt()` before writing to Supabase. `getInsurance()` decrypts them via `EncryptionService.decrypt()` on read. Plain-text values written before encryption was introduced are returned unchanged (backward compatible).
 
 #### User Consents
 
@@ -659,11 +721,16 @@ Log vital signs or miscellaneous health events.
 - Multiple readings per type supported
 
 **Misc (Open) Category:**
-- Colonoscopy, mammogram (female), dental, eye exam, period (female) dates with notes and locations
+- Colonoscopy, mammogram (female), dental, eye exam, period (female) — each supports **multiple dates** plus location and notes fields
+- Event/Procedure — supports **multiple dates** plus location field; hint text is gender-aware:
+  - Female: "Physiotherapy, Pap Smear, Screenings…"
+  - Male: "Physiotherapy, Screenings…"
 
 Gender-specific fields shown based on sex from `AuthService.getSex()`.
 
-On save: stores readings in `readings_data` JSON column + legacy individual columns via `StorageService.saveVital()`.
+**Typography:** Section headings use `fontSize: 13, color: grey[700], fontWeight: w600`. Input placeholder text uses `fontSize: 13, color: grey[400]` (smaller/dimmer than headings) so headings are visually dominant.
+
+On save: stores readings in `readings_data` JSON column + legacy individual columns via `StorageService.saveVital()`. For misc events, `effectiveDate` is derived from `eventDates.last` if dates were added, otherwise from `_recordedAt`.
 
 ---
 
@@ -805,6 +872,7 @@ Dashboard showing the latest entry from each section.
 - Same-day history chips for comparing multiple readings
 - Doctor name displayed when linked
 - Gender-specific misc fields (mammogram and period for female users)
+- Misc detail view shows up to 3 most recent dates for each misc category (colonoscopy, mammogram, dental, eye exam, period, event/procedure)
 
 ---
 
@@ -965,7 +1033,7 @@ Stores user profile data.
 | user_id | UUID | Auth user ID (RLS) |
 | recorded_at | DATE | Date of entry |
 | category | TEXT | 'daily', 'monthly', or 'open' |
-| event_name | TEXT | Name for misc events |
+| event_name | TEXT | Name for misc events/procedures |
 | readings_data | TEXT | JSON blob of all readings (primary storage) |
 | bp_systolic | INT | Legacy single BP systolic value |
 | bp_diastolic | INT | Legacy single BP diastolic value |
@@ -976,17 +1044,30 @@ Stores user profile data.
 | sugar_unit | TEXT | 'mg/dL' or 'mmol/L' |
 | cholesterol | FLOAT | Legacy single cholesterol value |
 | cholesterol_unit | TEXT | 'mg/dL' or 'mmol/L' |
-| colonoscopy_date | DATE | Colonoscopy date |
-| period_date | DATE | Menstrual period date |
-| mammogram_date | DATE | Mammogram date |
-| dental_date | DATE | Dental checkup date |
-| eye_exam_date | DATE | Eye exam date |
+| colonoscopy_date | TEXT | Colonoscopy date(s) — JSON array of ISO-8601 strings |
+| colonoscopy_location | TEXT | Location/clinic for colonoscopy |
+| colonoscopy_notes | TEXT | Notes for colonoscopy |
+| period_date | TEXT | Menstrual period date(s) — JSON array of ISO-8601 strings |
+| period_notes | TEXT | Notes for period |
+| mammogram_date | TEXT | Mammogram date(s) — JSON array of ISO-8601 strings |
+| mammogram_location | TEXT | Location/clinic for mammogram |
+| mammogram_notes | TEXT | Notes for mammogram |
+| dental_date | TEXT | Dental checkup date(s) — JSON array of ISO-8601 strings |
+| dental_location | TEXT | Location/clinic for dental |
+| dental_notes | TEXT | Notes for dental |
+| eye_exam_date | TEXT | Eye exam date(s) — JSON array of ISO-8601 strings |
+| eye_exam_location | TEXT | Location/clinic for eye exam |
+| eye_exam_notes | TEXT | Notes for eye exam |
+| event_dates | TEXT | Event/procedure date(s) — JSON array of ISO-8601 strings |
+| location | TEXT | Location for event/procedure |
 | risk_level | TEXT | Color-coded risk indicator |
 | notes | TEXT | General notes |
 | doctor_id | UUID | Linked doctor |
 | created_at | TIMESTAMPTZ | Record creation date |
 
 > **Note:** `readings_data` is a JSON string storing arrays of readings per type. It takes precedence over legacy individual columns on read.
+>
+> **Multi-date columns:** All misc date columns are TEXT storing a JSON array (e.g., `["2026-01-15T00:00:00.000","2026-03-20T00:00:00.000"]`). This is a change from earlier schema versions where they were DATE columns holding a single value. Run `ADD COLUMN IF NOT EXISTS` migrations on both dev and prod Supabase projects to add any missing columns.
 
 ---
 
@@ -1201,7 +1282,7 @@ HomeScreen init
 | Key | Value |
 |---|---|
 | `NSFaceIDUsageDescription` | "My Medical Wallet uses Face ID to keep your health data secure." |
-| `ITSAppUsesNonExemptEncryption` | `false` (standard HTTPS only, no custom encryption) |
+| `ITSAppUsesNonExemptEncryption` | `true` — AES-256 encryption is used for insurance fields; App Store export compliance must reflect this |
 | Supported orientations | Portrait, Landscape Left, Landscape Right |
 | iPad orientations | All 4 orientations |
 
@@ -1213,6 +1294,8 @@ HomeScreen init
 |---|---|
 | Transport Security | HTTPS for all Supabase communication |
 | Database Access | Row Level Security (RLS) — users see only their own rows via `user_id` filter |
+| Column-Level Encryption | AES-256-CBC via `EncryptionService` — insurance fields (`member_id`, `group_number`, `copay`, `deductible`) are encrypted before writing to Supabase. Encrypted values appear as `enc:<iv>:<ciphertext>` in the database. |
+| Encryption Key | Injected via `--dart-define=FIELD_ENCRYPTION_KEY=<key>` at build time; dev default used if not provided |
 | Biometric Auth | Platform-provided via `local_auth` — biometric data never leaves the device |
 | Session Timeout | 1-hour auto-logout via SharedPreferences timestamp |
 | Avatar Storage | Custom avatars stored as base64 in Supabase `profiles` table |
@@ -1271,8 +1354,18 @@ flutter pub run flutter_launcher_icons
 
 | Platform | Version | Build | Status |
 |---|---|---|---|
-| iOS (App Store) | 1.0.2 | 2017 | Waiting for Review |
-| Android (Google Play) | — | — | Closed testing |
+| iOS (App Store) | 1.0.7 | 2022 | Released / Active ad campaign running |
+| Android (Google Play) | 1.0.7 | 2022 | Closed testing (Alpha) — 12 testers enrolled |
+
+**Google Play production track requirements:**
+- Minimum 12 testers (met as of Aug 2026)
+- Minimum 14-day closed testing period (timer starts from when testers join)
+- Once both are met, production release track becomes available
+
+**Latest AAB path (local):**
+```
+build/app/outputs/bundle/release/app-release.aab
+```
 
 **Play Store assets location:** `images/`
 - `play_store_icon_512.png` — 512×512 store icon
