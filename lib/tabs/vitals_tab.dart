@@ -7,7 +7,6 @@ import '../screens/add_vital_screen.dart';
 
 class VitalsTab extends StatefulWidget {
   final VoidCallback? onDoctorAdded;
-  // isMisc: whether the Misc sub-tab is active; hasMiscRecords: whether any misc entry exists
   final void Function(bool isMisc, bool hasMiscRecords)? onSubTabChanged;
   const VitalsTab({super.key, this.onDoctorAdded, this.onSubTabChanged});
 
@@ -29,6 +28,12 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
   String get _currentCategory =>
       _tabController != null && _tabController!.index == 1 ? 'open' : 'daily';
+
+  void _notifySubTab() {
+    final isMisc = _tabController?.index == 1;
+    final hasMisc = _vitals.any((v) => v.category == 'open');
+    widget.onSubTabChanged?.call(isMisc, hasMisc);
+  }
 
   @override
   void initState() {
@@ -85,6 +90,8 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       _doctorNames = {for (final d in doctors) d.id: d.fullName};
       _loading = false;
     });
+
+    _notifySubTab();
   }
 
   void reload() => _load();

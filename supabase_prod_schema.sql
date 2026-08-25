@@ -197,3 +197,20 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE handle_new_user();
+
+-- ── Migration: add vitals columns added in v1.0.7 ─────────────
+-- Safe to run on an existing database — all statements are idempotent.
+
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS colonoscopy_location text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS colonoscopy_notes    text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS period_notes         text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS mammogram_location   text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS mammogram_notes      text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS dental_date          text;
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS dental_location      text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS dental_notes         text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS eye_exam_date        text;
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS eye_exam_location    text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS eye_exam_notes       text NOT NULL DEFAULT '';
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS event_dates          text;
+ALTER TABLE vitals ADD COLUMN IF NOT EXISTS location             text NOT NULL DEFAULT '';
