@@ -61,6 +61,8 @@ TABLES = [
     "activities",
     "prescription_alerts",
     "user_consents",
+    "allergies",
+    "insurance",
 ]
 
 # Fields exported per auth user — excludes any internal Supabase fields

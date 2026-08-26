@@ -2,7 +2,7 @@
 
 **App Name:** My Medical Wallet  
 **Package:** com.mymedicalwallet.app  
-**Version:** 1.0.7+2022  
+**Version:** 1.0.8+2023  
 **Platform:** Flutter (iOS + Android)  
 **Backend:** Supabase (PostgreSQL + Auth)  
 **Target Audience:** Adults 50+ managing medications, doctors, vitals, and appointments
@@ -130,6 +130,15 @@ flutter build appbundle --dart-define=ENV=production
 ```
 
 Initialized in `lib/main.dart` with a 10-second timeout on startup.
+
+### Build Scripts
+
+| Script | Target | Output |
+|---|---|---|
+| `./build_ios.sh` | iOS production IPA | `build/ios/ipa/My Medical Wallet.ipa` — bumps build number automatically |
+| `./build_prod.sh` | Android production AAB | `build/app/outputs/bundle/release/app-release.aab` |
+
+Both scripts pass `--dart-define=ENV=production` to target the production Supabase database.
 
 ### Encryption Key
 Sensitive insurance fields are encrypted with AES-256. The key is injected at build time:
@@ -1324,7 +1333,85 @@ HomeScreen init
 
 ---
 
-## 14. App Icon
+## 14. Database Operations
+
+### Environment Policy
+
+| Environment | Supabase Project | Used By |
+|---|---|---|
+| Development | `umunppclpmlmjpwpqosf` | `flutter run`, local testing |
+| Production | `bqkondmchcbqabjicdfo` | All release builds (IPA, AAB) |
+
+**Rule:** Prod data is never written back to dev. Dev is disposable. The sync and backup scripts enforce this in code.
+
+### One-Time Dev → Prod Sync
+
+**Script:** `sync_dev_to_prod.py`
+
+Run once to migrate existing user data from dev to prod (e.g. when switching iOS users from dev to prod database). Safe to re-run — uses idempotent upserts.
+
+```bash
+# Store keys in .env (gitignored)
+export DEV_SERVICE_ROLE_KEY="eyJ..."
+export PROD_SERVICE_ROLE_KEY="eyJ..."
+
+source .env && python3 sync_dev_to_prod.py          # dry-run preview
+source .env && python3 sync_dev_to_prod.py --run    # live migration
+source .env && python3 sync_dev_to_prod.py --run --send-reset-emails  # + trigger password reset emails
+```
+
+**Important:** Passwords do not transfer. After the sync, users must use **Forgot Password** to log in to prod.
+
+**Safety guards:**
+- Source and target URLs are hard-coded — cannot be swapped via flags
+- Same-key guard aborts if both keys are identical
+- Typed confirmation (`migrate`) required before any writes
+- Orphaned dev rows (no matching prod auth user) are skipped automatically
+- Dev-only columns not in prod schema are stripped and retried automatically
+
+### Daily Prod Backup
+
+**Script:** `backup_prod.py`  
+**Workflow:** `.github/workflows/daily-backup.yml` — runs every day at 2:00 AM UTC
+
+Exports all prod auth users and data tables to dated JSON files, committed to a private GitHub backup repo.
+
+```bash
+# Run manually
+export PROD_SERVICE_ROLE_KEY="eyJ..."
+python3 backup_prod.py
+```
+
+**GitHub Secrets required** (repo Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `PROD_SERVICE_ROLE_KEY` | Supabase prod service role key |
+| `BACKUP_GITHUB_REPO` | e.g. `kushanmaskey/medical-wallet-backups` |
+| `BACKUP_REPO_TOKEN` | GitHub PAT with `repo` scope on backup repo |
+
+**Backup output structure:**
+```
+backups/YYYY-MM-DD/
+  auth_users.json        # id, email, metadata (no passwords)
+  profiles.json
+  doctors.json
+  prescriptions.json
+  medications.json
+  appointments.json
+  appointment_alerts.json
+  vitals.json
+  activities.json
+  prescription_alerts.json
+  user_consents.json
+  allergies.json
+  insurance.json
+  manifest.json          # row counts + timestamps
+```
+
+---
+
+## 15. App Icon
 
 **Source script:** `generate_icon.py` (requires Pillow)  
 **Master icon:** `assets/icons/app_icon.png` (1024×1024)  
@@ -1354,8 +1441,8 @@ flutter pub run flutter_launcher_icons
 
 | Platform | Version | Build | Status |
 |---|---|---|---|
-| iOS (App Store) | 1.0.7 | 2022 | Released / Active ad campaign running |
-| Android (Google Play) | 1.0.7 | 2022 | Closed testing (Alpha) — 12 testers enrolled |
+| iOS (App Store) | 1.0.8 | 2023 | Uploaded to TestFlight — targets prod database |
+| Android (Google Play) | 1.0.8 | 2023 | Uploaded to closed testing — targets prod database |
 
 **Google Play production track requirements:**
 - Minimum 12 testers (met as of Aug 2026)

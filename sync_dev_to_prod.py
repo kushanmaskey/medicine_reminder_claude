@@ -71,6 +71,8 @@ TABLES = [
     "activities",
     "prescription_alerts",
     "user_consents",
+    "allergies",
+    "insurance",
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -112,28 +114,53 @@ def fetch_all_rows(base_url, key, table):
     return rows
 
 def upsert_rows(base_url, key, table, rows):
-    """Upsert rows; rows that already exist in prod are ignored."""
+    """Upsert rows; rows that already exist in prod are ignored.
+    Automatically strips dev-only columns that don't exist in prod schema."""
     if not rows:
         return 0
-    r = requests.post(
-        f"{base_url}/rest/v1/{table}",
-        headers=rest_headers(key, prefer="resolution=ignore-duplicates,return=minimal"),
-        json=rows,
-    )
-    if not r.ok:
+    import re
+    current_rows = rows
+    for _ in range(20):  # max column stripping iterations
+        r = requests.post(
+            f"{base_url}/rest/v1/{table}",
+            headers=rest_headers(key, prefer="resolution=ignore-duplicates,return=minimal"),
+            json=current_rows,
+        )
+        if r.ok:
+            return len(current_rows)
+        # PGRST204 = column not found in prod schema — strip it and retry
+        if r.status_code == 400:
+            try:
+                err = r.json()
+            except Exception:
+                err = {}
+            # PGRST204 = column not in prod schema — strip it and retry
+            if err.get("code") == "PGRST204":
+                match = re.search(r"Could not find the '(\w+)' column", err.get("message", ""))
+                if match:
+                    col = match.group(1)
+                    print(f"     ~ Stripping dev-only column '{col}' from {table}")
+                    current_rows = [{k: v for k, v in row.items() if k != col} for row in current_rows]
+                    continue
+            # 23502 = NOT NULL constraint — replace nulls with '' and retry
+            if err.get("code") == "23502":
+                print(f"     ~ Replacing null values with '' in {table} (NOT NULL constraint)")
+                current_rows = [
+                    {k: (v if v is not None else '') for k, v in row.items()}
+                    for row in current_rows
+                ]
+                continue
         print(f"     ! Upsert error on {table}: {r.status_code} {r.text[:200]}")
         r.raise_for_status()
-    return len(rows)
+    r.raise_for_status()
 
-def fetch_dev_users(dry_run):
-    """Return all users from the dev auth admin API."""
-    if dry_run:
-        return []
+def fetch_users(base_url, key):
+    """Return all users from a Supabase project's auth admin API."""
     users, page = [], 1
     while True:
         r = requests.get(
-            f"{DEV_URL}/auth/v1/admin/users",
-            headers=admin_headers(DEV_KEY),
+            f"{base_url}/auth/v1/admin/users",
+            headers=admin_headers(key),
             params={"page": page, "per_page": 50},
         )
         r.raise_for_status()
@@ -222,7 +249,7 @@ def main():
         users = []
     else:
         print("      Fetching users from dev...")
-        users = fetch_dev_users(dry_run=False)
+        users = fetch_users(DEV_URL, DEV_KEY)
         print(f"      Found {len(users)} user(s) in dev\n")
 
         created_count  = 0
@@ -240,6 +267,13 @@ def main():
 
         print(f"\n      Summary: {created_count} created, {existing_count} already existed")
 
+        # Fetch the UUIDs that actually exist in prod auth — used to filter
+        # data rows and skip any orphaned dev records with no prod auth account.
+        print("      Verifying prod auth users...")
+        prod_users = fetch_users(PROD_URL, PROD_KEY)
+        valid_user_ids = {u["id"] for u in prod_users}
+        print(f"      {len(valid_user_ids)} confirmed user(s) in prod auth")
+
     # ── Step 2: Sync data tables ──────────────────────────────────
 
     print("\n[2/2] Data tables")
@@ -250,6 +284,15 @@ def main():
         total_rows = 0
         for table in TABLES:
             rows = fetch_all_rows(DEV_URL, DEV_KEY, table)
+            if not dry_run:
+                # Filter to only rows whose owning user exists in prod auth,
+                # skipping orphaned dev rows that have no auth account.
+                user_id_field = "id" if table == "profiles" else "user_id"
+                before = len(rows)
+                rows = [r for r in rows if r.get(user_id_field) in valid_user_ids]
+                skipped = before - len(rows)
+                if skipped:
+                    print(f"      {table:<25} skipped {skipped} orphaned row(s)")
             if dry_run:
                 print(f"      {table:<25} {len(rows):>5} row(s) — would copy")
             else:
