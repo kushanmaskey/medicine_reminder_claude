@@ -208,6 +208,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
 
+          // Free year promotional banner
+          Container(
+            margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFF8C42), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.card_giftcard, color: Color(0xFFFF6B6B), size: 22),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    '🎉 We\'re offering full premium access at no charge through August 2027. Take advantage while it lasts — pricing is subject to change without notice.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFE65100),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Form
           Expanded(
             child: SingleChildScrollView(

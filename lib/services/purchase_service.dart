@@ -21,6 +21,8 @@ class PurchaseService {
   }
 
   static Future<bool> isPremium() async {
+    // Free for everyone until Aug 26, 2027
+    if (DateTime.now().isBefore(DateTime(2027, 8, 26))) return true;
     try {
       final info = await Purchases.getCustomerInfo();
       return info.entitlements.active.containsKey(RevenueCatConfig.entitlementId);
