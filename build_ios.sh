@@ -17,4 +17,4 @@ sed -i '' "s/^version: .*/version: $NEW_VERSION/" $PUBSPEC
 echo "Version bumped: $CURRENT → $NEW_VERSION"
 echo "Building IPA..."
 
-flutter build ipa --release
+flutter build ipa --release --dart-define=ENV=production

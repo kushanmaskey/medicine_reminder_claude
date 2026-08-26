@@ -1,0 +1,54 @@
+name: Daily Prod Backup
+
+on:
+  schedule:
+    # Runs every day at 2:00 AM UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    # Also triggerable manually from the GitHub Actions UI
+
+jobs:
+  backup:
+    name: Export prod data → backup repo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run backup script
+        env:
+          PROD_SERVICE_ROLE_KEY: ${{ secrets.PROD_SERVICE_ROLE_KEY }}
+        run: python3 backup_prod.py --output-dir /tmp/backups
+
+      - name: Push backup to private backup repo
+        env:
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          BACKUP_GITHUB_REPO: ${{ secrets.BACKUP_GITHUB_REPO }}
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+
+          git clone \
+            https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_GITHUB_REPO}.git \
+            /tmp/backup-repo
+
+          mkdir -p /tmp/backup-repo/backups/${TODAY}
+          cp -r /tmp/backups/${TODAY}/. /tmp/backup-repo/backups/${TODAY}/
+
+          cd /tmp/backup-repo
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          git add backups/
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+
+          git commit -m "backup: ${TODAY}"
+          git push
