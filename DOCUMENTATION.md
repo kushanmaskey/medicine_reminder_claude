@@ -1372,9 +1372,12 @@ source .env && python3 sync_dev_to_prod.py --run --send-reset-emails  # + trigge
 ### Daily Prod Backup
 
 **Script:** `backup_prod.py`  
-**Workflow:** `.github/workflows/daily-backup.yml` — runs every day at 2:00 AM UTC
+**Workflow:** `.github/workflows/daily-backup.yml` — runs every day at 2:00 AM UTC  
+**Backup repo:** `kushanmaskey/medical_wallet_dbbackup` (private)
 
-Exports all prod auth users and data tables to dated JSON files, committed to a private GitHub backup repo.
+Exports a **full snapshot** of all prod auth users and data tables, zipped and committed to a private GitHub backup repo. This script is **read-only** against the prod database — it never modifies, deletes, or writes anything to Supabase.
+
+Each backup is a complete standalone snapshot. Any single backup is sufficient to fully restore the database — previous backups are not needed. Only the 3 most recent zips are kept; older ones are deleted automatically.
 
 ```bash
 # Run manually
@@ -1387,13 +1390,13 @@ python3 backup_prod.py
 | Secret | Value |
 |---|---|
 | `PROD_SERVICE_ROLE_KEY` | Supabase prod service role key |
-| `BACKUP_GITHUB_REPO` | e.g. `kushanmaskey/medical-wallet-backups` |
-| `BACKUP_REPO_TOKEN` | GitHub PAT with `repo` scope on backup repo |
+| `BACKUP_GITHUB_REPO` | `kushanmaskey/medical_wallet_dbbackup` |
+| `BACKUP_REPO_TOKEN` | GitHub PAT with `repo` and `workflow` scope on backup repo |
 
 **Backup output structure:**
 ```
-backups/YYYY-MM-DD/
-  auth_users.json        # id, email, metadata (no passwords)
+backups/YYYY-MM-DD.zip        # full snapshot — contains:
+  auth_users.json             #   id, email, metadata (no passwords)
   profiles.json
   doctors.json
   prescriptions.json
@@ -1406,8 +1409,10 @@ backups/YYYY-MM-DD/
   user_consents.json
   allergies.json
   insurance.json
-  manifest.json          # row counts + timestamps
+  manifest.json               #   row counts + timestamps
 ```
+
+**Retention policy:** 3 most recent zips. Older backups are deleted automatically on each run.
 
 ---
 
