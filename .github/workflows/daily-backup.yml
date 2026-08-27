@@ -36,12 +36,15 @@ jobs:
         run: |
           TODAY=$(date -u +%Y-%m-%d)
 
+          cd /tmp/backups
+          zip -r ${TODAY}.zip ${TODAY}/
+
           git clone \
             https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_GITHUB_REPO}.git \
             /tmp/backup-repo
 
-          mkdir -p /tmp/backup-repo/backups/${TODAY}
-          cp -r /tmp/backups/${TODAY}/. /tmp/backup-repo/backups/${TODAY}/
+          mkdir -p /tmp/backup-repo/backups
+          cp /tmp/backups/${TODAY}.zip /tmp/backup-repo/backups/
 
           cd /tmp/backup-repo
           git config user.email "github-actions[bot]@users.noreply.github.com"
