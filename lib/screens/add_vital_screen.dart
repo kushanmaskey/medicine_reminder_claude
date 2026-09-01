@@ -318,11 +318,35 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   Future<void> _saveSingleReading(Vital vital) async {
     try {
-      await StorageService.saveVital(vital);
+      if (_isEditing) {
+        // In edit mode, update the existing vital with all current readings
+        // instead of creating a new separate record.
+        final e = widget.existing!;
+        await StorageService.updateVital(Vital(
+          id: e.id,
+          recordedAt: e.recordedAt,
+          category: _category,
+          eventName: e.eventName,
+          bpReadings: _bpReadings,
+          pulseReadings: _pulseReadings,
+          sugarReadings: _sugarReadings,
+          cholesterolReadings: _cholesterolReadings,
+          weightReadings: _weightReadings,
+          weightUnit: _weightUnit,
+          sugarUnit: _sugarUnit,
+          cholesterolUnit: _cholesterolUnit,
+          riskLevel: e.riskLevel,
+          notes: _notesController.text.trim(),
+          doctorId: e.doctorId,
+          location: e.location,
+        ));
+      } else {
+        await StorageService.saveVital(vital);
+      }
       if (mounted) {
         setState(() {
           _hasSaved = true;
-          _sessionSavedVitals.add(vital);
+          if (!_isEditing) _sessionSavedVitals.add(vital);
         });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Reading saved'),
