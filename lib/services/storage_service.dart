@@ -330,19 +330,25 @@ class StorageService {
     return jsonEncode(dates.map((d) => d.toUtc().toIso8601String()).toList());
   }
 
+  static const _newVitalColumns = [
+    'readings_data',
+    'pulse',
+    'pulse_recorded_at',
+    'bp_recorded_at',
+    'weight_recorded_at',
+    'sugar_recorded_at',
+    'cholesterol_recorded_at',
+  ];
+
   static Future<void> _insertWithFallback(Map<String, dynamic> row) async {
     try {
       await _db.from('vitals').insert(row);
     } on PostgrestException catch (e) {
       if (!_isUnknownColumn(e)) rethrow;
-      row.remove('readings_data');
-      try {
-        await _db.from('vitals').insert(row);
-      } on PostgrestException catch (e2) {
-        if (!_isUnknownColumn(e2)) rethrow;
-        row.remove('pulse');
-        await _db.from('vitals').insert(row);
+      for (final col in _newVitalColumns) {
+        row.remove(col);
       }
+      await _db.from('vitals').insert(row);
     }
   }
 
@@ -351,14 +357,10 @@ class StorageService {
       await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
     } on PostgrestException catch (e) {
       if (!_isUnknownColumn(e)) rethrow;
-      row.remove('readings_data');
-      try {
-        await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
-      } on PostgrestException catch (e2) {
-        if (!_isUnknownColumn(e2)) rethrow;
-        row.remove('pulse');
-        await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
+      for (final col in _newVitalColumns) {
+        row.remove(col);
       }
+      await _db.from('vitals').update(row).eq('id', id).eq('user_id', _uid);
     }
   }
 
@@ -377,16 +379,21 @@ class StorageService {
     'recorded_at': v.recordedAt.toUtc().toIso8601String(),
     'category': v.category,
     'event_name': v.eventName,
-    // Single-value columns (existing schema) — store last reading for backward compat
-    'bp_systolic': v.hasBP ? v.bpReadings.last.systolic : null,
-    'bp_diastolic': v.hasBP ? v.bpReadings.last.diastolic : null,
-    'pulse': v.hasPulse ? v.pulseReadings.last.value.toInt() : null,
-    'weight': v.hasWeight ? v.weightReadings.last.value : null,
-    'weight_unit': v.weightUnit,
-    'sugar_level': v.hasSugar ? v.sugarReadings.last.value : null,
-    'sugar_unit': v.sugarUnit,
-    'cholesterol': v.hasCholesterol ? v.cholesterolReadings.last.value : null,
-    'cholesterol_unit': v.cholesterolUnit,
+    // Single-value columns — store last reading value + dedicated timestamp
+    'bp_systolic':            v.hasBP          ? v.bpReadings.last.systolic                         : null,
+    'bp_diastolic':           v.hasBP          ? v.bpReadings.last.diastolic                        : null,
+    'bp_recorded_at':         v.hasBP          ? v.bpReadings.last.time.toUtc().toIso8601String()   : null,
+    'pulse':                  v.hasPulse       ? v.pulseReadings.last.value.toInt()                 : null,
+    'pulse_recorded_at':      v.hasPulse       ? v.pulseReadings.last.time.toUtc().toIso8601String(): null,
+    'weight':                 v.hasWeight      ? v.weightReadings.last.value                        : null,
+    'weight_unit':            v.weightUnit,
+    'weight_recorded_at':     v.hasWeight      ? v.weightReadings.last.time.toUtc().toIso8601String(): null,
+    'sugar_level':            v.hasSugar       ? v.sugarReadings.last.value                         : null,
+    'sugar_unit':             v.sugarUnit,
+    'sugar_recorded_at':      v.hasSugar       ? v.sugarReadings.last.time.toUtc().toIso8601String(): null,
+    'cholesterol':            v.hasCholesterol ? v.cholesterolReadings.last.value                    : null,
+    'cholesterol_unit':       v.cholesterolUnit,
+    'cholesterol_recorded_at': v.hasCholesterol ? v.cholesterolReadings.last.time.toUtc().toIso8601String(): null,
     // Full multi-reading data (requires readings_data TEXT column in Supabase)
     if (v.category == 'daily') 'readings_data': jsonEncode({
       'bp': v.bpReadings.map((r) => r.toJson()).toList(),
@@ -430,15 +437,20 @@ class StorageService {
       'category': r['category'] ?? 'daily',
       'eventName': r['event_name'] ?? '',
       // Legacy single-value columns — Vital.fromJson migrates these to reading lists
-      'bpSystolic': r['bp_systolic'],
-      'bpDiastolic': r['bp_diastolic'],
-      'pulse': r['pulse'],
-      'weight': r['weight'],
-      'sugarLevel': r['sugar_level'],
-      'cholesterol': r['cholesterol'],
-      'weightUnit': r['weight_unit'] ?? 'lbs',
-      'sugarUnit': r['sugar_unit'] ?? 'mg/dL',
-      'cholesterolUnit': r['cholesterol_unit'] ?? 'mg/dL',
+      'bpSystolic':             r['bp_systolic'],
+      'bpDiastolic':            r['bp_diastolic'],
+      'bpRecordedAt':           r['bp_recorded_at'],
+      'pulse':                  r['pulse'],
+      'pulseRecordedAt':        r['pulse_recorded_at'],
+      'weight':                 r['weight'],
+      'weightRecordedAt':       r['weight_recorded_at'],
+      'sugarLevel':             r['sugar_level'],
+      'sugarRecordedAt':        r['sugar_recorded_at'],
+      'cholesterol':            r['cholesterol'],
+      'cholesterolRecordedAt':  r['cholesterol_recorded_at'],
+      'weightUnit':             r['weight_unit'] ?? 'lbs',
+      'sugarUnit':              r['sugar_unit'] ?? 'mg/dL',
+      'cholesterolUnit':        r['cholesterol_unit'] ?? 'mg/dL',
       'colonoscopyDate': r['colonoscopy_date'],
       'colonoscopyLocation': r['colonoscopy_location'] ?? '',
       'colonoscopyNotes': r['colonoscopy_notes'] ?? '',

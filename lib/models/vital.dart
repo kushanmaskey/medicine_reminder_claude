@@ -209,7 +209,7 @@ class Vital {
           id: '${id}_bp_0',
           systolic: json['bpSystolic'] as int,
           diastolic: json['bpDiastolic'] as int,
-          time: recordedAt,
+          time: _tryParse(json['bpRecordedAt']) ?? recordedAt,
         )
       ];
     }
@@ -228,7 +228,7 @@ class Vital {
         VitalReading(
           id: '${id}_pulse_0',
           value: (json['pulse'] as num).toDouble(),
-          time: recordedAt,
+          time: _tryParse(json['pulseRecordedAt']) ?? recordedAt,
         )
       ];
     }
@@ -247,7 +247,7 @@ class Vital {
         VitalReading(
           id: '${id}_sugar_0',
           value: (json['sugarLevel'] as num).toDouble(),
-          time: recordedAt,
+          time: _tryParse(json['sugarRecordedAt']) ?? recordedAt,
         )
       ];
     }
@@ -266,7 +266,7 @@ class Vital {
         VitalReading(
           id: '${id}_chol_0',
           value: (json['cholesterol'] as num).toDouble(),
-          time: recordedAt,
+          time: _tryParse(json['cholesterolRecordedAt']) ?? recordedAt,
         )
       ];
     }
@@ -285,7 +285,7 @@ class Vital {
         VitalReading(
           id: '${id}_weight_0',
           value: (json['weight'] as num).toDouble(),
-          time: recordedAt,
+          time: _tryParse(json['weightRecordedAt']) ?? recordedAt,
         )
       ];
     }
