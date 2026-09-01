@@ -63,6 +63,8 @@ create table if not exists vitals (
   sugar_unit        text default 'mg/dL',
   cholesterol       double precision,
   cholesterol_unit  text default 'mg/dL',
+  pulse             integer,
+  readings_data     text,
   colonoscopy_date     text,
   colonoscopy_location text not null default '',
   colonoscopy_notes    text not null default '',

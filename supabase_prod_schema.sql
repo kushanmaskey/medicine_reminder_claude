@@ -93,6 +93,8 @@ CREATE TABLE IF NOT EXISTS vitals (
   sugar_unit       text DEFAULT 'mg/dL',
   cholesterol      double precision,
   cholesterol_unit text DEFAULT 'mg/dL',
+  pulse            integer,
+  readings_data    text,
   colonoscopy_date     text,
   colonoscopy_location text NOT NULL DEFAULT '',
   colonoscopy_notes    text NOT NULL DEFAULT '',
