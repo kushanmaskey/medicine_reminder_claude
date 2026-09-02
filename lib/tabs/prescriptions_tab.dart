@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/prescription.dart';
+import '../models/pharmacy.dart';
 import '../models/doctor.dart';
 import '../services/storage_service.dart';
 import '../screens/add_prescription_screen.dart';
+import '../screens/add_pharmacy_screen.dart';
 
 class PrescriptionsTab extends StatefulWidget {
   const PrescriptionsTab({super.key});
@@ -15,13 +17,14 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   List<Prescription> _prescriptions = [];
+  List<Pharmacy> _pharmacies = [];
   Map<String, Doctor> _doctorMap = {};
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _load();
   }
 
@@ -35,14 +38,17 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
     final results = await Future.wait([
       StorageService.getPrescriptions(),
       StorageService.getDoctors(),
+      StorageService.getPharmacies().catchError((_) => <Pharmacy>[]),
     ]);
     final prescriptions = results[0] as List<Prescription>;
-    final doctors = results[1] as List<Doctor>;
+    final doctors       = results[1] as List<Doctor>;
+    final pharmacies    = results[2] as List<Pharmacy>;
     if (mounted) {
       setState(() {
         _prescriptions = prescriptions;
-        _doctorMap = {for (final d in doctors) d.id: d};
-        _loading = false;
+        _doctorMap     = {for (final d in doctors) d.id: d};
+        _pharmacies    = pharmacies;
+        _loading       = false;
       });
     }
   }
@@ -50,20 +56,37 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
   void reload() => _load();
 
   Future<void> openAdd() async {
-    final type = _tabController.index == 0 ? 'prescribed' : 'otc';
+    if (_tabController.index == 0) {
+      // Pharmacy tab
+      final result = await Navigator.push<dynamic>(
+        context,
+        MaterialPageRoute(builder: (_) => const AddPharmacyScreen()),
+      );
+      if (result == true || result == 'deleted') _load();
+    } else {
+      final type = _tabController.index == 1 ? 'prescribed' : 'otc';
+      final result = await Navigator.push<dynamic>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddPrescriptionScreen(type: type),
+        ),
+      );
+      if (result == true || result == 'deleted') _load();
+    }
+  }
+
+  Future<void> _openPrescription(Prescription p) async {
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(
-        builder: (_) => AddPrescriptionScreen(type: type),
-      ),
+      MaterialPageRoute(builder: (_) => AddPrescriptionScreen(existing: p)),
     );
     if (result == true || result == 'deleted') _load();
   }
 
-  Future<void> _open(Prescription p) async {
+  Future<void> _openPharmacy(Pharmacy p) async {
     final result = await Navigator.push<dynamic>(
       context,
-      MaterialPageRoute(builder: (_) => AddPrescriptionScreen(existing: p)),
+      MaterialPageRoute(builder: (_) => AddPharmacyScreen(existing: p)),
     );
     if (result == true || result == 'deleted') _load();
   }
@@ -87,6 +110,7 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
             indicatorColor: const Color(0xFF3B82F6),
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: const [
+              Tab(text: 'Pharmacy'),
               Tab(text: 'Prescribed'),
               Tab(text: 'Over the Counter'),
             ],
@@ -98,12 +122,19 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
               : TabBarView(
                   controller: _tabController,
                   children: [
+                    _PharmacyList(
+                      items: _pharmacies,
+                      emptyMessage: 'No pharmacies yet',
+                      emptyHint: 'Tap + to add a pharmacy',
+                      onTap: _openPharmacy,
+                      onRefresh: _load,
+                    ),
                     _PrescriptionList(
                       items: _prescribed,
                       doctorMap: _doctorMap,
                       emptyMessage: 'No prescribed medications yet',
                       emptyHint: 'Tap + to add a prescription',
-                      onTap: _open,
+                      onTap: _openPrescription,
                       onRefresh: _load,
                     ),
                     _PrescriptionList(
@@ -111,7 +142,7 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
                       doctorMap: _doctorMap,
                       emptyMessage: 'No OTC medications yet',
                       emptyHint: 'Tap + to add an over-the-counter medication',
-                      onTap: _open,
+                      onTap: _openPrescription,
                       onRefresh: _load,
                     ),
                   ],
@@ -121,6 +152,155 @@ class PrescriptionsTabState extends State<PrescriptionsTab>
     );
   }
 }
+
+// ── Pharmacy list ──────────────────────────────────────────────────────────────
+
+class _PharmacyList extends StatelessWidget {
+  final List<Pharmacy> items;
+  final String emptyMessage;
+  final String emptyHint;
+  final void Function(Pharmacy) onTap;
+  final Future<void> Function() onRefresh;
+
+  const _PharmacyList({
+    required this.items,
+    required this.emptyMessage,
+    required this.emptyHint,
+    required this.onTap,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.local_pharmacy_outlined, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(emptyMessage,
+                style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text(emptyHint,
+                style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        itemBuilder: (ctx, i) => _PharmacyCard(
+          pharmacy: items[i],
+          onTap: () => onTap(items[i]),
+        ),
+      ),
+    );
+  }
+}
+
+class _PharmacyCard extends StatelessWidget {
+  final Pharmacy pharmacy;
+  final VoidCallback onTap;
+
+  const _PharmacyCard({required this.pharmacy, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFF8B5CF6);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.local_pharmacy, color: accent, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pharmacy.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF635A5A),
+                        ),
+                      ),
+                      if (pharmacy.phone.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(Icons.phone_outlined, size: 11, color: Colors.grey[400]),
+                            const SizedBox(width: 3),
+                            Text(
+                              pharmacy.phone,
+                              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (pharmacy.city.isNotEmpty || pharmacy.state.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 11, color: Colors.grey[400]),
+                            const SizedBox(width: 3),
+                            Text(
+                              [pharmacy.city, pharmacy.state]
+                                  .where((s) => s.isNotEmpty).join(', '),
+                              style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.grey[300], size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Prescription list ──────────────────────────────────────────────────────────
 
 class _PrescriptionList extends StatelessWidget {
   final List<Prescription> items;

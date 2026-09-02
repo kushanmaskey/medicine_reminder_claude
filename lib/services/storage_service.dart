@@ -10,6 +10,7 @@ import '../models/vital.dart';
 import '../models/activity.dart';
 import '../models/allergy.dart';
 import '../models/doctor.dart';
+import '../models/pharmacy.dart';
 import '../models/insurance.dart';
 import 'auth_service.dart';
 import 'encryption_service.dart';
@@ -571,6 +572,62 @@ class StorageService {
 
   static Future<void> deleteDoctor(String id) async {
     await _db.from('doctors').delete().eq('id', id).eq('user_id', _uid);
+  }
+
+  // ── Pharmacies ────────────────────────────────────────────────────────────
+
+  static Future<List<Pharmacy>> getPharmacies() async {
+    final rows = await _db
+        .from('pharmacies')
+        .select()
+        .eq('user_id', _uid)
+        .order('name');
+    return rows.map((r) => Pharmacy.fromJson({
+      'id': r['id'],
+      'name': r['name'] ?? '',
+      'npiNumber': r['npi_number'] ?? '',
+      'phone': r['phone'] ?? '',
+      'fax': r['fax'] ?? '',
+      'address': r['address'] ?? '',
+      'city': r['city'] ?? '',
+      'state': r['state'] ?? '',
+      'zip': r['zip'] ?? '',
+      'notes': r['notes'] ?? '',
+    })).toList();
+  }
+
+  static Future<void> savePharmacy(Pharmacy p) async {
+    await _db.from('pharmacies').insert({
+      'id': p.id,
+      'user_id': _uid,
+      'name': p.name,
+      'npi_number': p.npiNumber,
+      'phone': p.phone,
+      'fax': p.fax,
+      'address': p.address,
+      'city': p.city,
+      'state': p.state,
+      'zip': p.zip,
+      'notes': p.notes,
+    });
+  }
+
+  static Future<void> updatePharmacy(Pharmacy p) async {
+    await _db.from('pharmacies').update({
+      'name': p.name,
+      'npi_number': p.npiNumber,
+      'phone': p.phone,
+      'fax': p.fax,
+      'address': p.address,
+      'city': p.city,
+      'state': p.state,
+      'zip': p.zip,
+      'notes': p.notes,
+    }).eq('id', p.id).eq('user_id', _uid);
+  }
+
+  static Future<void> deletePharmacy(String id) async {
+    await _db.from('pharmacies').delete().eq('id', id).eq('user_id', _uid);
   }
 
   // ── Insurance ─────────────────────────────────────────────────────────────

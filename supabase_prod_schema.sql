@@ -148,6 +148,21 @@ CREATE TABLE IF NOT EXISTS user_consents (
   created_at    timestamptz DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS pharmacies (
+  id          text PRIMARY KEY,
+  user_id     uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  name        text NOT NULL DEFAULT '',
+  npi_number  text NOT NULL DEFAULT '',
+  phone       text NOT NULL DEFAULT '',
+  fax         text NOT NULL DEFAULT '',
+  address     text NOT NULL DEFAULT '',
+  city        text NOT NULL DEFAULT '',
+  state       text NOT NULL DEFAULT '',
+  zip         text NOT NULL DEFAULT '',
+  notes       text NOT NULL DEFAULT '',
+  created_at  timestamptz DEFAULT now()
+);
+
 -- ── Row Level Security ─────────────────────────────────────────
 
 ALTER TABLE profiles           ENABLE ROW LEVEL SECURITY;
@@ -157,6 +172,7 @@ ALTER TABLE medications        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointment_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vitals              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pharmacies          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prescription_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_consents       ENABLE ROW LEVEL SECURITY;
@@ -174,6 +190,7 @@ CREATE POLICY "appointments_all"        ON appointments        FOR ALL USING (au
 CREATE POLICY "appointment_alerts_all"  ON appointment_alerts  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "vitals_all"              ON vitals              FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "activities_all"          ON activities          FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "pharmacies_all"          ON pharmacies          FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "prescription_alerts_all" ON prescription_alerts FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "user_consents_all"       ON user_consents       FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
