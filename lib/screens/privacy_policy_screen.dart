@@ -135,7 +135,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             number: '9',
             title: 'Data Retention',
             body:
-                'Your data stays in the App until you delete it. The App automatically removes activity records older than 7 days. All other records are kept until you delete them manually or request account deletion.',
+                'Your data stays in the App until you delete it. All records are kept until you delete them manually or request account deletion.',
           ),
           _PolicySection(
             number: '10',
