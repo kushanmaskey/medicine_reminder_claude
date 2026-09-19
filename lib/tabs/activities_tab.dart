@@ -30,19 +30,10 @@ class ActivitiesTabState extends State<ActivitiesTab> {
   }
 
   Future<void> _load() async {
-    final list = await StorageService.getActivities();
-    final cutoff = DateTime.now().subtract(const Duration(days: 7));
-
-    for (final a in list.where((a) => a.recordedAt.isBefore(cutoff))) {
-      await StorageService.deleteActivity(a.id);
-    }
-
-    final recent = list
-        .where((a) => !a.recordedAt.isBefore(cutoff))
-        .toList()
+    final list = await StorageService.getActivities()
       ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
 
-    if (mounted) setState(() { _activities = recent; _loading = false; });
+    if (mounted) setState(() { _activities = list; _loading = false; });
   }
 
   void reload() => _load();

@@ -12,7 +12,8 @@ class AppointmentsTab extends StatefulWidget {
 }
 
 class AppointmentsTabState extends State<AppointmentsTab> {
-  List<Appointment> _appointments = [];
+  List<Appointment> _upcoming = [];
+  List<Appointment> _past = [];
   bool _loading = true;
   String? _loadError;
 
@@ -28,17 +29,17 @@ class AppointmentsTabState extends State<AppointmentsTab> {
       final list = await StorageService.getAppointments();
       final now = DateTime.now();
 
-      for (final a in list.where((a) => !a.appointmentDateTime.isAfter(now))) {
-        await StorageService.deleteAppointment(a.id);
-        await NotificationService.cancelNotification(
-            NotificationService.idFromString(a.id));
-      }
-
-      final active = list
+      final upcoming = list
           .where((a) => a.appointmentDateTime.isAfter(now))
           .toList()
         ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
-      if (mounted) setState(() { _appointments = active; _loading = false; });
+
+      final past = list
+          .where((a) => !a.appointmentDateTime.isAfter(now))
+          .toList()
+        ..sort((a, b) => b.appointmentDateTime.compareTo(a.appointmentDateTime));
+
+      if (mounted) setState(() { _upcoming = upcoming; _past = past; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; _loadError = e.toString(); });
     }
@@ -83,7 +84,7 @@ class AppointmentsTabState extends State<AppointmentsTab> {
       );
     }
 
-    if (_appointments.isEmpty) {
+    if (_upcoming.isEmpty && _past.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -91,7 +92,7 @@ class AppointmentsTabState extends State<AppointmentsTab> {
             Icon(Icons.calendar_today_outlined,
                 size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text('No Upcoming Appointments',
+            Text('No Appointments',
                 style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
@@ -106,12 +107,48 @@ class AppointmentsTabState extends State<AppointmentsTab> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: _appointments.length,
-        itemBuilder: (ctx, i) => _AppointmentCard(
-          appointment: _appointments[i],
-          onTap: () => _open(_appointments[i]),
+        children: [
+          if (_upcoming.isNotEmpty) ...[
+            _SectionHeader(label: 'Upcoming'),
+            ..._upcoming.map((a) => _AppointmentCard(
+              appointment: a,
+              isPast: false,
+              onTap: () => _open(a),
+            )),
+          ],
+          if (_past.isNotEmpty) ...[
+            _SectionHeader(label: 'Past'),
+            ..._past.map((a) => _AppointmentCard(
+              appointment: a,
+              isPast: true,
+              onTap: () => _open(a),
+            )),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  const _SectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey[500],
+          letterSpacing: 0.8,
         ),
       ),
     );
@@ -122,9 +159,10 @@ class AppointmentsTabState extends State<AppointmentsTab> {
 
 class _AppointmentCard extends StatelessWidget {
   final Appointment appointment;
+  final bool isPast;
   final VoidCallback onTap;
 
-  const _AppointmentCard({required this.appointment, required this.onTap});
+  const _AppointmentCard({required this.appointment, required this.isPast, required this.onTap});
 
   Color _urgencyColor(DateTime dt) {
     final diff = DateTime(dt.year, dt.month, dt.day)
@@ -143,7 +181,9 @@ class _AppointmentCard extends StatelessWidget {
         .inDays;
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
-    return 'In $diff days';
+    if (diff > 0) return 'In $diff days';
+    if (diff == -1) return 'Yesterday';
+    return '${diff.abs()} days ago';
   }
 
   String _formatDateTime(DateTime dt) {
@@ -158,13 +198,13 @@ class _AppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dt = appointment.appointmentDateTime;
-    final color = _urgencyColor(dt);
+    final color = isPast ? Colors.grey : _urgencyColor(dt);
     final activeAlertCount = appointment.activeAlerts.length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isPast ? Colors.grey.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
         boxShadow: [
