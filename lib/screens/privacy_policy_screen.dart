@@ -136,8 +136,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
             title: 'Data Retention',
             body:
                 'We retain your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of 12 months (one year) from the date each record was created.\n\n'
-                'Records older than 12 months may be permanently purged from our servers. You will not receive a separate notice before individual records are purged under this policy.\n\n'
-                'You may delete any record at any time before that window expires by editing it in the App. To request full account deletion and immediate removal of all your data, contact us at the email below.',
+                'Records older than 12 months may be archived into a compressed ZIP file and saved locally on your device, then removed from our cloud servers. Your archived data remains on your device and is never permanently deleted without your explicit action.\n\n'
+                'No data is automatically removed before the 12-month period expires. You may delete any record at any time within the App. To request full account deletion and removal of all your data from our servers, contact us at the email below.',
           ),
           _PolicySection(
             number: '10',

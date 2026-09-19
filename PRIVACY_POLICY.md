@@ -116,11 +116,11 @@ With your permission, the App sends local push notifications for medication remi
 
 We retain your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of **12 months (one year)** from the date each record was created.
 
-Records older than 12 months may be permanently purged from our servers. You will not receive a separate notification before individual records are purged under this policy.
+Records older than 12 months may be **archived into a compressed ZIP file and saved locally on your device**, then removed from our cloud servers. Archived data remains on your device and is never permanently deleted without your explicit action.
 
-**No data is automatically deleted before the 12-month retention period expires.** You may delete any record at any time within the App before that window closes.
+**No data is automatically removed before the 12-month period expires.** You may delete any record at any time within the App.
 
-To request full account deletion and immediate removal of all your data, contact us at the email below.
+To request full account deletion and removal of all your data from our servers, contact us at the email below.
 
 ---
 
