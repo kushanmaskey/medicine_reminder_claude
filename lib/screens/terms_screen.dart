@@ -143,13 +143,21 @@ class TermsScreen extends StatelessWidget {
           ),
           _TermsSection(
             number: '10',
+            title: 'Data Retention',
+            body:
+                'We keep your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of 12 months (one year) from the date each record was created.\n\n'
+                'Records older than 12 months may be permanently deleted from our servers without further notice. No data is automatically deleted before that 12-month period expires.\n\n'
+                'You may delete individual records at any time within the App. You will not receive a separate notification before records are purged under this retention policy.',
+          ),
+          _TermsSection(
+            number: '11',
             title: 'Account Termination',
             body:
                 'You may delete your account at any time by contacting medicalwallet473@gmail.com. All personal data will be permanently deleted within 30 days of your request.\n\n'
                 'We reserve the right to suspend accounts that violate these Terms.',
           ),
           _TermsSection(
-            number: '11',
+            number: '12',
             title: 'Disclaimer of Warranties',
             body:
                 'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO:\n\n'
@@ -161,7 +169,7 @@ class TermsScreen extends StatelessWidget {
                 'You use the App entirely at your own risk.',
           ),
           _TermsSection(
-            number: '12',
+            number: '13',
             title: 'Limitation of Liability',
             body:
                 'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE DEVELOPER OF MY MEDICAL WALLET, AND ANY OF ITS OFFICERS, EMPLOYEES, OR AGENTS, SHALL NOT BE LIABLE FOR:\n\n'
@@ -176,7 +184,7 @@ class TermsScreen extends StatelessWidget {
                 'Some jurisdictions do not allow the exclusion of certain warranties or limitation of liability, so some of the above may not apply to you.',
           ),
           _TermsSection(
-            number: '13',
+            number: '14',
             title: 'Indemnification',
             body:
                 'You agree to indemnify, defend, and hold harmless the developer of My Medical Wallet and any of its officers, employees, or agents from and against any and all claims, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or related to:\n\n'
@@ -187,7 +195,7 @@ class TermsScreen extends StatelessWidget {
                 '• Your failure to keep your login credentials secure',
           ),
           _TermsSection(
-            number: '14',
+            number: '15',
             title: 'Governing Law & Dispute Resolution',
             body:
                 'These Terms are governed by the laws of the State of Florida, United States, without regard to its conflict of law provisions.\n\n'
@@ -195,13 +203,13 @@ class TermsScreen extends StatelessWidget {
                 'YOU WAIVE ANY RIGHT TO A JURY TRIAL OR TO PARTICIPATE IN A CLASS ACTION LAWSUIT IN CONNECTION WITH YOUR USE OF THE APP.',
           ),
           _TermsSection(
-            number: '15',
+            number: '16',
             title: 'Changes to These Terms',
             body:
                 'We may update these Terms from time to time. The version number and effective date will be updated accordingly. Continued use of the App after changes constitutes acceptance of the revised Terms.',
           ),
           _TermsSection(
-            number: '16',
+            number: '17',
             title: 'Contact',
             body: 'For questions about these Terms:\n\nmedicalwallet473@gmail.com',
           ),

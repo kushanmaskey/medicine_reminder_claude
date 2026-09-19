@@ -135,7 +135,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             number: '9',
             title: 'Data Retention',
             body:
-                'Your data stays in the App until you delete it. The App automatically removes activity records older than 7 days. All other records are kept until you delete them manually or request account deletion.',
+                'We retain your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of 12 months (one year) from the date each record was created.\n\n'
+                'Records older than 12 months may be permanently purged from our servers. You will not receive a separate notice before individual records are purged under this policy.\n\n'
+                'You may delete any record at any time before that window expires by editing it in the App. To request full account deletion and immediate removal of all your data, contact us at the email below.',
           ),
           _PolicySection(
             number: '10',
