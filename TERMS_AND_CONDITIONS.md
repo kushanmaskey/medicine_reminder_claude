@@ -92,7 +92,17 @@ You agree to:
 
 ---
 
-## 8. Account Termination
+## 8. Data Retention
+
+We retain your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of **12 months (one year)** from the date each record was created.
+
+Records older than 12 months may be **archived into a compressed ZIP file and saved locally on your device**, then removed from our cloud servers. Archived data remains on your device and is never permanently deleted without your explicit action.
+
+**No data is automatically removed before the 12-month period expires.** You may delete individual records at any time within the App. To request full account deletion and removal of all your data from our servers, contact us at medicalwallet473@gmail.com.
+
+---
+
+## 9. Account Termination
 
 You may delete your account at any time by contacting us at medicalwallet473@gmail.com. Upon request, all your personal data will be permanently deleted from our systems within 30 days.
 
@@ -100,31 +110,31 @@ We reserve the right to suspend or terminate accounts that violate these Terms.
 
 ---
 
-## 9. Disclaimer of Warranties
+## 11. Disclaimer of Warranties
 
 The App is provided "as is" without warranties of any kind. We do not guarantee that the App will be error-free, uninterrupted, or that the health reference information displayed is complete or current.
 
 ---
 
-## 10. Limitation of Liability
+## 12. Limitation of Liability
 
 To the maximum extent permitted by law, My Medical Wallet shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including reliance on any health information displayed.
 
 ---
 
-## 11. Changes to These Terms
+## 13. Changes to These Terms
 
 We may update these Terms from time to time. When we do, the version number and effective date will be updated. Continued use of the App after changes are posted constitutes acceptance of the revised Terms.
 
 ---
 
-## 12. Governing Law
+## 14. Governing Law
 
 These Terms are governed by the laws of the United States. Any disputes shall be resolved in the courts of competent jurisdiction.
 
 ---
 
-## 13. Contact
+## 15. Contact
 
 For questions about these Terms:
 

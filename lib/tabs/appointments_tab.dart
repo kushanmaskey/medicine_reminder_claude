@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/appointment.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 import '../screens/add_appointment_screen.dart';
 
 class AppointmentsTab extends StatefulWidget {
@@ -38,11 +39,7 @@ class AppointmentsTabState extends State<AppointmentsTab> {
           .toList()
         ..sort((a, b) => b.appointmentDateTime.compareTo(a.appointmentDateTime));
 
-      if (mounted) setState(() {
-        _upcoming = upcoming;
-        _past = past;
-        _loading = false;
-      });
+      if (mounted) setState(() { _upcoming = upcoming; _past = past; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; _loadError = e.toString(); });
     }
@@ -95,7 +92,7 @@ class AppointmentsTabState extends State<AppointmentsTab> {
             Icon(Icons.calendar_today_outlined,
                 size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text('No Appointments Yet',
+            Text('No Appointments',
                 style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
@@ -108,31 +105,34 @@ class AppointmentsTabState extends State<AppointmentsTab> {
       );
     }
 
-    final items = <Widget>[];
-
-    if (_upcoming.isNotEmpty) {
-      items.add(_SectionHeader(label: 'Upcoming'));
-      for (final a in _upcoming) {
-        items.add(_AppointmentCard(appointment: a, isPast: false, onTap: () => _open(a)));
-      }
-    }
-
-    if (_past.isNotEmpty) {
-      items.add(_SectionHeader(label: 'Past'));
-      for (final a in _past) {
-        items.add(_AppointmentCard(appointment: a, isPast: true, onTap: () => _open(a)));
-      }
-    }
-
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.all(16),
-        children: items,
+        children: [
+          if (_upcoming.isNotEmpty) ...[
+            _SectionHeader(label: 'Upcoming'),
+            ..._upcoming.map((a) => _AppointmentCard(
+              appointment: a,
+              isPast: false,
+              onTap: () => _open(a),
+            )),
+          ],
+          if (_past.isNotEmpty) ...[
+            _SectionHeader(label: 'Past'),
+            ..._past.map((a) => _AppointmentCard(
+              appointment: a,
+              isPast: true,
+              onTap: () => _open(a),
+            )),
+          ],
+        ],
       ),
     );
   }
 }
+
+// ── Section header ────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String label;
@@ -165,7 +165,6 @@ class _AppointmentCard extends StatelessWidget {
   const _AppointmentCard({required this.appointment, required this.isPast, required this.onTap});
 
   Color _urgencyColor(DateTime dt) {
-    if (isPast) return Colors.grey;
     final diff = DateTime(dt.year, dt.month, dt.day)
         .difference(DateTime(
             DateTime.now().year, DateTime.now().month, DateTime.now().day))
@@ -182,8 +181,9 @@ class _AppointmentCard extends StatelessWidget {
         .inDays;
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Tomorrow';
-    if (diff < 0) return '${(-diff)} day${(-diff) == 1 ? '' : 's'} ago';
-    return 'In $diff days';
+    if (diff > 0) return 'In $diff days';
+    if (diff == -1) return 'Yesterday';
+    return '${diff.abs()} days ago';
   }
 
   String _formatDateTime(DateTime dt) {
@@ -198,13 +198,13 @@ class _AppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dt = appointment.appointmentDateTime;
-    final color = _urgencyColor(dt);
+    final color = isPast ? Colors.grey : _urgencyColor(dt);
     final activeAlertCount = appointment.activeAlerts.length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isPast ? Colors.grey.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
         boxShadow: [

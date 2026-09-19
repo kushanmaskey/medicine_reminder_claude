@@ -30,11 +30,10 @@ class ActivitiesTabState extends State<ActivitiesTab> {
   }
 
   Future<void> _load() async {
-    final list = await StorageService.getActivities();
+    final list = await StorageService.getActivities()
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
 
-    final sorted = list..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-
-    if (mounted) setState(() { _activities = sorted; _loading = false; });
+    if (mounted) setState(() { _activities = list; _loading = false; });
   }
 
   void reload() => _load();

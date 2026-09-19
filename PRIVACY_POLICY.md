@@ -114,11 +114,13 @@ With your permission, the App sends local push notifications for medication remi
 
 ## 9. Data Retention
 
-Your data remains in the App until you delete it. The App automatically removes:
+We retain your health records — including vitals, medications, prescriptions, activities, appointments, allergies, and insurance information — for a minimum of **12 months (one year)** from the date each record was created.
 
-- Activity records older than 7 days (from the Activities tab)
+Records older than 12 months may be **archived into a compressed ZIP file and saved locally on your device**, then removed from our cloud servers. Archived data remains on your device and is never permanently deleted without your explicit action.
 
-All other records (vitals, medications, appointments, doctors) are retained indefinitely until you manually delete them or request account deletion.
+**No data is automatically removed before the 12-month period expires.** You may delete any record at any time within the App.
+
+To request full account deletion and removal of all your data from our servers, contact us at the email below.
 
 ---
 
