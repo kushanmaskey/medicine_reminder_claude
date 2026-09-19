@@ -6,6 +6,7 @@ import '../services/ringtone_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/purchase_service.dart';
+import '../services/archive_service.dart';
 import 'privacy_policy_screen.dart';
 import 'paywall_screen.dart';
 import 'terms_screen.dart';
@@ -464,6 +465,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          _ArchiveSection(),
+          const SizedBox(height: 24),
           _SectionHeader(title: 'Legal'),
           const SizedBox(height: 8),
           Container(
@@ -537,6 +540,138 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Data Archive Section ──────────────────────────────────────────────────────
+
+class _ArchiveSection extends StatefulWidget {
+  @override
+  State<_ArchiveSection> createState() => _ArchiveSectionState();
+}
+
+class _ArchiveSectionState extends State<_ArchiveSection> {
+  bool _running = false;
+
+  Future<void> _run({required bool testMode}) async {
+    // Preview first
+    final counts = await ArchiveService.preview(testMode: testMode);
+    if (!mounted) return;
+
+    if (counts.isEmpty) {
+      _showInfo('No records found older than the cutoff date. Nothing to archive.');
+      return;
+    }
+
+    final total = counts.values.fold(0, (s, v) => s + v);
+    final summary = counts.entries.map((e) => '• ${e.key}: ${e.value}').join('\n');
+    final label = testMode ? 'TEST (records older than 1 day)' : 'YEARLY (records older than 12 months)';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Archive $total records?'),
+        content: Text(
+          'Mode: $label\n\nThe following records will be saved to a ZIP file on this device and then removed from the cloud:\n\n$summary\n\nThis cannot be undone from the cloud.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Archive & Remove', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _running = true);
+    try {
+      final path = await ArchiveService.runArchive(testMode: testMode);
+      if (mounted) {
+        _showInfo('Archive saved to:\n$path\n\nRecords have been removed from the cloud.');
+      }
+    } catch (e) {
+      if (mounted) _showInfo('Archive failed: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  void _showInfo(String msg) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(msg),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Data Archive'),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.science_outlined, color: Color(0xFFF9A825), size: 20),
+                ),
+                title: const Text('Test Archive', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                subtitle: Text('Archives records older than 1 day — use to verify the process works', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                trailing: _running
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                onTap: _running ? null : () => _run(testMode: true),
+              ),
+              Divider(height: 1, indent: 72, color: Colors.grey.shade100),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.archive_outlined, color: Color(0xFF3B82F6), size: 20),
+                ),
+                title: const Text('Yearly Archive', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                subtitle: Text('Archives records older than 12 months and removes them from cloud', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                trailing: _running
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                onTap: _running ? null : () => _run(testMode: false),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
