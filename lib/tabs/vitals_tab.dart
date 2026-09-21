@@ -4,6 +4,7 @@ import '../models/vital.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../screens/add_vital_screen.dart';
+import 'trends_tab.dart';
 
 class VitalsTab extends StatefulWidget {
   final VoidCallback? onDoctorAdded;
@@ -23,8 +24,9 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
   // Prevents re-triggering auto-navigation when returning from the detail screen.
   // Reset when the user leaves the Misc sub-tab so the next visit auto-opens again.
   bool _miscAutoNavigated = false;
+  final _trendsKey = GlobalKey<TrendsTabState>();
 
-  List<String> get _tabs => ['Daily', 'Misc'];
+  List<String> get _tabs => ['Daily', 'Misc', 'Trends'];
 
   String get _currentCategory =>
       _tabController != null && _tabController!.index == 1 ? 'open' : 'daily';
@@ -64,9 +66,9 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
 
     if (!mounted) return;
 
-    if (_tabController == null || _tabController!.length != 2) {
+    if (_tabController == null || _tabController!.length != 3) {
       _tabController?.dispose();
-      _tabController = TabController(length: 2, vsync: this);
+      _tabController = TabController(length: 3, vsync: this);
       _tabController!.addListener(() {
         if (!_tabController!.indexIsChanging) {
           final isMisc = _tabController!.index == 1;
@@ -91,6 +93,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
       _loading = false;
     });
 
+    _trendsKey.currentState?.reload();
     _notifySubTab();
   }
 
@@ -224,6 +227,7 @@ class VitalsTabState extends State<VitalsTab> with SingleTickerProviderStateMixi
                 onRefresh: _load,
               ),
               miscWidget,
+              TrendsTab(key: _trendsKey),
             ],
           ),
         ),
@@ -464,18 +468,20 @@ class _VitalDayCard extends StatelessWidget {
   }
 
   Widget _buildDailyContent() {
-    final allBp    = group.vitals.expand((v) => v.bpReadings).toList();
-    final allPulse = group.vitals.expand((v) => v.pulseReadings).toList();
-    final allSugar = group.vitals.expand((v) => v.sugarReadings).toList();
-    final allWeight = group.vitals.expand((v) => v.weightReadings).toList();
-    final allChol  = group.vitals.expand((v) => v.cholesterolReadings).toList();
+    final allBp      = group.vitals.expand((v) => v.bpReadings).toList();
+    final allPulse   = group.vitals.expand((v) => v.pulseReadings).toList();
+    final allSugar   = group.vitals.expand((v) => v.sugarReadings).toList();
+    final allWeight  = group.vitals.expand((v) => v.weightReadings).toList();
+    final allChol    = group.vitals.expand((v) => v.cholesterolReadings).toList();
+    final allInsulin = group.vitals.expand((v) => v.insulinReadings).toList();
     final last = group.vitals.last;
 
-    final bpVal     = allBp.isNotEmpty ? '${allBp.last.systolic}/${allBp.last.diastolic} mmHg' : '—';
-    final pulseVal  = allPulse.isNotEmpty ? '${allPulse.last.value.toInt()} bpm' : '—';
-    final sugarVal  = allSugar.isNotEmpty ? '${allSugar.last.value.toStringAsFixed(1)} ${last.sugarUnit}' : '—';
-    final weightVal = allWeight.isNotEmpty ? '${allWeight.last.value.toStringAsFixed(1)} ${last.weightUnit}' : '—';
-    final cholVal   = allChol.isNotEmpty ? '${allChol.last.value.toStringAsFixed(1)} ${last.cholesterolUnit}' : '—';
+    final bpVal      = allBp.isNotEmpty ? '${allBp.last.systolic}/${allBp.last.diastolic} mmHg' : '—';
+    final pulseVal   = allPulse.isNotEmpty ? '${allPulse.last.value.toInt()} bpm' : '—';
+    final sugarVal   = allSugar.isNotEmpty ? '${allSugar.last.value.toStringAsFixed(1)} ${last.sugarUnit}' : '—';
+    final weightVal  = allWeight.isNotEmpty ? '${allWeight.last.value.toStringAsFixed(1)} ${last.weightUnit}' : '—';
+    final cholVal    = allChol.isNotEmpty ? '${allChol.last.value.toStringAsFixed(1)} ${last.cholesterolUnit}' : '—';
+    final insulinVal = allInsulin.isNotEmpty ? '${allInsulin.last.value.toStringAsFixed(1)} ${last.insulinUnit}' : '—';
 
     Color? bpBulb = allBp.isNotEmpty
         ? _bpBulbColor(allBp.last.systolic, allBp.last.diastolic) : null;
@@ -484,17 +490,27 @@ class _VitalDayCard extends StatelessWidget {
     Color? cholBulb = allChol.isNotEmpty
         ? _cholesterolBulbColor(allChol.last.value, last.cholesterolUnit) : null;
 
-    return Row(
+    return Column(
       children: [
-        _MiniVital(icon: Icons.favorite_outlined,     value: bpVal,     color: const Color(0xFFEF4444), count: allBp.length,     bulbColor: bpBulb),
-        const SizedBox(width: 8),
-        _MiniVital(icon: Icons.monitor_heart_outlined, value: pulseVal,  color: const Color(0xFFEC4899), count: allPulse.length),
-        const SizedBox(width: 8),
-        _MiniVital(icon: Icons.water_drop_outlined,   value: sugarVal,  color: const Color(0xFFF97316), count: allSugar.length,  bulbColor: sugarBulb),
-        const SizedBox(width: 8),
-        _MiniVital(icon: Icons.scale_outlined,        value: weightVal, color: const Color(0xFF3B82F6), count: allWeight.length),
-        const SizedBox(width: 8),
-        _MiniVital(icon: Icons.biotech_outlined,      value: cholVal,   color: const Color(0xFF8B5CF6), count: allChol.length,   bulbColor: cholBulb),
+        Row(
+          children: [
+            _MiniVital(icon: Icons.favorite_outlined,      value: bpVal,      color: const Color(0xFFEF4444), count: allBp.length,      bulbColor: bpBulb),
+            const SizedBox(width: 6),
+            _MiniVital(icon: Icons.monitor_heart_outlined, value: pulseVal,   color: const Color(0xFFEC4899), count: allPulse.length),
+            const SizedBox(width: 6),
+            _MiniVital(icon: Icons.water_drop_outlined,    value: sugarVal,   color: const Color(0xFFF97316), count: allSugar.length,    bulbColor: sugarBulb),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            _MiniVital(icon: Icons.scale_outlined,         value: weightVal,  color: const Color(0xFF3B82F6), count: allWeight.length),
+            const SizedBox(width: 6),
+            _MiniVital(icon: Icons.biotech_outlined,       value: cholVal,    color: const Color(0xFF8B5CF6), count: allChol.length,     bulbColor: cholBulb),
+            const SizedBox(width: 6),
+            _MiniVital(icon: Icons.medication_outlined,    value: insulinVal, color: const Color(0xFF06B6D4), count: allInsulin.length),
+          ],
+        ),
       ],
     );
   }

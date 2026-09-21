@@ -47,6 +47,7 @@ dependencies:
   url_launcher: ^6.3.0
   local_auth: ^3.0.1
   purchases_flutter: ^10.10.1
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:
