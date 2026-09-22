@@ -13,11 +13,13 @@ class Vital {
   final List<VitalReading> sugarReadings;
   final List<VitalReading> cholesterolReadings;
   final List<VitalReading> weightReadings;
+  final List<VitalReading> insulinReadings;
 
   // Units (section-level)
   final String weightUnit;
   final String sugarUnit;
   final String cholesterolUnit;
+  final String insulinUnit;
 
   // Misc fields — lists to support multiple dates per section
   final List<DateTime> colonoscopyDates;
@@ -51,9 +53,11 @@ class Vital {
     this.sugarReadings = const [],
     this.cholesterolReadings = const [],
     this.weightReadings = const [],
+    this.insulinReadings = const [],
     this.weightUnit = 'lbs',
     this.sugarUnit = 'mg/dL',
     this.cholesterolUnit = 'mg/dL',
+    this.insulinUnit = 'units',
     this.colonoscopyDates = const [],
     this.colonoscopyLocation = '',
     this.colonoscopyNotes = '',
@@ -108,6 +112,11 @@ class Vital {
       ? '${cholesterolReadings.last.value.toStringAsFixed(1)} $cholesterolUnit'
       : '—';
 
+  bool get hasInsulin => insulinReadings.isNotEmpty;
+  String get insulinDisplay => hasInsulin
+      ? '${insulinReadings.last.value.toStringAsFixed(1)} $insulinUnit'
+      : '—';
+
   static String _fmtDate(DateTime dt) {
     const months = [
       'Jan','Feb','Mar','Apr','May','Jun',
@@ -133,9 +142,11 @@ class Vital {
         'sugarReadings': sugarReadings.map((r) => r.toJson()).toList(),
         'cholesterolReadings': cholesterolReadings.map((r) => r.toJson()).toList(),
         'weightReadings': weightReadings.map((r) => r.toJson()).toList(),
+        'insulinReadings': insulinReadings.map((r) => r.toJson()).toList(),
         'weightUnit': weightUnit,
         'sugarUnit': sugarUnit,
         'cholesterolUnit': cholesterolUnit,
+        'insulinUnit': insulinUnit,
         'colonoscopyDate': colonoscopyDate?.toIso8601String(),
         if (colonoscopyLocation.isNotEmpty) 'colonoscopyLocation': colonoscopyLocation,
         if (colonoscopyNotes.isNotEmpty) 'colonoscopyNotes': colonoscopyNotes,
@@ -290,6 +301,17 @@ class Vital {
       ];
     }
 
+    // Insulin readings
+    List<VitalReading> insulinReadings = [];
+    final rdInsulin = rd?['insulin'] as List?;
+    if (rdInsulin != null && rdInsulin.isNotEmpty) {
+      insulinReadings = rdInsulin.map((e) => VitalReading.fromJson(e as Map<String, dynamic>)).toList();
+    } else if (json['insulinReadings'] != null) {
+      insulinReadings = (json['insulinReadings'] as List)
+          .map((e) => VitalReading.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
     return Vital(
       id: id,
       recordedAt: recordedAt,
@@ -300,9 +322,11 @@ class Vital {
       sugarReadings: sugarReadings,
       cholesterolReadings: cholesterolReadings,
       weightReadings: weightReadings,
+      insulinReadings: insulinReadings,
       weightUnit: json['weightUnit'] ?? 'lbs',
       sugarUnit: json['sugarUnit'] ?? 'mg/dL',
       cholesterolUnit: json['cholesterolUnit'] ?? 'mg/dL',
+      insulinUnit: json['insulinUnit'] ?? 'units',
       colonoscopyDates: _parseDateList(json, 'colonoscopyDate'),
       colonoscopyLocation: json['colonoscopyLocation'] ?? '',
       colonoscopyNotes: json['colonoscopyNotes'] ?? '',

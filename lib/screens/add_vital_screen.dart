@@ -35,6 +35,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   List<VitalReading> _sugarReadings    = [];
   List<VitalReading> _cholesterolReadings = [];
   List<VitalReading> _weightReadings   = [];
+  List<VitalReading> _insulinReadings  = [];
 
   // IDs of readings that came from widget.existing (not from new session Vitals)
   final Set<String> _existingReadingIds = {};
@@ -106,18 +107,20 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       _sugarReadings       = List.from(e.sugarReadings);
       _cholesterolReadings = List.from(e.cholesterolReadings);
       _weightReadings      = List.from(e.weightReadings);
+      _insulinReadings     = List.from(e.insulinReadings);
       _existingReadingIds.addAll(e.bpReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.pulseReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.sugarReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.cholesterolReadings.map((r) => r.id));
       _existingReadingIds.addAll(e.weightReadings.map((r) => r.id));
+      _existingReadingIds.addAll(e.insulinReadings.map((r) => r.id));
       _eventNameController.text            = e.eventName;
       _locationController.text             = e.location;
       _mammogramLocationController.text    = e.mammogramLocation;
       _colonoscopyLocationController.text  = e.colonoscopyLocation;
       _dentalLocationController.text       = e.dentalLocation;
       _eyeExamLocationController.text      = e.eyeExamLocation;
-      _notesController.text       = e.notes;
+      if (_category != 'daily') _notesController.text = e.notes;
       _weightUnit      = e.weightUnit;
       _sugarUnit       = e.sugarUnit;
       _cholesterolUnit = e.cholesterolUnit;
@@ -236,9 +239,11 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         sugarReadings:       _category == 'daily' ? _sugarReadings : [],
         cholesterolReadings: _category == 'daily' ? _cholesterolReadings : [],
         weightReadings:      _category == 'daily' ? _weightReadings : [],
+        insulinReadings:     _category == 'daily' ? _insulinReadings : [],
         weightUnit:      _weightUnit,
         sugarUnit:       _sugarUnit,
         cholesterolUnit: _cholesterolUnit,
+        insulinUnit:     'units',
         colonoscopyDates:    _category != 'daily' ? _colonoscopyDates : [],
         colonoscopyLocation: _category != 'daily' ? _colonoscopyLocationController.text.trim() : '',
         colonoscopyNotes:    '',
@@ -283,12 +288,14 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     List<VitalReading> sugarReadings = const [],
     List<VitalReading> cholesterolReadings = const [],
     List<VitalReading> weightReadings = const [],
+    List<VitalReading> insulinReadings = const [],
   }) {
     final readingTime = bpReadings.isNotEmpty ? bpReadings.first.time
         : pulseReadings.isNotEmpty ? pulseReadings.first.time
         : sugarReadings.isNotEmpty ? sugarReadings.first.time
         : cholesterolReadings.isNotEmpty ? cholesterolReadings.first.time
         : weightReadings.isNotEmpty ? weightReadings.first.time
+        : insulinReadings.isNotEmpty ? insulinReadings.first.time
         : DateTime.now();
 
     // Keep the existing record's DATE for correct day grouping, but use the
@@ -308,9 +315,11 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       sugarReadings: sugarReadings,
       cholesterolReadings: cholesterolReadings,
       weightReadings: weightReadings,
+      insulinReadings: insulinReadings,
       weightUnit: _weightUnit,
       sugarUnit: _sugarUnit,
       cholesterolUnit: _cholesterolUnit,
+      insulinUnit: 'units',
       riskLevel: 'Low',
       notes: _notesController.text.trim(),
     );
@@ -374,7 +383,8 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         final remSugar = _sugarReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
         final remCholesterol = _cholesterolReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
         final remWeight = _weightReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
-        if (remBp.isEmpty && remPulse.isEmpty && remSugar.isEmpty && remCholesterol.isEmpty && remWeight.isEmpty) {
+        final remInsulin = _insulinReadings.where((r) => _existingReadingIds.contains(r.id)).toList();
+        if (remBp.isEmpty && remPulse.isEmpty && remSugar.isEmpty && remCholesterol.isEmpty && remWeight.isEmpty && remInsulin.isEmpty) {
           await StorageService.deleteVital(widget.existing!.id);
         } else {
           final e = widget.existing!;
@@ -382,8 +392,10 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             id: e.id, recordedAt: e.recordedAt, category: e.category,
             eventName: e.eventName, bpReadings: remBp, pulseReadings: remPulse,
             sugarReadings: remSugar, cholesterolReadings: remCholesterol,
-            weightReadings: remWeight, weightUnit: e.weightUnit, sugarUnit: e.sugarUnit,
-            cholesterolUnit: e.cholesterolUnit, riskLevel: e.riskLevel, notes: e.notes,
+            weightReadings: remWeight, insulinReadings: remInsulin,
+            weightUnit: e.weightUnit, sugarUnit: e.sugarUnit,
+            cholesterolUnit: e.cholesterolUnit, insulinUnit: e.insulinUnit,
+            riskLevel: e.riskLevel, notes: e.notes,
           ));
         }
       } else {
@@ -589,6 +601,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
           sugarReadings:       type == 'sugar'       ? [result] : [],
           cholesterolReadings: type == 'cholesterol' ? [result] : [],
           weightReadings:      type == 'weight'      ? [result] : [],
+          insulinReadings:     type == 'insulin'     ? [result] : [],
         ));
       }
     }
@@ -627,6 +640,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     for (final v in widget.sameDayHistory) {
       for (final r in getter(v)) {
         rows.add(('${r.value.toStringAsFixed(1)} $unit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
+  List<(String, DateTime)> get _histInsulin {
+    final rows = <(String, DateTime)>[];
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.insulinReadings) {
+        rows.add(('${r.value.toStringAsFixed(1)} units', r.time));
       }
     }
     rows.sort((a, b) => b.$2.compareTo(a.$2));
@@ -820,6 +844,38 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             context, _weightReadings, 'Weight', _weightUnit, 'e.g. 155', const Color(0xFF3B82F6), 'weight',
           ),
         ),
+      ],
+    ),
+    const SizedBox(height: 16),
+    _SectionCard(
+      title: 'Insulin',
+      icon: Icons.medication_outlined,
+      iconColor: const Color(0xFF06B6D4),
+      children: [
+        ..._insulinReadings.reversed.toList().asMap().entries.map((e) {
+          final originalIndex = _insulinReadings.length - 1 - e.key;
+          final reading = e.value;
+          return _ReadingRow(
+            label: '${reading.value.toStringAsFixed(1)} units',
+            time: _formatTime(reading.time),
+            accentColor: const Color(0xFF06B6D4),
+            onDelete: () async {
+              setState(() => _insulinReadings.removeAt(originalIndex));
+              await _deleteReading(reading.id);
+            },
+          );
+        }),
+        ..._historyRows(_histInsulin, const Color(0xFF06B6D4)),
+        _AddReadingButton(
+          label: _insulinReadings.isEmpty ? 'Add Insulin Reading' : 'Add Another',
+          color: const Color(0xFF06B6D4),
+          onPressed: () => _addVitalReading(
+            context, _insulinReadings, 'Insulin', 'units', 'e.g. 10', const Color(0xFF06B6D4), 'insulin',
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('Log dose in units (fast-acting, basal, etc.)',
+            style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     ),
   ];
@@ -1150,24 +1206,26 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             id: v.id, recordedAt: v.recordedAt, category: v.category,
             eventName: v.eventName, bpReadings: v.bpReadings, pulseReadings: v.pulseReadings,
             sugarReadings: v.sugarReadings, cholesterolReadings: v.cholesterolReadings,
-            weightReadings: v.weightReadings, weightUnit: v.weightUnit,
-            sugarUnit: v.sugarUnit, cholesterolUnit: v.cholesterolUnit,
+            weightReadings: v.weightReadings, insulinReadings: v.insulinReadings,
+            weightUnit: v.weightUnit, sugarUnit: v.sugarUnit,
+            cholesterolUnit: v.cholesterolUnit, insulinUnit: v.insulinUnit,
             riskLevel: v.riskLevel, notes: notes,
           ));
           _hasSaved = true;
         } catch (_) {}
       }
     }
-    // Update existing vital's notes when editing
-    if (_isEditing && widget.existing!.notes != notes) {
+    // Update existing vital's notes only if the user typed something new
+    if (_isEditing && notes.isNotEmpty && widget.existing!.notes != notes) {
       try {
         final e = widget.existing!;
         await StorageService.updateVital(Vital(
           id: e.id, recordedAt: e.recordedAt, category: e.category,
           eventName: e.eventName, bpReadings: _bpReadings, pulseReadings: _pulseReadings,
           sugarReadings: _sugarReadings, cholesterolReadings: _cholesterolReadings,
-          weightReadings: _weightReadings, weightUnit: _weightUnit,
-          sugarUnit: _sugarUnit, cholesterolUnit: _cholesterolUnit,
+          weightReadings: _weightReadings, insulinReadings: _insulinReadings,
+          weightUnit: _weightUnit, sugarUnit: _sugarUnit,
+          cholesterolUnit: _cholesterolUnit, insulinUnit: 'units',
           riskLevel: e.riskLevel, notes: notes, doctorId: e.doctorId, location: e.location,
         ));
         _hasSaved = true;
@@ -1180,14 +1238,17 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
 
   Widget _buildNotesSection() {
     return _SectionCard(
-      title: 'Notes',
+      title: 'What caused this reading?',
       icon: Icons.notes_outlined,
       iconColor: _accentColor,
       children: [
         TextFormField(
           controller: _notesController,
           maxLines: 3,
-          decoration: _inputDecoration('Optional notes (symptoms, context…)', ''),
+          decoration: _inputDecoration(
+            'What food, drink or activity may have affected this reading? (e.g. salty food, alcohol, exercise, stress…)',
+            '',
+          ),
         ),
       ],
     );
