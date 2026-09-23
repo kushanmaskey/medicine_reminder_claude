@@ -188,21 +188,22 @@ class TrendsTabState extends State<TrendsTab> {
     return (points: points, xLabels: labels);
   }
 
-  // Weekly: current week only (Mon → today), grouped by day
+  // Weekly: last 7 days including today, grouped by day
   ({List<_ChartPoint> points, List<String> xLabels}) _buildWeeklyData() {
     final now = DateTime.now().toLocal();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final weekStart = todayStart.subtract(Duration(days: todayStart.weekday - 1));
+    final weekStart = todayStart.subtract(const Duration(days: 6));
 
     return _groupByDay(
       _vitals.where((v) => !v.recordedAt.toLocal().isBefore(weekStart)).toList(),
     );
   }
 
-  // Monthly: current calendar month only, grouped by day
+  // Monthly: last 30 days including today, grouped by day
   ({List<_ChartPoint> points, List<String> xLabels}) _buildMonthlyData() {
     final now = DateTime.now().toLocal();
-    final monthStart = DateTime(now.year, now.month, 1);
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final monthStart = todayStart.subtract(const Duration(days: 29));
 
     return _groupByDay(
       _vitals.where((v) => !v.recordedAt.toLocal().isBefore(monthStart)).toList(),
