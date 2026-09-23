@@ -292,9 +292,9 @@ class _TypeGroupRow extends StatelessWidget {
                         Text(
                           typeGroup.type,
                           style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: Color(0xFF475569),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF635A5A),
                           ),
                         ),
                         if (typeGroup.entries.length > 1) ...[

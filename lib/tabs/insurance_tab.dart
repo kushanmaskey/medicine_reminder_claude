@@ -305,7 +305,7 @@ class _InsuranceCard extends StatelessWidget {
                       if (ins.memberId.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text('Member ID: ${ins.memberId}',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                             overflow: TextOverflow.ellipsis),
                       ],
                     ],

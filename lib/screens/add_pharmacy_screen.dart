@@ -346,7 +346,7 @@ class _AddPharmacyScreenState extends State<AddPharmacyScreen> {
                   if (_searchResults.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text('${_searchResults.length} result(s) — tap to select',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                     const SizedBox(height: 6),
                     Container(
                       constraints: const BoxConstraints(maxHeight: 300),
@@ -392,7 +392,7 @@ class _AddPharmacyScreenState extends State<AddPharmacyScreen> {
                                   if (r.phone.isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(r.phone,
-                                        style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                                   ],
                                 ],
                               ),
@@ -823,7 +823,7 @@ class _SectionCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(title.toUpperCase(),
                   style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Colors.grey[500],
                       letterSpacing: 0.6)),

@@ -536,7 +536,7 @@ class _VitalDayCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
         ),
-        child: Text(l, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF3B82F6))),
+        child: Text(l, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF3B82F6))),
       )).toList(),
     );
   }
@@ -586,7 +586,7 @@ class _MiscDetailInline extends StatelessWidget {
           Row(children: [
             Icon(icon, size: 14, color: const Color(0xFFFF6B6B)),
             const SizedBox(width: 6),
-            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFFF6B6B))),
+            Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFFF6B6B))),
           ]),
           const SizedBox(height: 8),
           ...rows,
@@ -723,12 +723,12 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 88,
-            child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            width: 90,
+            child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF635A5A))),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF635A5A))),
           ),
         ],
       ),
@@ -806,7 +806,7 @@ class _MiniVital extends StatelessWidget {
                   child: Text(
                     value,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: hasValue ? color : Colors.grey[400],
                     ),

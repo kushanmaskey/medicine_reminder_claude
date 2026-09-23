@@ -646,6 +646,51 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
     return rows.take(3).toList();
   }
 
+  List<(String, DateTime)> get _histWeight {
+    final rows = <(String, DateTime)>[];
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.weightReadings) {
+        double val = r.value;
+        if (v.weightUnit != _weightUnit) {
+          val = _weightUnit == 'kg' ? val * 0.453592 : val * 2.20462;
+        }
+        rows.add(('${val.toStringAsFixed(1)} $_weightUnit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
+  List<(String, DateTime)> get _histSugar {
+    final rows = <(String, DateTime)>[];
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.sugarReadings) {
+        double val = r.value;
+        if (v.sugarUnit != _sugarUnit) {
+          val = _sugarUnit == 'mmol/L' ? val / 18.0182 : val * 18.0182;
+        }
+        rows.add(('${val.toStringAsFixed(1)} $_sugarUnit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
+  List<(String, DateTime)> get _histCholesterol {
+    final rows = <(String, DateTime)>[];
+    for (final v in widget.sameDayHistory) {
+      for (final r in v.cholesterolReadings) {
+        double val = r.value;
+        if (v.cholesterolUnit != _cholesterolUnit) {
+          val = _cholesterolUnit == 'mmol/L' ? val / 38.67 : val * 38.67;
+        }
+        rows.add(('${val.toStringAsFixed(1)} $_cholesterolUnit', r.time));
+      }
+    }
+    rows.sort((a, b) => b.$2.compareTo(a.$2));
+    return rows.take(3).toList();
+  }
+
   List<(String, DateTime)> get _histInsulin {
     final rows = <(String, DateTime)>[];
     for (final v in widget.sameDayHistory) {
@@ -670,7 +715,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 6),
         child: Text('Previous readings',
-            style: TextStyle(fontSize: 11, color: Colors.grey[400], fontWeight: FontWeight.w500, letterSpacing: 0.3)),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600, letterSpacing: 0.2)),
       ),
       ...history.map((h) => _HistoryRow(label: h.$1, time: _formatDateTime(h.$2), accentColor: color)),
       const Divider(height: 20, thickness: 0.5),
@@ -743,7 +788,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         options: const ['mg/dL', 'mmol/L'],
         selected: _sugarUnit,
         color: const Color(0xFFF97316),
-        onChanged: (u) => setState(() => _sugarUnit = u),
+        onChanged: (newUnit) {
+          if (newUnit == _sugarUnit) return;
+          setState(() {
+            _sugarReadings = _sugarReadings.map((r) => VitalReading(
+              id: r.id,
+              value: double.parse(
+                (newUnit == 'mmol/L' ? r.value / 18.0182 : r.value * 18.0182)
+                    .toStringAsFixed(1)),
+              time: r.time, notes: r.notes,
+            )).toList();
+            _sugarUnit = newUnit;
+          });
+        },
       ),
       children: [
         ..._sugarReadings.reversed.toList().asMap().entries.map((e) {
@@ -760,7 +817,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             },
           );
         }),
-        ..._historyRows(_histVital((v) => v.sugarReadings, _sugarUnit), const Color(0xFFF97316)),
+        ..._historyRows(_histSugar, const Color(0xFFF97316)),
         _AddReadingButton(
           label: _sugarReadings.isEmpty ? 'Add Sugar Reading' : 'Add Another',
           color: const Color(0xFFF97316),
@@ -781,7 +838,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         options: const ['mg/dL', 'mmol/L'],
         selected: _cholesterolUnit,
         color: const Color(0xFF8B5CF6),
-        onChanged: (u) => setState(() => _cholesterolUnit = u),
+        onChanged: (newUnit) {
+          if (newUnit == _cholesterolUnit) return;
+          setState(() {
+            _cholesterolReadings = _cholesterolReadings.map((r) => VitalReading(
+              id: r.id,
+              value: double.parse(
+                (newUnit == 'mmol/L' ? r.value / 38.67 : r.value * 38.67)
+                    .toStringAsFixed(1)),
+              time: r.time, notes: r.notes,
+            )).toList();
+            _cholesterolUnit = newUnit;
+          });
+        },
       ),
       children: [
         ..._cholesterolReadings.reversed.toList().asMap().entries.map((e) {
@@ -798,7 +867,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             },
           );
         }),
-        ..._historyRows(_histVital((v) => v.cholesterolReadings, _cholesterolUnit), const Color(0xFF8B5CF6)),
+        ..._historyRows(_histCholesterol, const Color(0xFF8B5CF6)),
         _AddReadingButton(
           label: _cholesterolReadings.isEmpty ? 'Add Cholesterol Reading' : 'Add Another',
           color: const Color(0xFF8B5CF6),
@@ -819,7 +888,19 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         options: const ['lbs', 'kg'],
         selected: _weightUnit,
         color: const Color(0xFF3B82F6),
-        onChanged: (u) => setState(() => _weightUnit = u),
+        onChanged: (newUnit) {
+          if (newUnit == _weightUnit) return;
+          final factor = newUnit == 'kg' ? 0.453592 : 2.20462;
+          setState(() {
+            _weightReadings = _weightReadings.map((r) => VitalReading(
+              id: r.id,
+              value: double.parse((r.value * factor).toStringAsFixed(1)),
+              time: r.time,
+              notes: r.notes,
+            )).toList();
+            _weightUnit = newUnit;
+          });
+        },
       ),
       children: [
         ..._weightReadings.reversed.toList().asMap().entries.map((e) {
@@ -836,7 +917,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
             },
           );
         }),
-        ..._historyRows(_histVital((v) => v.weightReadings, _weightUnit), const Color(0xFF3B82F6)),
+        ..._historyRows(_histWeight, const Color(0xFF3B82F6)),
         _AddReadingButton(
           label: _weightReadings.isEmpty ? 'Add Weight Reading' : 'Add Another',
           color: const Color(0xFF3B82F6),
@@ -1006,7 +1087,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         iconColor: _mauve,
         children: [
           Text('Menstrual period dates',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              style: TextStyle(fontSize: 13, color: Colors.grey[500])),
           const SizedBox(height: 10),
           ..._multiDateTiles(
             dates: _periodDates,
@@ -1026,7 +1107,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
         iconColor: _mauve,
         children: [
           Text('Mammogram screening dates',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              style: TextStyle(fontSize: 13, color: Colors.grey[500])),
           const SizedBox(height: 10),
           ..._multiDateTiles(
             dates: _mammogramDates,
@@ -1057,7 +1138,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFF0EA5E9),
       children: [
         Text('Colonoscopy dates',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500])),
         const SizedBox(height: 10),
         ..._multiDateTiles(
           dates: _colonoscopyDates,
@@ -1087,7 +1168,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFF22C55E),
       children: [
         Text('Dental visit dates',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500])),
         const SizedBox(height: 10),
         ..._multiDateTiles(
           dates: _dentalDates,
@@ -1117,7 +1198,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
       iconColor: const Color(0xFF8B5CF6),
       children: [
         Text('Eye exam dates',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500])),
         const SizedBox(height: 10),
         ..._multiDateTiles(
           dates: _eyeExamDates,
@@ -1299,7 +1380,7 @@ class _AddVitalScreenState extends State<AddVitalScreen> {
   InputDecoration _inputDecoration(String hint, String suffix) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
+      hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
       suffixText: suffix.isNotEmpty ? suffix : null,
       filled: true,
       fillColor: Colors.white,
@@ -1359,9 +1440,9 @@ class _HistoryRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(label,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[600])),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600])),
           ),
-          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+          Text(time, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
         ],
       ),
     );

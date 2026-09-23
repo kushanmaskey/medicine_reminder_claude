@@ -355,7 +355,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                           Text(
                             wt.desc,
                             style: TextStyle(
-                                fontSize: 11, color: Colors.grey[400]),
+                                fontSize: 12, color: Colors.grey[400]),
                           ),
                         ],
                       ),
@@ -615,7 +615,7 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title.toUpperCase(),
                 style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey[500],
                     letterSpacing: 0.6),

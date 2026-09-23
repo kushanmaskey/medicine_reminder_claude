@@ -388,7 +388,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                   if (_searchResults.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text('${_searchResults.length} result(s) — tap to select',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                     const SizedBox(height: 6),
                     Container(
                       constraints: const BoxConstraints(maxHeight: 300),
@@ -440,7 +440,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                                     Text(
                                       [_titleCase(r.city), r.state]
                                           .where((s) => s.isNotEmpty).join(', '),
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                     ),
                                   ],
                                 ],
@@ -540,7 +540,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         ),
         const SizedBox(height: 4),
         Text('e.g. MD, DO, NP, PA — specialty: Cardiology, Family Medicine…',
-            style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+            style: TextStyle(fontSize: 12, color: Colors.grey[400])),
       ],
     );
   }

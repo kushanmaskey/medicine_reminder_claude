@@ -557,7 +557,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                   Text(
                     'ALERTS',
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.grey[500],
                         letterSpacing: 0.6),
@@ -582,7 +582,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                   child: Text(
                     'No alerts set — tap Add Alert to get reminders',
                     style:
-                        TextStyle(fontSize: 12, color: Colors.grey[400]),
+                        TextStyle(fontSize: 13, color: Colors.grey[400]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -726,11 +726,11 @@ class _AlertRow extends StatelessWidget {
                 ),
                 if (isDone)
                   Text(isPast && !acknowledged ? 'Passed' : 'Acknowledged',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                 if (isNew)
                   Text('New — will be scheduled on save',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Colors.grey[400],
                           fontStyle: FontStyle.italic)),
               ],

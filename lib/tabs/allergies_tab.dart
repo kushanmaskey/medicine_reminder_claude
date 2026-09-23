@@ -157,16 +157,16 @@ class _AllergyCard extends StatelessWidget {
                       TextSpan(
                         text: allergy.name,
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E293B),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF635A5A),
                         ),
                       ),
                       if (allergy.reason != null)
                         TextSpan(
                           text: '  ·  ${allergy.reason}',
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.normal,
                             color: Color(0xFFD97706),
                           ),

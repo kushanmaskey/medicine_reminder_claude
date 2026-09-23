@@ -250,7 +250,7 @@ class _AppointmentCard extends StatelessWidget {
                       Text(
                         _formatDateTime(dt),
                         style:
-                            TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            TextStyle(fontSize: 12, color: Colors.grey[500]),
                       ),
                     ],
                   ),

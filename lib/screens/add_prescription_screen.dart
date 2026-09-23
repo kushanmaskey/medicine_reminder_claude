@@ -463,7 +463,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                     Text(
                       'PRESCRIBED BY',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: _doctorError
                             ? const Color(0xFFEF4444)
@@ -612,7 +612,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                     Text(
                       'PILL SUPPLY',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.grey[500],
                         letterSpacing: 0.6,
@@ -698,7 +698,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Optional — pill count auto-decrements daily after saving',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ],
               ],
@@ -718,7 +718,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                         children: [
                           Text('Estimated Refill Date',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.grey[500])),
+                                  fontSize: 13, color: Colors.grey[500])),
                           Text(
                             _refillDateDisplay,
                             style: TextStyle(
@@ -798,7 +798,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                     Text(
                       'REFILL ALERTS',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: Colors.grey[500],
                           letterSpacing: 0.6),
@@ -975,11 +975,11 @@ class _AlertRow extends StatelessWidget {
                 ),
                 if (isDone)
                   Text(isPast && !acknowledged ? 'Passed' : 'Acknowledged',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                 if (isNew)
                   Text('New — will be scheduled on save',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Colors.grey[400],
                           fontStyle: FontStyle.italic)),
               ],
@@ -1076,7 +1076,7 @@ class _PickerTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[500])),
                   Text(
                     value,
                     style: TextStyle(
