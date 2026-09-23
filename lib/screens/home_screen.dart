@@ -22,6 +22,7 @@ import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'add_appointment_screen.dart';
 import 'add_activity_screen.dart';
+import '../widgets/rating_overlay.dart';
 
 const _gradientColors = [Color(0xFFFF6B6B), Color(0xFFFF8C42)];
 
@@ -80,9 +81,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _requestNotificationPermission();
     _loadAvatar();
+    _maybeShowRating();
     StorageService.decrementPillsIfNeeded();
     _startSessionTimer();
   }
+
+  Future<void> _maybeShowRating() async {
+    final should = await StorageService.shouldShowRating();
+    if (!should || !mounted) return;
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+    await StorageService.recordRatingShown();
+    if (!mounted) return;
+    await showRatingOverlay(context); // ignore: use_build_context_synchronously
+  }
+
 
   @override
   void dispose() {

@@ -927,4 +927,64 @@ class StorageService {
     }
   }
 
+  // ── App Rating ───────────────────────────────────────────────────────────────
+
+  static Future<bool> hasRated() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('app_rated') == true) return true;
+      final rows = await _db
+          .from('app_ratings')
+          .select('id')
+          .eq('user_id', _uid)
+          .limit(1);
+      final rated = (rows as List).isNotEmpty;
+      if (rated) await prefs.setBool('app_rated', true);
+      return rated;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Returns true if the rating overlay should be shown.
+  // Show up to 3 times: immediately, then after 3-day snooze, then after 7-day snooze.
+  static Future<bool> shouldShowRating() async {
+    try {
+      if (await hasRated()) return false;
+      final prefs = await SharedPreferences.getInstance();
+      final showCount = prefs.getInt('rating_show_count') ?? 0;
+      if (showCount >= 3) return false;
+      final nextShow = prefs.getInt('rating_next_show');
+      if (nextShow != null && DateTime.now().millisecondsSinceEpoch < nextShow) return false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> recordRatingShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = (prefs.getInt('rating_show_count') ?? 0) + 1;
+    await prefs.setInt('rating_show_count', count);
+  }
+
+  static Future<void> dismissRating() async {
+    final prefs = await SharedPreferences.getInstance();
+    final showCount = prefs.getInt('rating_show_count') ?? 1;
+    // 1st dismissal → snooze 3 days; 2nd+ → snooze 7 days
+    final days = showCount <= 1 ? 3 : 7;
+    final next = DateTime.now().add(Duration(days: days)).millisecondsSinceEpoch;
+    await prefs.setInt('rating_next_show', next);
+  }
+
+  static Future<void> submitRating(int stars, String comment) async {
+    await _db.from('app_ratings').insert({
+      'user_id': _uid,
+      'stars': stars,
+      'comment': comment.trim(),
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('app_rated', true);
+  }
+
 }
