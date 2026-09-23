@@ -653,7 +653,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   const SizedBox(height: 3),
                   Text(
                     _fmtDateTime(dt),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -766,7 +766,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   Text(
                     refillLabel(),
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: isRefillUrgent
                           ? const Color(0xFFF97316)
                           : Colors.grey[500],
@@ -887,7 +887,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   ),
                   const SizedBox(height: 2),
                   Text(_fmtDateTime(a.recordedAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                 ],
               ),
             ),
@@ -987,7 +987,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(subtitle.join(' · '),
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis),
                   ],
                 ],
@@ -1095,7 +1095,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   if (ins.memberId.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text('Member ID: ${ins.memberId}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis),
                   ],
                 ],
@@ -1177,7 +1177,7 @@ Widget _buildVitalDayCard(DateTime date, List<Vital> vitals) {
                   if (a.reason != null) ...[
                     const SizedBox(height: 3),
                     Text(a.reason!,
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   ],
                 ],
               ),

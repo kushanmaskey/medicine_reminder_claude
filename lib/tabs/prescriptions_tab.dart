@@ -268,7 +268,7 @@ class _PharmacyCard extends StatelessWidget {
                             const SizedBox(width: 3),
                             Text(
                               pharmacy.phone,
-                              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                             ),
                           ],
                         ),
@@ -282,7 +282,7 @@ class _PharmacyCard extends StatelessWidget {
                             Text(
                               [pharmacy.city, pharmacy.state]
                                   .where((s) => s.isNotEmpty).join(', '),
-                              style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                             ),
                           ],
                         ),
@@ -453,13 +453,13 @@ class _PrescriptionCard extends StatelessWidget {
                               : 'Over the counter',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         )
                       else ...[
                         Text(
                           _refillLabel(refill),
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: isRefillUrgent
                                 ? const Color(0xFFF97316)
                                 : Colors.grey[500],
@@ -475,7 +475,7 @@ class _PrescriptionCard extends StatelessWidget {
                               Text(
                                 doctor!.fullName,
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey[400]),
+                                    fontSize: 12, color: Colors.grey[400]),
                               ),
                             ],
                           ),

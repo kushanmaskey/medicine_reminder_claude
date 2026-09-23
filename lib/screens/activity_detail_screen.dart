@@ -218,11 +218,11 @@ class _EntryRow extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 70,
+                    width: 75,
                     child: Text(
                       time,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[600],
                       ),

@@ -181,7 +181,7 @@ class _DoctorCard extends StatelessWidget {
     }
     return Text(
       parts.join(' · '),
-      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
       overflow: TextOverflow.ellipsis,
     );
   }

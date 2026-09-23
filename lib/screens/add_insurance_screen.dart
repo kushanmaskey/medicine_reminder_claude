@@ -564,7 +564,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500])),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
@@ -597,7 +597,7 @@ class _AddInsuranceScreenState extends State<AddInsuranceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(label,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                   const SizedBox(height: 2),
                   Text(
                     _fmtDate(value),
