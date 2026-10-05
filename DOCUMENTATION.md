@@ -2,7 +2,7 @@
 
 **App Name:** My Medical Wallet  
 **Package:** com.mymedicalwallet.app  
-**Version:** 1.0.12+2036  
+**Version:** 1.0.12+2041  
 **Platform:** Flutter (iOS + Android)  
 **Backend:** Supabase (PostgreSQL + Auth)  
 **Target Audience:** Adults 50+ managing medications, doctors, vitals, and appointments
@@ -1517,8 +1517,8 @@ flutter pub run flutter_launcher_icons
 
 | Platform | Version | Build | Status |
 |---|---|---|---|
-| iOS (App Store) | 1.0.12 | 2036 | Ready to upload via Transporter — targets prod database |
-| Android (Google Play) | 1.0.12 | 2035 | Ready to upload — targets prod database |
+| iOS (App Store) | 1.0.12 | 2041 | Uploaded via Transporter — submitted for App Store review — targets prod database |
+| Android (Google Play) | 1.0.12 | 2041 | Submitted for review (Oct 5, 2026) — targets prod database |
 
 **Google Play production track requirements:**
 - Minimum 12 testers (met as of Aug 2026)
