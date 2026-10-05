@@ -2,7 +2,7 @@
 
 **App Name:** My Medical Wallet  
 **Package:** com.mymedicalwallet.app  
-**Version:** 1.0.8+2023  
+**Version:** 1.0.12+2036  
 **Platform:** Flutter (iOS + Android)  
 **Backend:** Supabase (PostgreSQL + Auth)  
 **Target Audience:** Adults 50+ managing medications, doctors, vitals, and appointments
@@ -24,6 +24,14 @@
 11. [Platform Permissions](#11-platform-permissions)
 12. [Security & Privacy](#12-security--privacy)
 13. [Color Scheme](#13-color-scheme)
+14. [Typography Standards](#14-typography-standards)
+15. [Database Operations](#15-database-operations)
+16. [App Icon](#16-app-icon)
+17. [Android Package Name](#17-android-package-name)
+18. [App Store & Google Play](#18-app-store--google-play)
+19. [RevenueCat — In-App Subscriptions](#19-revenuecat--in-app-subscriptions)
+20. [Apple App Store — Payments & Tax Setup](#20-apple-app-store--payments--tax-setup)
+21. [Google Play — Payments Setup](#21-google-play--payments-setup)
 
 ---
 
@@ -70,6 +78,8 @@ lib/
 │   ├── activity_detail_screen.dart
 │   ├── privacy_policy_screen.dart
 │   └── terms_screen.dart
+├── widgets/
+│   └── rating_overlay.dart          # Auto-show App Store / Play Store rating prompt
 ├── tabs/
 │   ├── summary_tab.dart
 │   ├── prescriptions_tab.dart
@@ -597,6 +607,21 @@ All CRUD operations for health data via Supabase PostgREST.
 |---|---|---|
 | `saveUserConsent(email)` | `void` | Records that user agreed to terms |
 
+#### Rating
+
+| Method | Returns | Description |
+|---|---|---|
+| `hasRated()` | `bool` | Returns true if user has already submitted a rating |
+| `shouldShowRating()` | `bool` | Returns true if eligible to show the rating prompt (not yet rated, shown < 3 times, snooze delay passed) |
+| `recordRatingShown()` | `void` | Increments the show count in SharedPreferences |
+| `markRated()` | `void` | Permanently marks user as rated — prompt never shown again |
+| `dismissRating()` | `void` | Snoozes the prompt: 3 days after 1st dismiss, 7 days after 2nd or later |
+
+**SharedPreferences keys:**
+- `has_rated` — bool, set to true once the user submits a rating
+- `rating_show_count` — int, how many times the overlay has been shown (max 3)
+- `rating_next_show` — int (epoch ms), earliest time the overlay may next appear
+
 ---
 
 ### `RingtoneService`
@@ -628,6 +653,20 @@ Main tabbed interface after login.
 - Session timeout: auto-logs out after **1 hour** of inactivity
 - FAB for context-sensitive quick-add actions
 - Uses `GlobalKey` on each tab to call `reload()` across tabs when data changes
+- **Rating overlay:** 3 seconds after the app opens, `_maybeShowRating()` checks eligibility via `StorageService.shouldShowRating()`. If eligible, records the show via `StorageService.recordRatingShown()` then calls `showRatingOverlay(context)` (see `lib/widgets/rating_overlay.dart`).
+
+---
+
+### `RatingOverlay`
+**File:** `lib/widgets/rating_overlay.dart`
+
+Half-screen modal that prompts the user to rate the app on the App Store / Google Play.
+
+- Shown at most **3 times** per installation (controlled by `StorageService`)
+- `barrierDismissible: false` — user must tap a button to close
+- **Submit:** saves a rating record then opens the store listing (`market://details?id=com.mymedicalwallet.app` on Android; `https://apps.apple.com/app/id6745052523?action=write-review` on iOS) via `url_launcher`
+- **Dismiss / "Maybe Later":** calls `StorageService.dismissRating()` (snooze 3 days on first dismiss, 7 days on second or later)
+- Falls back to the Play Store web URL if the `market://` deep link is unavailable
 
 ---
 
@@ -738,6 +777,19 @@ Log vital signs or miscellaneous health events.
 Gender-specific fields shown based on sex from `AuthService.getSex()`.
 
 **Typography:** Section headings use `fontSize: 13, color: grey[700], fontWeight: w600`. Input placeholder text uses `fontSize: 13, color: grey[400]` (smaller/dimmer than headings) so headings are visually dominant.
+
+**Unit Conversion (live toggle):** When the user switches the unit for Weight, Sugar, or Cholesterol, all readings already entered in that session are converted in place so the displayed values stay equivalent:
+
+| Vital | Conversion |
+|---|---|
+| Weight lbs → kg | `value × 0.453592` |
+| Weight kg → lbs | `value × 2.20462` |
+| Sugar mg/dL → mmol/L | `value ÷ 18.0182` |
+| Sugar mmol/L → mg/dL | `value × 18.0182` |
+| Cholesterol mg/dL → mmol/L | `value ÷ 38.67` |
+| Cholesterol mmol/L → mg/dL | `value × 38.67` |
+
+Historical readings (loaded from the database) are also displayed in the selected unit. The stored unit of each historical `Vital` record (`v.weightUnit`, `v.sugarUnit`, `v.cholesterolUnit`) is compared to the current display unit and converted on-the-fly via the `_histWeight`, `_histSugar`, and `_histCholesterol` getters.
 
 On save: stores readings in `readings_data` JSON column + legacy individual columns via `StorageService.saveVital()`. For misc events, `effectiveDate` is derived from `eventDates.last` if dates were added, otherwise from `_recordedAt`.
 
@@ -1333,7 +1385,26 @@ HomeScreen init
 
 ---
 
-## 14. Database Operations
+## 14. Typography Standards
+
+Standardized font sizes are applied consistently across all list views and detail screens to ensure readability, especially for users 50 and older.
+
+| Role | Size | Weight | Color |
+|---|---|---|---|
+| List item title | 14 | w700 | `#635A5A` |
+| List item subtitle / secondary detail | 12 | normal | `grey[500]` |
+| Detail screen label | 13 | w600 | `grey[600]` |
+| Detail screen value | 14 | w600 | `grey[600]` |
+| Section heading | 13 | w600 | `grey[700]` |
+| Input placeholder / hint | 14 | normal | `grey[400]` |
+| Caps-style field label (e.g., PRESCRIBED BY) | 12 | w600 | `grey[400]` |
+| Badge / chip label | 11–12 | w700 | varies by state |
+
+This hierarchy is applied in: `vitals_tab.dart`, `summary_tab.dart`, `prescriptions_tab.dart`, `allergies_tab.dart`, `activities_tab.dart`, `doctors_tab.dart`, `appointments_tab.dart`, `insurance_tab.dart`, `add_vital_screen.dart`, `add_prescription_screen.dart`, `add_appointment_screen.dart`, `add_doctor_screen.dart`, `add_pharmacy_screen.dart`, `add_activity_screen.dart`, `add_insurance_screen.dart`, and `activity_detail_screen.dart`.
+
+---
+
+## 15. Database Operations
 
 ### Environment Policy
 
@@ -1416,7 +1487,7 @@ backups/YYYY-MM-DD.zip        # full snapshot — contains:
 
 ---
 
-## 15. App Icon
+## 16. App Icon
 
 **Source script:** `generate_icon.py` (requires Pillow)  
 **Master icon:** `assets/icons/app_icon.png` (1024×1024)  
@@ -1432,7 +1503,7 @@ flutter pub run flutter_launcher_icons
 
 ---
 
-## 15. Android Package Name
+## 17. Android Package Name
 
 **Package:** `com.mymedicalwallet.app`  
 **Changed from:** `com.medreminder.medication_reminder` (was taken on Google Play)  
@@ -1440,14 +1511,14 @@ flutter pub run flutter_launcher_icons
 
 ---
 
-## 16. App Store & Google Play
+## 18. App Store & Google Play
 
 ### Submission Status
 
 | Platform | Version | Build | Status |
 |---|---|---|---|
-| iOS (App Store) | 1.0.8 | 2023 | Uploaded to TestFlight — targets prod database |
-| Android (Google Play) | 1.0.8 | 2023 | Uploaded to closed testing — targets prod database |
+| iOS (App Store) | 1.0.12 | 2036 | Ready to upload via Transporter — targets prod database |
+| Android (Google Play) | 1.0.12 | 2035 | Ready to upload — targets prod database |
 
 **Google Play production track requirements:**
 - Minimum 12 testers (met as of Aug 2026)
@@ -1468,7 +1539,7 @@ build/app/outputs/bundle/release/app-release.aab
 
 ---
 
-## 17. RevenueCat — In-App Subscriptions
+## 19. RevenueCat — In-App Subscriptions
 
 RevenueCat is the subscription management layer. It does **not** process payments — Apple and Google handle the actual payments. RevenueCat reads subscription status from their APIs and exposes it to the app.
 
@@ -1509,7 +1580,7 @@ RevenueCat reads subscription status via API
 
 ---
 
-## 18. Apple App Store — Payments & Tax Setup
+## 20. Apple App Store — Payments & Tax Setup
 
 Access: **App Store Connect → Business → Agreements, Tax, and Banking**
 
@@ -1549,7 +1620,7 @@ Apple pays out monthly, approximately 30 days after the end of each fiscal month
 
 ---
 
-## 19. Google Play — Payments Setup
+## 21. Google Play — Payments Setup
 
 Access: **Google Play Console → Developer account → View payments profile** → redirects to **pay.google.com**
 
