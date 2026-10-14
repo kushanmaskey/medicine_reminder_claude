@@ -554,33 +554,30 @@ class _ArchiveSection extends StatefulWidget {
 class _ArchiveSectionState extends State<_ArchiveSection> {
   bool _running = false;
 
-  Future<void> _run({required bool testMode}) async {
-    // Preview first
-    final counts = await ArchiveService.preview(testMode: testMode);
+  Future<void> _run() async {
+    final counts = await ArchiveService.preview(testMode: false);
     if (!mounted) return;
 
     if (counts.isEmpty) {
-      _showInfo('No records found older than the cutoff date. Nothing to archive.');
+      _showInfo('No records older than 12 months found. Nothing to archive.');
       return;
     }
 
     final total = counts.values.fold(0, (s, v) => s + v);
     final summary = counts.entries.map((e) => '• ${e.key}: ${e.value}').join('\n');
-    final label = testMode ? 'TEST (records older than 1 day)' : 'YEARLY (records older than 12 months)';
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Archive $total records?'),
+        title: Text('Save $total records to ZIP?'),
         content: Text(
-          'Mode: $label\n\nThe following records will be saved to a ZIP file on this device and then removed from the cloud:\n\n$summary\n\nThis cannot be undone from the cloud.',
+          'The following records older than 12 months will be saved to a ZIP file on this device. Your cloud data is not affected.\n\n$summary',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
-            child: const Text('Archive & Remove', style: TextStyle(color: Colors.white)),
+            child: const Text('Save Archive'),
           ),
         ],
       ),
@@ -590,9 +587,9 @@ class _ArchiveSectionState extends State<_ArchiveSection> {
 
     setState(() => _running = true);
     try {
-      final path = await ArchiveService.runArchive(testMode: testMode);
+      final path = await ArchiveService.runArchive(testMode: false);
       if (mounted) {
-        _showInfo('Archive saved to:\n$path\n\nRecords have been removed from the cloud.');
+        _showInfo('Archive saved to:\n$path\n\nYour cloud data has not been changed.');
       }
     } catch (e) {
       if (mounted) _showInfo('Archive failed: $e');
@@ -638,35 +635,17 @@ class _ArchiveSectionState extends State<_ArchiveSection> {
                 leading: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.science_outlined, color: Color(0xFFF9A825), size: 20),
-                ),
-                title: const Text('Test Archive', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                subtitle: Text('Archives records older than 1 day — use to verify the process works', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                trailing: _running
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                onTap: _running ? null : () => _run(testMode: true),
-              ),
-              Divider(height: 1, indent: 72, color: Colors.grey.shade100),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.archive_outlined, color: Color(0xFF3B82F6), size: 20),
                 ),
                 title: const Text('Yearly Archive', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                subtitle: Text('Archives records older than 12 months and removes them from cloud', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                subtitle: Text('Saves records older than 12 months to a ZIP file on this device. Cloud data is not affected.', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                 trailing: _running
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                onTap: _running ? null : () => _run(testMode: false),
+                onTap: _running ? null : _run,
               ),
             ],
           ),

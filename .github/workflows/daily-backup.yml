@@ -29,6 +29,66 @@ jobs:
           PROD_SERVICE_ROLE_KEY: ${{ secrets.PROD_SERVICE_ROLE_KEY }}
         run: python3 backup_prod.py --output-dir /tmp/backups
 
+      - name: Check for data loss vs previous backup
+        env:
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          BACKUP_GITHUB_REPO: ${{ secrets.BACKUP_GITHUB_REPO }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, json, subprocess, sys, glob
+
+          # Clone backup repo to read yesterday's manifest
+          token = os.environ["BACKUP_REPO_TOKEN"]
+          repo  = os.environ["BACKUP_GITHUB_REPO"]
+          subprocess.run(
+            ["git", "clone", "--depth=1",
+             f"https://x-access-token:{token}@github.com/{repo}.git",
+             "/tmp/backup-repo"],
+            check=True, capture_output=True
+          )
+
+          # Find the most recent existing manifest in the backup repo
+          zips = sorted(glob.glob("/tmp/backup-repo/backups/*.zip"), reverse=True)
+          prev_counts = {}
+          if zips:
+            import zipfile
+            with zipfile.ZipFile(zips[0]) as zf:
+              names = zf.namelist()
+              manifest_name = next((n for n in names if n.endswith("manifest.json")), None)
+              if manifest_name:
+                prev_counts = json.loads(zf.read(manifest_name)).get("tables", {})
+
+          # Read today's manifest
+          today_dirs = sorted(glob.glob("/tmp/backups/*/manifest.json"), reverse=True)
+          if not today_dirs:
+            print("No today manifest found — skipping check")
+            sys.exit(0)
+          today_counts = json.load(open(today_dirs[0])).get("tables", {})
+
+          # Compare — fail if any important table drops more than 20%
+          WATCHED = ["activities", "vitals", "prescriptions", "appointments", "allergies", "insurance"]
+          problems = []
+          for table in WATCHED:
+            prev = prev_counts.get(table, 0)
+            today = today_counts.get(table, 0)
+            if prev > 0 and today < prev * 0.8:
+              drop = prev - today
+              pct  = round((drop / prev) * 100)
+              problems.append(f"  {table}: {prev} → {today} (dropped {drop} rows / {pct}%)")
+
+          if problems:
+            print("DATA LOSS DETECTED — backup halted, investigate before proceeding:")
+            for p in problems:
+              print(p)
+            sys.exit(1)
+          else:
+            print("Row count check passed:")
+            for table in WATCHED:
+              p = prev_counts.get(table, "N/A")
+              t = today_counts.get(table, 0)
+              print(f"  {table}: {p} → {t}")
+          PYEOF
+
       - name: Push backup to private backup repo
         env:
           BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
@@ -39,19 +99,12 @@ jobs:
           cd /tmp/backups
           zip -r ${TODAY}.zip ${TODAY}/
 
-          git clone \
-            https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_GITHUB_REPO}.git \
-            /tmp/backup-repo
-
-          mkdir -p /tmp/backup-repo/backups
-          cp /tmp/backups/${TODAY}.zip /tmp/backup-repo/backups/
-
           cd /tmp/backup-repo
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
-          # Keep only the 3 most recent zips — delete older ones
-          ls -1t backups/*.zip 2>/dev/null | tail -n +4 | xargs -r rm -f
+          mkdir -p backups
+          cp /tmp/backups/${TODAY}.zip backups/
 
           git add backups/
           git diff --cached --quiet && echo "No changes to commit" && exit 0
